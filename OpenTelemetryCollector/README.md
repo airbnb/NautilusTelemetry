@@ -8,7 +8,7 @@ Run this:
 
 `docker run \
 -v "${PWD}/otel-local-config.yaml":/otel-local-config.yaml \
--p 55681:55681 \
+-p 4318:4318 \
 otel/opentelemetry-collector \
 --config otel-local-config.yaml;`
 
