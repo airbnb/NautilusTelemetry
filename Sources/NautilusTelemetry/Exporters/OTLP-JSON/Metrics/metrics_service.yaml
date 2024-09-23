@@ -4,6 +4,8 @@ info:
   version: version not set
 servers:
 - url: /
+tags:
+- name: MetricsService
 paths:
   /v1/metrics:
     post:
@@ -20,20 +22,18 @@ paths:
               $ref: '#/components/schemas/v1ExportMetricsServiceRequest'
         required: true
       responses:
-        '200':
+        "200":
           description: A successful response.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/v1ExportMetricsServiceResponse'
-        '429':
-          description: Too Many Requests
         default:
           description: An unexpected error response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/runtimeError'
+                $ref: '#/components/schemas/rpcStatus'
       x-codegen-request-body-name: body
 components:
   schemas:
@@ -47,12 +47,12 @@ components:
 
             Note: This uses a varint encoding as a simple form of compression.
           format: int32
-        bucket_counts:
+        bucketCounts:
           type: array
           description: |-
-            Count is an array of counts, where count[i] carries the count
-            of the bucket at index (offset+i).  count[i] is the count of
-            values greater than or equal to base^(offset+i) and less than
+            bucket_counts is an array of count values, where bucket_counts[i] carries
+            the count of the bucket at index (offset+i). bucket_counts[i] is the count
+            of values greater than base^(offset+i) and less than or equal to
             base^(offset+i+1).
 
             Note: By contrast, the explicit HistogramDataPoint uses
@@ -93,17 +93,13 @@ components:
     protobufAny:
       type: object
       properties:
-        type_url:
+        '@type':
           type: string
-        value:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
-          type: string
-          format: byte
-    runtimeError:
+      additionalProperties:
+        type: object
+    rpcStatus:
       type: object
       properties:
-        error:
-          type: string
         code:
           type: integer
           format: int32
@@ -188,22 +184,22 @@ components:
     v1AnyValue:
       type: object
       properties:
-        string_value:
+        stringValue:
           type: string
-        bool_value:
+        boolValue:
           type: boolean
-        int_value:
+        intValue:
           type: string
           format: int64
-        double_value:
+        doubleValue:
           type: number
           format: double
-        array_value:
+        arrayValue:
           $ref: '#/components/schemas/v1ArrayValue'
-        kvlist_value:
+        kvlistValue:
           $ref: '#/components/schemas/v1KeyValueList'
-        bytes_value:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+        bytesValue:
+          pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
           type: string
           format: byte
       description: |-
@@ -224,7 +220,7 @@ components:
     v1Exemplar:
       type: object
       properties:
-        filtered_attributes:
+        filteredAttributes:
           title: |-
             The set of key/value pairs that were filtered out by the aggregator, but
             recorded alongside the original measurement. Only key/value pairs that were
@@ -232,43 +228,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        filtered_labels:
-          type: array
-          description: |-
-            Labels is deprecated and will be removed soon.
-            1. Old senders and receivers that are not aware of this change will
-            continue using the `filtered_labels` field.
-            2. New senders, which are aware of this change MUST send only
-            `filtered_attributes`.
-            3. New receivers, which are aware of this change MUST convert this into
-            `filtered_labels` by simply converting all int64 values into float.
-
-            This field will be removed in ~3 months, on July 1, 2021.
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        time_unix_nano:
+        timeUnixNano:
           title: time_unix_nano is the exact time when this exemplar was recorded
           type: string
           description: |-
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
             1970.
           format: uint64
-        as_double:
+        asDouble:
           type: number
           format: double
-        as_int:
+        asInt:
           type: string
           format: int64
-        span_id:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+        spanId:
+          pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
           type: string
           description: |-
             (Optional) Span ID of the exemplar trace.
             span_id may be missing if the measurement is not recorded inside a trace
             or if the trace is not sampled.
           format: byte
-        trace_id:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+        traceId:
+          pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
           type: string
           description: |-
             (Optional) Trace ID of the exemplar trace.
@@ -283,11 +265,11 @@ components:
     v1ExponentialHistogram:
       type: object
       properties:
-        data_points:
+        dataPoints:
           type: array
           items:
             $ref: '#/components/schemas/v1ExponentialHistogramDataPoint'
-        aggregation_temporality:
+        aggregationTemporality:
           $ref: '#/components/schemas/v1AggregationTemporality'
       description: |-
         ExponentialHistogram represents the type of a metric that is calculated by aggregating
@@ -300,9 +282,11 @@ components:
           description: |-
             The set of key/value pairs that uniquely identify the timeseries from
             where this point belongs. The list may be empty (may contain 0 elements).
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        start_time_unix_nano:
+        startTimeUnixNano:
           type: string
           description: |-
             StartTimeUnixNano is optional but strongly encouraged, see the
@@ -311,7 +295,7 @@ components:
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
             1970.
           format: uint64
-        time_unix_nano:
+        timeUnixNano:
           type: string
           description: |-
             TimeUnixNano is required, see the detailed comments above Metric.
@@ -347,8 +331,8 @@ components:
             base = (2^(2^-scale))
 
             The histogram bucket identified by `index`, a signed integer,
-            contains values that are greater than or equal to (base^index) and
-            less than (base^(index+1)).
+            contains values that are greater than (base^index) and
+            less than or equal to (base^(index+1)).
 
             The positive and negative ranges of the histogram are expressed
             separately.  Negative values are mapped by their absolute value
@@ -357,7 +341,7 @@ components:
             scale is not restricted by the protocol, as the permissible
             values depend on the range of the data.
           format: int32
-        zero_count:
+        zeroCount:
           type: string
           description: |-
             zero_count is the count of values that are either exactly zero or
@@ -386,15 +370,54 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/v1Exemplar'
+        min:
+          type: number
+          description: "min is the minimum value over (start_time, end_time]."
+          format: double
+        max:
+          type: number
+          description: "max is the maximum value over (start_time, end_time]."
+          format: double
+        zeroThreshold:
+          type: number
+          description: |-
+            ZeroThreshold may be optionally set to convey the width of the zero
+            region. Where the zero region is defined as the closed interval
+            [-ZeroThreshold, ZeroThreshold].
+            When ZeroThreshold is 0, zero count bucket stores values that cannot be
+            expressed using the standard exponential formula as well as values that
+            have been rounded to zero.
+          format: double
       description: |-
         ExponentialHistogramDataPoint is a single data point in a timeseries that describes the
         time-varying values of a ExponentialHistogram of double values. A ExponentialHistogram contains
         summary statistics for a population of values, it may optionally contain the
         distribution of those values across a set of buckets.
+    v1ExportMetricsPartialSuccess:
+      type: object
+      properties:
+        rejectedDataPoints:
+          type: string
+          description: |-
+            The number of rejected data points.
+
+            A `rejected_<signal>` field holding a `0` value indicates that the
+            request was fully accepted.
+          format: int64
+        errorMessage:
+          type: string
+          description: |-
+            A developer-facing human-readable message in English. It should be used
+            either to explain why the server rejected parts of the data during a partial
+            success or to convey warnings/suggestions during a full success. The message
+            should offer guidance on how users can address such issues.
+
+            error_message is an optional field. An error_message with an empty value
+            is equivalent to it not being set.
     v1ExportMetricsServiceRequest:
       type: object
       properties:
-        resource_metrics:
+        resourceMetrics:
           type: array
           description: |-
             An array of ResourceMetrics.
@@ -406,10 +429,13 @@ components:
             $ref: '#/components/schemas/v1ResourceMetrics'
     v1ExportMetricsServiceResponse:
       type: object
+      properties:
+        partialSuccess:
+          $ref: '#/components/schemas/v1ExportMetricsPartialSuccess'
     v1Gauge:
       type: object
       properties:
-        data_points:
+        dataPoints:
           type: array
           items:
             $ref: '#/components/schemas/v1NumberDataPoint'
@@ -426,11 +452,11 @@ components:
     v1Histogram:
       type: object
       properties:
-        data_points:
+        dataPoints:
           type: array
           items:
             $ref: '#/components/schemas/v1HistogramDataPoint'
-        aggregation_temporality:
+        aggregationTemporality:
           $ref: '#/components/schemas/v1AggregationTemporality'
       description: |-
         Histogram represents the type of a metric that is calculated by aggregating
@@ -443,22 +469,11 @@ components:
           description: |-
             The set of key/value pairs that uniquely identify the timeseries from
             where this point belongs. The list may be empty (may contain 0 elements).
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        labels:
-          type: array
-          description: |-
-            Labels is deprecated and will be removed soon.
-            1. Old senders and receivers that are not aware of this change will
-            continue using the `labels` field.
-            2. New senders, which are aware of this change MUST send only `attributes`.
-            3. New receivers, which are aware of this change MUST convert this into
-            `labels` by simply converting all int64 values into float.
-
-            This field will be removed in ~3 months, on July 1, 2021.
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        start_time_unix_nano:
+        startTimeUnixNano:
           type: string
           description: |-
             StartTimeUnixNano is optional but strongly encouraged, see the
@@ -467,7 +482,7 @@ components:
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
             1970.
           format: uint64
-        time_unix_nano:
+        timeUnixNano:
           type: string
           description: |-
             TimeUnixNano is required, see the detailed comments above Metric.
@@ -494,7 +509,7 @@ components:
             doing so.  This is specifically to enforce compatibility w/ OpenMetrics,
             see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#histogram
           format: double
-        bucket_counts:
+        bucketCounts:
           type: array
           description: |-
             bucket_counts is an optional field contains the count values of histogram
@@ -507,7 +522,7 @@ components:
           items:
             type: string
             format: uint64
-        explicit_bounds:
+        explicitBounds:
           type: array
           description: |-
             explicit_bounds specifies buckets with explicitly defined bounds for values.
@@ -539,6 +554,14 @@ components:
             Flags that apply to this specific data point.  See DataPointFlags
             for the available flags and their meaning.
           format: int64
+        min:
+          type: number
+          description: "min is the minimum value over (start_time, end_time]."
+          format: double
+        max:
+          type: number
+          description: "max is the maximum value over (start_time, end_time]."
+          format: double
       description: |-
         HistogramDataPoint is a single data point in a timeseries that describes the
         time-varying values of a Histogram. A Histogram contains summary statistics
@@ -550,219 +573,28 @@ components:
         If the histogram does not contain the distribution of values, then both
         "explicit_bounds" and "bucket_counts" must be omitted and only "count" and
         "sum" are known.
-    v1InstrumentationLibrary:
+    v1InstrumentationScope:
       type: object
       properties:
         name:
           type: string
-          description: An empty instrumentation library name means the name is unknown.
+          description: An empty instrumentation scope name means the name is unknown.
         version:
           type: string
+        attributes:
+          type: array
+          description: |-
+            Additional attributes that describe the scope. [Optional].
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
+          items:
+            $ref: '#/components/schemas/v1KeyValue'
+        droppedAttributesCount:
+          type: integer
+          format: int64
       description: |-
-        InstrumentationLibrary is a message representing the instrumentation library information
+        InstrumentationScope is a message representing the instrumentation scope information
         such as the fully qualified name and version.
-    v1InstrumentationLibraryMetrics:
-      type: object
-      properties:
-        instrumentation_library:
-          $ref: '#/components/schemas/v1InstrumentationLibrary'
-        metrics:
-          type: array
-          description: A list of metrics that originate from an instrumentation library.
-          items:
-            $ref: '#/components/schemas/v1Metric'
-        schema_url:
-          type: string
-          description: This schema_url applies to all metrics in the "metrics" field.
-      description: A collection of Metrics produced by an InstrumentationLibrary.
-    v1IntDataPoint:
-      type: object
-      properties:
-        labels:
-          type: array
-          description: The set of labels that uniquely identify this timeseries.
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        start_time_unix_nano:
-          type: string
-          description: |-
-            StartTimeUnixNano is optional but strongly encouraged, see the
-            the detailed comments above Metric.
-
-            Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
-            1970.
-          format: uint64
-        time_unix_nano:
-          type: string
-          description: |-
-            TimeUnixNano is required, see the detailed comments above Metric.
-
-            Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
-            1970.
-          format: uint64
-        value:
-          type: string
-          description: value itself.
-          format: int64
-        exemplars:
-          title: |-
-            (Optional) List of exemplars collected from
-            measurements that were used to form the data point
-          type: array
-          items:
-            $ref: '#/components/schemas/v1IntExemplar'
-      description: IntDataPoint is deprecated. Use integer value in NumberDataPoint.
-    v1IntExemplar:
-      title: IntExemplar is deprecated. Use Exemplar with as_int for value
-      type: object
-      properties:
-        filtered_labels:
-          title: |-
-            The set of labels that were filtered out by the aggregator, but recorded
-            alongside the original measurement. Only labels that were filtered out
-            by the aggregator should be included
-          type: array
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        time_unix_nano:
-          title: time_unix_nano is the exact time when this exemplar was recorded
-          type: string
-          description: |-
-            Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
-            1970.
-          format: uint64
-        value:
-          type: string
-          description: Numerical int value of the measurement that was recorded.
-          format: int64
-        span_id:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
-          type: string
-          description: |-
-            (Optional) Span ID of the exemplar trace.
-            span_id may be missing if the measurement is not recorded inside a trace
-            or if the trace is not sampled.
-          format: byte
-        trace_id:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
-          type: string
-          description: |-
-            (Optional) Trace ID of the exemplar trace.
-            trace_id may be missing if the measurement is not recorded inside a trace
-            or if the trace is not sampled.
-          format: byte
-    v1IntGauge:
-      type: object
-      properties:
-        data_points:
-          type: array
-          items:
-            $ref: '#/components/schemas/v1IntDataPoint'
-      description: IntGauge is deprecated.  Use Gauge with an integer value in NumberDataPoint.
-    v1IntHistogram:
-      type: object
-      properties:
-        data_points:
-          type: array
-          items:
-            $ref: '#/components/schemas/v1IntHistogramDataPoint'
-        aggregation_temporality:
-          $ref: '#/components/schemas/v1AggregationTemporality'
-      description: |-
-        IntHistogram is deprecated, replaced by Histogram points using double-
-        valued exemplars.
-    v1IntHistogramDataPoint:
-      type: object
-      properties:
-        labels:
-          type: array
-          description: The set of labels that uniquely identify this timeseries.
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        start_time_unix_nano:
-          type: string
-          description: |-
-            StartTimeUnixNano is optional but strongly encouraged, see the
-            the detailed comments above Metric.
-
-            Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
-            1970.
-          format: uint64
-        time_unix_nano:
-          type: string
-          description: |-
-            TimeUnixNano is required, see the detailed comments above Metric.
-
-            Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
-            1970.
-          format: uint64
-        count:
-          type: string
-          description: |-
-            count is the number of values in the population. Must be non-negative. This
-            value must be equal to the sum of the "count" fields in buckets if a
-            histogram is provided.
-          format: uint64
-        sum:
-          type: string
-          description: |-
-            sum of the values in the population. If count is zero then this field
-            must be zero. This value must be equal to the sum of the "sum" fields in
-            buckets if a histogram is provided.
-          format: int64
-        bucket_counts:
-          type: array
-          description: |-
-            bucket_counts is an optional field contains the count values of histogram
-            for each bucket.
-
-            The sum of the bucket_counts must equal the value in the count field.
-
-            The number of elements in bucket_counts array must be by one greater than
-            the number of elements in explicit_bounds array.
-          items:
-            type: string
-            format: uint64
-        explicit_bounds:
-          type: array
-          description: |-
-            explicit_bounds specifies buckets with explicitly defined bounds for values.
-
-            The boundaries for bucket at index i are:
-
-            (-infinity, explicit_bounds[i]] for i == 0
-            (explicit_bounds[i-1], explicit_bounds[i]] for 0 < i < size(explicit_bounds)
-            (explicit_bounds[i-1], +infinity) for i == size(explicit_bounds)
-
-            The values in the explicit_bounds array must be strictly increasing.
-
-            Histogram buckets are inclusive of their upper boundary, except the last
-            bucket where the boundary is at infinity. This format is intentionally
-            compatible with the OpenMetrics histogram definition.
-          items:
-            type: number
-            format: double
-        exemplars:
-          title: |-
-            (Optional) List of exemplars collected from
-            measurements that were used to form the data point
-          type: array
-          items:
-            $ref: '#/components/schemas/v1IntExemplar'
-      description: IntHistogramDataPoint is deprecated; use HistogramDataPoint.
-    v1IntSum:
-      type: object
-      properties:
-        data_points:
-          type: array
-          items:
-            $ref: '#/components/schemas/v1IntDataPoint'
-        aggregation_temporality:
-          $ref: '#/components/schemas/v1AggregationTemporality'
-        is_monotonic:
-          type: boolean
-          description: If "true" means that the sum is monotonic.
-      description: IntSum is deprecated.  Use Sum with an integer value in NumberDataPoint.
     v1KeyValue:
       type: object
       properties:
@@ -781,6 +613,8 @@ components:
           description: |-
             A collection of key/value pairs of key-value pairs. The list may be empty (may
             contain 0 elements).
+            The keys MUST be unique (it is not allowed to have more than one
+            value with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
       description: |-
@@ -797,34 +631,39 @@ components:
       properties:
         name:
           type: string
-          description: name of the metric, including its DNS name prefix. It must
-            be unique.
+          description: name of the metric.
         description:
           type: string
-          description: description of the metric, which can be used in documentation.
+          description: "description of the metric, which can be used in documentation."
         unit:
           type: string
           description: |-
             unit in which the metric value is reported. Follows the format
             described by http://unitsofmeasure.org/ucum.html.
-        int_gauge:
-          $ref: '#/components/schemas/v1IntGauge'
         gauge:
           $ref: '#/components/schemas/v1Gauge'
-        int_sum:
-          $ref: '#/components/schemas/v1IntSum'
         sum:
           $ref: '#/components/schemas/v1Sum'
-        int_histogram:
-          $ref: '#/components/schemas/v1IntHistogram'
         histogram:
           $ref: '#/components/schemas/v1Histogram'
-        exponential_histogram:
+        exponentialHistogram:
           $ref: '#/components/schemas/v1ExponentialHistogram'
         summary:
           $ref: '#/components/schemas/v1Summary'
+        metadata:
+          type: array
+          description: |-
+            Additional metadata attributes that describe the metric. [Optional].
+            Attributes are non-identifying.
+            Consumers SHOULD NOT need to be aware of these attributes.
+            These attributes MAY be used to encode information allowing
+            for lossless roundtrip translation to / from another data model.
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
+          items:
+            $ref: '#/components/schemas/v1KeyValue'
       description: |-
-        https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
+        https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md
 
 
         The data model and relation between entities is shown in the
@@ -914,22 +753,11 @@ components:
           description: |-
             The set of key/value pairs that uniquely identify the timeseries from
             where this point belongs. The list may be empty (may contain 0 elements).
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        labels:
-          type: array
-          description: |-
-            Labels is deprecated and will be removed soon.
-            1. Old senders and receivers that are not aware of this change will
-            continue using the `labels` field.
-            2. New senders, which are aware of this change MUST send only `attributes`.
-            3. New receivers, which are aware of this change MUST convert this into
-            `labels` by simply converting all int64 values into float.
-
-            This field will be removed in ~3 months, on July 1, 2021.
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        start_time_unix_nano:
+        startTimeUnixNano:
           type: string
           description: |-
             StartTimeUnixNano is optional but strongly encouraged, see the
@@ -938,7 +766,7 @@ components:
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
             1970.
           format: uint64
-        time_unix_nano:
+        timeUnixNano:
           type: string
           description: |-
             TimeUnixNano is required, see the detailed comments above Metric.
@@ -946,10 +774,10 @@ components:
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
             1970.
           format: uint64
-        as_double:
+        asDouble:
           type: number
           format: double
-        as_int:
+        asInt:
           type: string
           format: int64
         exemplars:
@@ -973,10 +801,13 @@ components:
       properties:
         attributes:
           type: array
-          description: Set of labels that describe the resource.
+          description: |-
+            Set of attributes that describe the resource.
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        dropped_attributes_count:
+        droppedAttributesCount:
           type: integer
           description: |-
             dropped_attributes_count is the number of dropped attributes. If the value is 0, then
@@ -988,38 +819,48 @@ components:
       properties:
         resource:
           $ref: '#/components/schemas/v1Resource'
-        instrumentation_library_metrics:
+        scopeMetrics:
           type: array
           description: A list of metrics that originate from a resource.
           items:
-            $ref: '#/components/schemas/v1InstrumentationLibraryMetrics'
-        schema_url:
+            $ref: '#/components/schemas/v1ScopeMetrics'
+        schemaUrl:
           type: string
           description: |-
+            The Schema URL, if known. This is the identifier of the Schema that the resource data
+            is recorded in. To learn more about Schema URL see
+            https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
             This schema_url applies to the data in the "resource" field. It does not apply
-            to the data in the "instrumentation_library_metrics" field which have their own
-            schema_url field.
-      description: A collection of InstrumentationLibraryMetrics from a Resource.
-    v1StringKeyValue:
+            to the data in the "scope_metrics" field which have their own schema_url field.
+      description: A collection of ScopeMetrics from a Resource.
+    v1ScopeMetrics:
       type: object
       properties:
-        key:
+        scope:
+          $ref: '#/components/schemas/v1InstrumentationScope'
+        metrics:
+          type: array
+          description: A list of metrics that originate from an instrumentation library.
+          items:
+            $ref: '#/components/schemas/v1Metric'
+        schemaUrl:
           type: string
-        value:
-          type: string
-      description: |-
-        StringKeyValue is a pair of key/value strings. This is the simpler (and faster) version
-        of KeyValue that only supports string values.
+          description: |-
+            The Schema URL, if known. This is the identifier of the Schema that the metric data
+            is recorded in. To learn more about Schema URL see
+            https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
+            This schema_url applies to all metrics in the "metrics" field.
+      description: A collection of Metrics produced by an Scope.
     v1Sum:
       type: object
       properties:
-        data_points:
+        dataPoints:
           type: array
           items:
             $ref: '#/components/schemas/v1NumberDataPoint'
-        aggregation_temporality:
+        aggregationTemporality:
           $ref: '#/components/schemas/v1AggregationTemporality'
-        is_monotonic:
+        isMonotonic:
           type: boolean
           description: If "true" means that the sum is monotonic.
       description: |-
@@ -1028,7 +869,7 @@ components:
     v1Summary:
       type: object
       properties:
-        data_points:
+        dataPoints:
           type: array
           items:
             $ref: '#/components/schemas/v1SummaryDataPoint'
@@ -1047,22 +888,11 @@ components:
           description: |-
             The set of key/value pairs that uniquely identify the timeseries from
             where this point belongs. The list may be empty (may contain 0 elements).
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        labels:
-          type: array
-          description: |-
-            Labels is deprecated and will be removed soon.
-            1. Old senders and receivers that are not aware of this change will
-            continue using the `labels` field.
-            2. New senders, which are aware of this change MUST send only `attributes`.
-            3. New receivers, which are aware of this change MUST convert this into
-            `labels` by simply converting all int64 values into float.
-
-            This field will be removed in ~3 months, on July 1, 2021.
-          items:
-            $ref: '#/components/schemas/v1StringKeyValue'
-        start_time_unix_nano:
+        startTimeUnixNano:
           type: string
           description: |-
             StartTimeUnixNano is optional but strongly encouraged, see the
@@ -1071,7 +901,7 @@ components:
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January
             1970.
           format: uint64
-        time_unix_nano:
+        timeUnixNano:
           type: string
           description: |-
             TimeUnixNano is required, see the detailed comments above Metric.
@@ -1095,7 +925,7 @@ components:
             doing so.  This is specifically to enforce compatibility w/ OpenMetrics,
             see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#summary
           format: double
-        quantile_values:
+        quantileValues:
           type: array
           description: |-
             (Optional) list of values at different quantiles of the distribution calculated
@@ -1111,3 +941,4 @@ components:
       description: |-
         SummaryDataPoint is a single data point in a timeseries that describes the
         time-varying values of a Summary metric.
+x-original-swagger-version: "2.0"

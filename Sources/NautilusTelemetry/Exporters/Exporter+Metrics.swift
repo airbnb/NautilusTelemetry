@@ -20,13 +20,13 @@ extension Exporter {
 
 		let metrics = exportOTLP(instruments: instruments)
 
-		let instrumentationLibrary = OTLP.V1InstrumentationLibrary(name: "NautilusTelemetry", version: "1.0")
+		let scope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 		let resourceAttributes = ResourceAttributes.makeWithDefaults(additionalAttributes: additionalAttributes)
 		let attributes = convertToOTLP(attributes: resourceAttributes.keyValues)
 		let resource = OTLP.V1Resource(attributes: attributes, droppedAttributesCount: nil)
 		
-		let instrumentationLibraryMetrics = OTLP.V1InstrumentationLibraryMetrics(instrumentationLibrary: instrumentationLibrary, metrics: metrics, schemaUrl: schemaUrl)
-		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, instrumentationLibraryMetrics: [instrumentationLibraryMetrics], schemaUrl: schemaUrl)
+		let scopeMetrics = OTLP.V1ScopeMetrics(scope: scope, metrics: metrics, schemaUrl: schemaUrl)
+		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: schemaUrl)
 		let metricServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
 		
 		let json = try encodeJSON(metricServiceRequest)

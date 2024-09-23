@@ -28,7 +28,7 @@ final class TraceExporterTests: XCTestCase {
 	let testWithLocalCollector = TraceExporterTests.testEnabled("testWithLocalCollector")
 	let testWithSherlock = TraceExporterTests.testEnabled("testWithSherlock")
 	
-	let instrumentationLibrary = OTLP.V1InstrumentationLibrary(name: "NautilusTelemetry", version: "1.0")
+	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 	let schemaUrl = "https://api.ebay.com/nautilus-tracing"
 	
 	let sherlockTraceEndpoint = "https://otel-collector-http.sherlock-tracing.svc.130.tess.io/v1/traces"
@@ -152,7 +152,6 @@ final class TraceExporterTests: XCTestCase {
 					// https://www.w3.org/TR/trace-context/#sampled-flag
 					// 1 == sampled
 					let flags = Int64(0x01)
-					let name = logEntry.subsystem
 					let body = logEntry.composedMessage
 					
 					let attributes: TelemetryAttributes = [
@@ -171,7 +170,6 @@ final class TraceExporterTests: XCTestCase {
 					let logRecord = OTLP.V1LogRecord(timeUnixNano: "\(time)",
 													 severityNumber: severity,
 													 severityText: nil,
-													 name: name,
 													 body: OTLP.V1AnyValue(stringValue: body),
 													 attributes: attributesKV,
 													 droppedAttributesCount: nil,
@@ -184,10 +182,10 @@ final class TraceExporterTests: XCTestCase {
 			}
 		}
 		
-		let instrumentationLibraryLogs = OTLP.V1InstrumentationLibraryLogs(instrumentationLibrary: instrumentationLibrary, logs: logRecords, schemaUrl: schemaUrl)
+		let scopeLogs = OTLP.V1ScopeLogs(scope: instrumentationScope, logRecords: logRecords, schemaUrl: schemaUrl)
 		
 		let resource = OTLP.V1Resource(attributes: [], droppedAttributesCount: nil)
-		let resourceLogs = OTLP.V1ResourceLogs(resource: resource, instrumentationLibraryLogs: [instrumentationLibraryLogs], schemaUrl: schemaUrl)
+        let resourceLogs = OTLP.V1ResourceLogs(resource: resource, scopeLogs: [scopeLogs], schemaUrl: schemaUrl)
 		let exportLogsServiceRequest = OTLP.V1ExportLogsServiceRequest(resourceLogs: [resourceLogs])
 		
 		let json = try encodeJSON(exportLogsServiceRequest)
@@ -232,9 +230,9 @@ final class TraceExporterTests: XCTestCase {
 		
 		metrics.append(freeMemoryMetric)
 		
-		let instrumentationLibraryMetrics = OTLP.V1InstrumentationLibraryMetrics(instrumentationLibrary: instrumentationLibrary, metrics: metrics, schemaUrl: schemaUrl)
+		let scopeMetrics = OTLP.V1ScopeMetrics(scope: instrumentationScope, metrics: metrics, schemaUrl: schemaUrl)
 		let resource = OTLP.V1Resource(attributes: [], droppedAttributesCount: nil)
-		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, instrumentationLibraryMetrics: [instrumentationLibraryMetrics], schemaUrl: schemaUrl)
+		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: schemaUrl)
 		
 		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
 		

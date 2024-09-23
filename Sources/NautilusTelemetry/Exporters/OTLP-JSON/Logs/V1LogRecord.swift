@@ -6,32 +6,38 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1LogRecord")
+typealias V1LogRecord = OTLP.V1LogRecord
 
 extension OTLP {
-	struct V1LogRecord: Codable, Equatable {
+	struct V1LogRecord: Codable, Hashable {
 		/** time_unix_nano is the time when the event occurred. Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. Value of 0 indicates unknown or missing timestamp. */
-		internal let timeUnixNano: String?
-		internal let severityNumber: V1SeverityNumber?
+		var timeUnixNano: String?
+		/** Time when the event was observed by the collection system. For events that originate in OpenTelemetry (e.g. using OpenTelemetry Logging SDK) this timestamp is typically set at the generation time and is equal to Timestamp. For events originating externally and collected by OpenTelemetry (e.g. using Collector) this is the time when OpenTelemetry's code observed the event measured by the clock of the OpenTelemetry code. This field MUST be set once the event is observed by OpenTelemetry.  For converting OpenTelemetry log data to formats that support only one timestamp or when receiving OpenTelemetry log data by recipients that support only one timestamp internally the following logic is recommended:   - Use time_unix_nano if it is present, otherwise use observed_time_unix_nano.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. Value of 0 indicates unknown or missing timestamp. */
+		var observedTimeUnixNano: String?
+		var severityNumber: V1SeverityNumber?
 		/** The severity text (also known as log level). The original string representation as it is known at the source. [Optional]. */
-		internal let severityText: String?
-		/** Short event identifier that does not contain varying parts. Name describes what happened (e.g. \"ProcessStarted\"). Recommended to be no longer than 50 characters. Not guaranteed to be unique in any way. [Optional]. */
-		internal let name: String?
-		internal let body: V1AnyValue?
-		/** Additional attributes that describe the specific event occurrence. [Optional]. */
-		internal let attributes: [V1KeyValue]?
-		internal let droppedAttributesCount: Int64?
-		/** Flags, a bit field. 8 least significant bits are the trace flags as defined in W3C Trace Context specification. 24 most significant bits are reserved and must be set to 0. Readers must not assume that 24 most significant bits will be zero and must correctly mask the bits when reading 8-bit trace flag (use flags & TRACE_FLAGS_MASK). [Optional]. */
-		internal let flags: Int64?
-		/** A unique identifier for a trace. All logs from the same trace share the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes is considered invalid. Can be set for logs that are part of request processing and have an assigned trace id. [Optional]. */
-		internal let traceId: Data?
-		/** A unique identifier for a span within a trace, assigned when the span is created. The ID is an 8-byte array. An ID with all zeroes is considered invalid. Can be set for logs that are part of a particular processing span. If span_id is present trace_id SHOULD be also present. [Optional]. */
-		internal let spanId: Data?
+		var severityText: String?
+		var body: V1AnyValue?
+		/** Additional attributes that describe the specific event occurrence. [Optional]. Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
+		var droppedAttributesCount: Int64?
+		/** Flags, a bit field. 8 least significant bits are the trace flags as defined in W3C Trace Context specification. 24 most significant bits are reserved and must be set to 0. Readers must not assume that 24 most significant bits will be zero and must correctly mask the bits when reading 8-bit trace flag (use flags & LOG_RECORD_FLAGS_TRACE_FLAGS_MASK). [Optional]. */
+		var flags: Int64?
+		/** A unique identifier for a trace. All logs from the same trace share the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes OR of length other than 16 bytes is considered invalid (empty string in OTLP/JSON is zero-length and thus is also invalid).  This field is optional.  The receivers SHOULD assume that the log record is not associated with a trace if any of the following is true:   - the field is not present,   - the field contains an invalid value. */
+		var traceId: Data?
+		/** A unique identifier for a span within a trace, assigned when the span is created. The ID is an 8-byte array. An ID with all zeroes OR of length other than 8 bytes is considered invalid (empty string in OTLP/JSON is zero-length and thus is also invalid).  This field is optional. If the sender specifies a valid span_id then it SHOULD also specify a valid trace_id.  The receivers SHOULD assume that the log record is not associated with a span if any of the following is true:   - the field is not present,   - the field contains an invalid value. */
+		var spanId: Data?
 
-		internal init(timeUnixNano: String?, severityNumber: V1SeverityNumber?, severityText: String?, name: String?, body: V1AnyValue?, attributes: [V1KeyValue]?, droppedAttributesCount: Int64?, flags: Int64?, traceId: Data?, spanId: Data?) {
+		init(timeUnixNano: String? = nil, observedTimeUnixNano: String? = nil, severityNumber: V1SeverityNumber? = nil, severityText: String? = nil, body: V1AnyValue? = nil, attributes: [V1KeyValue]? = nil, droppedAttributesCount: Int64? = nil, flags: Int64? = nil, traceId: Data? = nil, spanId: Data? = nil) {
 			self.timeUnixNano = timeUnixNano
+			self.observedTimeUnixNano = observedTimeUnixNano
 			self.severityNumber = severityNumber
 			self.severityText = severityText
-			self.name = name
 			self.body = body
 			self.attributes = attributes
 			self.droppedAttributesCount = droppedAttributesCount
@@ -40,17 +46,33 @@ extension OTLP {
 			self.spanId = spanId
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case timeUnixNano = "time_unix_nano"
-			case severityNumber = "severity_number"
-			case severityText = "severity_text"
-			case name
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case timeUnixNano
+			case observedTimeUnixNano
+			case severityNumber
+			case severityText
 			case body
 			case attributes
-			case droppedAttributesCount = "dropped_attributes_count"
+			case droppedAttributesCount
 			case flags
-			case traceId = "trace_id"
-			case spanId = "span_id"
+			case traceId
+			case spanId
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(timeUnixNano, forKey: .timeUnixNano)
+			try container.encodeIfPresent(observedTimeUnixNano, forKey: .observedTimeUnixNano)
+			try container.encodeIfPresent(severityNumber, forKey: .severityNumber)
+			try container.encodeIfPresent(severityText, forKey: .severityText)
+			try container.encodeIfPresent(body, forKey: .body)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(droppedAttributesCount, forKey: .droppedAttributesCount)
+			try container.encodeIfPresent(flags, forKey: .flags)
+			try container.encodeIfPresent(traceId, forKey: .traceId)
+			try container.encodeIfPresent(spanId, forKey: .spanId)
 		}
 	}
 }

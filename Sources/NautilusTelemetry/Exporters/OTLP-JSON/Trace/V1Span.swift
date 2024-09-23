@@ -6,45 +6,53 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1Span")
+typealias V1Span = OTLP.V1Span
 
 extension OTLP {
-	/** Span represents a single operation within a trace. Spans can be nested to form a trace tree. Spans may also be linked to other spans from the same or different trace and form graphs. Often, a trace contains a root span that describes the end-to-end latency, and one or more subspans for its sub-operations. A trace can also contain multiple root spans, or none at all. Spans do not need to be contiguous - there may be gaps or overlaps between spans in a trace.  The next available field id is 17. */
-	struct V1Span: Codable, Equatable {
-		/** A unique identifier for a trace. All spans from the same trace share the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes is considered invalid.  This field is semantically required. Receiver should generate new random trace_id if empty or invalid trace_id was received.  This field is required. */
-		internal let traceId: Data?
-		/** A unique identifier for a span within a trace, assigned when the span is created. The ID is an 8-byte array. An ID with all zeroes is considered invalid.  This field is semantically required. Receiver should generate new random span_id if empty or invalid span_id was received.  This field is required. */
-		internal let spanId: Data?
+	/** A Span represents a single operation performed by a single component of the system.  The next available field id is 17. */
+	struct V1Span: Codable, Hashable {
+		/** A unique identifier for a trace. All spans from the same trace share the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes OR of length other than 16 bytes is considered invalid (empty string in OTLP/JSON is zero-length and thus is also invalid).  This field is required. */
+		var traceId: Data?
+		/** A unique identifier for a span within a trace, assigned when the span is created. The ID is an 8-byte array. An ID with all zeroes OR of length other than 8 bytes is considered invalid (empty string in OTLP/JSON is zero-length and thus is also invalid).  This field is required. */
+		var spanId: Data?
 		/** trace_state conveys information about request position in multiple distributed tracing graphs. It is a trace_state in w3c-trace-context format: https://www.w3.org/TR/trace-context/#tracestate-header See also https://github.com/w3c/distributed-tracing for more details about this field. */
-		internal let traceState: String?
+		var traceState: String?
 		/** The `span_id` of this span's parent span. If this is a root span, then this field must be empty. The ID is an 8-byte array. */
-		internal let parentSpanId: Data?
-		/** A description of the span's operation.  For example, the name can be a qualified method name or a file name and a line number where the operation is called. A best practice is to use the same display name at the same call point in an application. This makes it easier to correlate spans in different traces.  This field is semantically required to be set to non-empty string. When null or empty string received - receiver may use string \"name\" as a replacement. There might be smarted algorithms implemented by receiver to fix the empty span name.  This field is required. */
-		internal let name: String?
-		internal let kind: SpanSpanKind?
+		var parentSpanId: Data?
+		/** Flags, a bit field.  Bits 0-7 (8 least significant bits) are the trace flags as defined in W3C Trace Context specification. To read the 8-bit W3C trace flag, use `flags & SPAN_FLAGS_TRACE_FLAGS_MASK`.  See https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions.  Bits 8 and 9 represent the 3 states of whether a span's parent is remote. The states are (unknown, is not remote, is remote). To read whether the value is known, use `(flags & SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK) != 0`. To read whether the span is remote, use `(flags & SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK) != 0`.  When creating span messages, if the message is logically forwarded from another source with an equivalent flags fields (i.e., usually another OTLP span message), the field SHOULD be copied as-is. If creating from a source that does not have an equivalent flags field (such as a runtime representation of an OpenTelemetry span), the high 22 bits MUST be set to zero. Readers MUST NOT assume that bits 10-31 (22 most significant bits) will be zero.  [Optional]. */
+		var flags: Int64?
+		/** A description of the span's operation.  For example, the name can be a qualified method name or a file name and a line number where the operation is called. A best practice is to use the same display name at the same call point in an application. This makes it easier to correlate spans in different traces.  This field is semantically required to be set to non-empty string. Empty value is equivalent to an unknown span name.  This field is required. */
+		var name: String?
+		var kind: SpanSpanKind?
 		/** start_time_unix_nano is the start time of the span. On the client side, this is the time kept by the local machine where the span execution starts. On the server side, this is the time when the server's application handler starts running. Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.  This field is semantically required and it is expected that end_time >= start_time. */
-		internal let startTimeUnixNano: String?
+		var startTimeUnixNano: String?
 		/** end_time_unix_nano is the end time of the span. On the client side, this is the time kept by the local machine where the span execution ends. On the server side, this is the time when the server application handler stops running. Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.  This field is semantically required and it is expected that end_time >= start_time. */
-		internal let endTimeUnixNano: String?
-		/** \"/http/user_agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\"     \"/http/server_latency\": 300     \"abc.com/myattribute\": true     \"abc.com/score\": 10.239  The OpenTelemetry API specification further restricts the allowed value types: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md#attributes */
-		internal let attributes: [V1KeyValue]?
+		var endTimeUnixNano: String?
+		/** \"/http/user_agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36\"     \"/http/server_latency\": 300     \"example.com/myattribute\": true     \"example.com/score\": 10.239  The OpenTelemetry API specification further restricts the allowed value types: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md#attribute Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
 		/** dropped_attributes_count is the number of attributes that were discarded. Attributes can be discarded because their keys are too long or because there are too many attributes. If this value is 0, then no attributes were dropped. */
-		internal let droppedAttributesCount: Int64?
+		var droppedAttributesCount: Int64?
 		/** events is a collection of Event items. */
-		internal let events: [SpanEvent]?
+		var events: [SpanEvent]?
 		/** dropped_events_count is the number of dropped events. If the value is 0, then no events were dropped. */
-		internal let droppedEventsCount: Int64?
+		var droppedEventsCount: Int64?
 		/** links is a collection of Links, which are references from this span to a span in the same or different trace. */
-		internal let links: [SpanLink]?
+		var links: [SpanLink]?
 		/** dropped_links_count is the number of dropped links after the maximum size was enforced. If this value is 0, then no links were dropped. */
-		internal let droppedLinksCount: Int64?
-		internal let status: V1Status?
+		var droppedLinksCount: Int64?
+		var status: Tracev1Status?
 
-		internal init(traceId: Data?, spanId: Data?, traceState: String?, parentSpanId: Data?, name: String?, kind: SpanSpanKind?, startTimeUnixNano: String?, endTimeUnixNano: String?, attributes: [V1KeyValue]?, droppedAttributesCount: Int64?, events: [SpanEvent]?, droppedEventsCount: Int64?, links: [SpanLink]?, droppedLinksCount: Int64?, status: V1Status?) {
-			
+		init(traceId: Data? = nil, spanId: Data? = nil, traceState: String? = nil, parentSpanId: Data? = nil, flags: Int64? = nil, name: String? = nil, kind: SpanSpanKind? = nil, startTimeUnixNano: String? = nil, endTimeUnixNano: String? = nil, attributes: [V1KeyValue]? = nil, droppedAttributesCount: Int64? = nil, events: [SpanEvent]? = nil, droppedEventsCount: Int64? = nil, links: [SpanLink]? = nil, droppedLinksCount: Int64? = nil, status: Tracev1Status? = nil) {
 			self.traceId = traceId
 			self.spanId = spanId
 			self.traceState = traceState
 			self.parentSpanId = parentSpanId
+			self.flags = flags
 			self.name = name
 			self.kind = kind
 			self.startTimeUnixNano = startTimeUnixNano
@@ -58,22 +66,45 @@ extension OTLP {
 			self.status = status
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case traceId = "trace_id"
-			case spanId = "span_id"
-			case traceState = "trace_state"
-			case parentSpanId = "parent_span_id"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case traceId
+			case spanId
+			case traceState
+			case parentSpanId
+			case flags
 			case name
 			case kind
-			case startTimeUnixNano = "start_time_unix_nano"
-			case endTimeUnixNano = "end_time_unix_nano"
+			case startTimeUnixNano
+			case endTimeUnixNano
 			case attributes
-			case droppedAttributesCount = "dropped_attributes_count"
+			case droppedAttributesCount
 			case events
-			case droppedEventsCount = "dropped_events_count"
+			case droppedEventsCount
 			case links
-			case droppedLinksCount = "dropped_links_count"
+			case droppedLinksCount
 			case status
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(traceId, forKey: .traceId)
+			try container.encodeIfPresent(spanId, forKey: .spanId)
+			try container.encodeIfPresent(traceState, forKey: .traceState)
+			try container.encodeIfPresent(parentSpanId, forKey: .parentSpanId)
+			try container.encodeIfPresent(flags, forKey: .flags)
+			try container.encodeIfPresent(name, forKey: .name)
+			try container.encodeIfPresent(kind, forKey: .kind)
+			try container.encodeIfPresent(startTimeUnixNano, forKey: .startTimeUnixNano)
+			try container.encodeIfPresent(endTimeUnixNano, forKey: .endTimeUnixNano)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(droppedAttributesCount, forKey: .droppedAttributesCount)
+			try container.encodeIfPresent(events, forKey: .events)
+			try container.encodeIfPresent(droppedEventsCount, forKey: .droppedEventsCount)
+			try container.encodeIfPresent(links, forKey: .links)
+			try container.encodeIfPresent(droppedLinksCount, forKey: .droppedLinksCount)
+			try container.encodeIfPresent(status, forKey: .status)
 		}
 	}
 }

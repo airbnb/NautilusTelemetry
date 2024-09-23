@@ -6,6 +6,12 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1SeverityNumber")
+typealias V1SeverityNumber = OTLP.V1SeverityNumber
 
 extension OTLP {
 	/** Possible values for LogRecord.SeverityNumber.   - SEVERITY_NUMBER_UNSPECIFIED: UNSPECIFIED is the default SeverityNumber, it MUST NOT be used. */

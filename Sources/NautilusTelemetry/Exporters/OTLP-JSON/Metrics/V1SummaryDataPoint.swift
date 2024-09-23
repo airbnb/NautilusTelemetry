@@ -6,26 +6,32 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1SummaryDataPoint")
+typealias V1SummaryDataPoint = OTLP.V1SummaryDataPoint
 
 extension OTLP {
 	/** SummaryDataPoint is a single data point in a timeseries that describes the time-varying values of a Summary metric. */
-	struct V1SummaryDataPoint: Codable, Equatable {
-		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). */
-		internal let attributes: [V1KeyValue]?
+	struct V1SummaryDataPoint: Codable, Hashable {
+		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
 		/** StartTimeUnixNano is optional but strongly encouraged, see the the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let startTimeUnixNano: String?
+		var startTimeUnixNano: String?
 		/** TimeUnixNano is required, see the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let timeUnixNano: String?
+		var timeUnixNano: String?
 		/** count is the number of values in the population. Must be non-negative. */
-		internal let count: String?
+		var count: String?
 		/** sum of the values in the population. If count is zero then this field must be zero.  Note: Sum should only be filled out when measuring non-negative discrete events, and is assumed to be monotonic over the values of these events. Negative events *can* be recorded, but sum should not be filled out when doing so.  This is specifically to enforce compatibility w/ OpenMetrics, see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#summary */
-		internal let sum: Double?
+		var sum: Double?
 		/** (Optional) list of values at different quantiles of the distribution calculated from the current snapshot. The quantiles must be strictly increasing. */
-		internal let quantileValues: [SummaryDataPointValueAtQuantile]?
+		var quantileValues: [SummaryDataPointValueAtQuantile]?
 		/** Flags that apply to this specific data point.  See DataPointFlags for the available flags and their meaning. */
-		internal let flags: Int64?
+		var flags: Int64?
 
-		internal init(attributes: [V1KeyValue]?, startTimeUnixNano: String?, timeUnixNano: String?, count: String?, sum: Double?, quantileValues: [SummaryDataPointValueAtQuantile]?, flags: Int64?) {
+		init(attributes: [V1KeyValue]? = nil, startTimeUnixNano: String? = nil, timeUnixNano: String? = nil, count: String? = nil, sum: Double? = nil, quantileValues: [SummaryDataPointValueAtQuantile]? = nil, flags: Int64? = nil) {
 			self.attributes = attributes
 			self.startTimeUnixNano = startTimeUnixNano
 			self.timeUnixNano = timeUnixNano
@@ -35,14 +41,27 @@ extension OTLP {
 			self.flags = flags
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
+		enum CodingKeys: String, CodingKey, CaseIterable {
 			case attributes
-			case startTimeUnixNano = "start_time_unix_nano"
-			case timeUnixNano = "time_unix_nano"
+			case startTimeUnixNano
+			case timeUnixNano
 			case count
 			case sum
-			case quantileValues = "quantile_values"
+			case quantileValues
 			case flags
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(startTimeUnixNano, forKey: .startTimeUnixNano)
+			try container.encodeIfPresent(timeUnixNano, forKey: .timeUnixNano)
+			try container.encodeIfPresent(count, forKey: .count)
+			try container.encodeIfPresent(sum, forKey: .sum)
+			try container.encodeIfPresent(quantileValues, forKey: .quantileValues)
+			try container.encodeIfPresent(flags, forKey: .flags)
 		}
 	}
 }

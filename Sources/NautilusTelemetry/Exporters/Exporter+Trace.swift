@@ -18,13 +18,13 @@ extension Exporter {
 	public func exportOTLPToJSON(spans: [Span], additionalAttributes: TelemetryAttributes?) throws -> Data {
 		let otlpSpans = spans.map { exportOTLP(span: $0) }
 
-		let instrumentationLibrary = OTLP.V1InstrumentationLibrary(name: "NautilusTelemetry", version: "1.0")
+		let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 		let resourceAttributes = ResourceAttributes.makeWithDefaults(additionalAttributes: additionalAttributes)
 		let attributes = convertToOTLP(attributes: resourceAttributes.keyValues)
 		let resource = OTLP.V1Resource(attributes: attributes, droppedAttributesCount: nil)
-		let instrumentationLibrarySpan = OTLP.V1InstrumentationLibrarySpans(instrumentationLibrary: instrumentationLibrary, spans: otlpSpans, schemaUrl: schemaUrl)
+		let scopeSpans = OTLP.V1ScopeSpans(scope: instrumentationScope, spans: otlpSpans, schemaUrl: schemaUrl)
 		
-		let resourceSpans = OTLP.V1ResourceSpans(resource: resource, instrumentationLibrarySpans: [instrumentationLibrarySpan], schemaUrl: schemaUrl)
+		let resourceSpans = OTLP.V1ResourceSpans(resource: resource, scopeSpans: [scopeSpans], schemaUrl: schemaUrl)
 		let traceServiceRequest = OTLP.V1ExportTraceServiceRequest(resourceSpans: [resourceSpans])
 		
 		let json = try encodeJSON(traceServiceRequest)
@@ -75,14 +75,14 @@ extension Exporter {
 	/// Converts Span.Status to OTLP.V1Status
 	/// - Parameter status: Span status
 	/// - Returns: OTLP span status
-	func convertToOTLP(status: Span.Status) -> OTLP.V1Status {
+	func convertToOTLP(status: Span.Status) -> OTLP.Tracev1Status {
 		switch status {
 		case .unset:
-			return OTLP.V1Status(message: nil, code: .unset)
+			return OTLP.Tracev1Status(message: nil, code: .unset)
 		case .ok:
-			return OTLP.V1Status(message: nil, code: .ok)
+			return OTLP.Tracev1Status(message: nil, code: .ok)
 		case .error(let message):
-			return OTLP.V1Status(message: message, code: .error)
+			return OTLP.Tracev1Status(message: message, code: .error)
 		}
 	}
 

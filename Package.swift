@@ -23,7 +23,7 @@ let package = Package(
 			name: "NautilusTelemetry",
 			dependencies: [],
 			exclude: [
-				"Exporters/OTLP-JSON/generator-config.json",
+				"Exporters/OTLP-JSON/openapi-generator",
 				"Exporters/OTLP-JSON/Metrics/metrics_service.yaml",
 				"Exporters/OTLP-JSON/Trace/trace_service.yaml",
 				"Exporters/OTLP-JSON/Logs/logs_service.yaml",

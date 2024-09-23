@@ -6,35 +6,57 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.SpanLink")
+typealias SpanLink = OTLP.SpanLink
 
 extension OTLP {
 	/** A pointer from the current span to another span in the same trace or in a different trace. For example, this can be used in batching operations, where a single batch handler processes multiple requests from different traces or when the handler receives a request from a different project. */
-	struct SpanLink: Codable, Equatable {
+	struct SpanLink: Codable, Hashable {
 		/** A unique identifier of a trace that this linked span is part of. The ID is a 16-byte array. */
-		internal let traceId: Data?
+		var traceId: Data?
 		/** A unique identifier for the linked span. The ID is an 8-byte array. */
-		internal let spanId: Data?
+		var spanId: Data?
 		/** The trace_state associated with the link. */
-		internal let traceState: String?
-		/** attributes is a collection of attribute key/value pairs on the link. */
-		internal let attributes: [V1KeyValue]?
+		var traceState: String?
+		/** attributes is a collection of attribute key/value pairs on the link. Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
 		/** dropped_attributes_count is the number of dropped attributes. If the value is 0, then no attributes were dropped. */
-		internal let droppedAttributesCount: Int64?
+		var droppedAttributesCount: Int64?
+		/** Flags, a bit field.  Bits 0-7 (8 least significant bits) are the trace flags as defined in W3C Trace Context specification. To read the 8-bit W3C trace flag, use `flags & SPAN_FLAGS_TRACE_FLAGS_MASK`.  See https://www.w3.org/TR/trace-context-2/#trace-flags for the flag definitions.  Bits 8 and 9 represent the 3 states of whether the link is remote. The states are (unknown, is not remote, is remote). To read whether the value is known, use `(flags & SPAN_FLAGS_CONTEXT_HAS_IS_REMOTE_MASK) != 0`. To read whether the link is remote, use `(flags & SPAN_FLAGS_CONTEXT_IS_REMOTE_MASK) != 0`.  Readers MUST NOT assume that bits 10-31 (22 most significant bits) will be zero. When creating new spans, bits 10-31 (most-significant 22-bits) MUST be zero.  [Optional]. */
+		var flags: Int64?
 
-		internal init(traceId: Data?, spanId: Data?, traceState: String?, attributes: [V1KeyValue]?, droppedAttributesCount: Int64?) {
+		init(traceId: Data? = nil, spanId: Data? = nil, traceState: String? = nil, attributes: [V1KeyValue]? = nil, droppedAttributesCount: Int64? = nil, flags: Int64? = nil) {
 			self.traceId = traceId
 			self.spanId = spanId
 			self.traceState = traceState
 			self.attributes = attributes
 			self.droppedAttributesCount = droppedAttributesCount
+			self.flags = flags
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case traceId = "trace_id"
-			case spanId = "span_id"
-			case traceState = "trace_state"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case traceId
+			case spanId
+			case traceState
 			case attributes
-			case droppedAttributesCount = "dropped_attributes_count"
+			case droppedAttributesCount
+			case flags
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(traceId, forKey: .traceId)
+			try container.encodeIfPresent(spanId, forKey: .spanId)
+			try container.encodeIfPresent(traceState, forKey: .traceState)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(droppedAttributesCount, forKey: .droppedAttributesCount)
+			try container.encodeIfPresent(flags, forKey: .flags)
 		}
 	}
 }

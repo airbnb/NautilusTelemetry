@@ -4,6 +4,8 @@ info:
   version: version not set
 servers:
 - url: /
+tags:
+- name: LogsService
 paths:
   /v1/logs:
     post:
@@ -20,37 +22,31 @@ paths:
               $ref: '#/components/schemas/v1ExportLogsServiceRequest'
         required: true
       responses:
-        '200':
+        "200":
           description: A successful response.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/v1ExportLogsServiceResponse'
-        '429':
-          description: Too Many Requests
         default:
           description: An unexpected error response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/runtimeError'
+                $ref: '#/components/schemas/rpcStatus'
       x-codegen-request-body-name: body
 components:
   schemas:
     protobufAny:
       type: object
       properties:
-        type_url:
+        '@type':
           type: string
-        value:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
-          type: string
-          format: byte
-    runtimeError:
+      additionalProperties:
+        type: object
+    rpcStatus:
       type: object
       properties:
-        error:
-          type: string
         code:
           type: integer
           format: int32
@@ -63,22 +59,22 @@ components:
     v1AnyValue:
       type: object
       properties:
-        string_value:
+        stringValue:
           type: string
-        bool_value:
+        boolValue:
           type: boolean
-        int_value:
+        intValue:
           type: string
           format: int64
-        double_value:
+        doubleValue:
           type: number
           format: double
-        array_value:
+        arrayValue:
           $ref: '#/components/schemas/v1ArrayValue'
-        kvlist_value:
+        kvlistValue:
           $ref: '#/components/schemas/v1KeyValueList'
-        bytes_value:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+        bytesValue:
+          pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
           type: string
           format: byte
       description: |-
@@ -96,10 +92,31 @@ components:
       description: |-
         ArrayValue is a list of AnyValue messages. We need ArrayValue as a message
         since oneof in AnyValue does not allow repeated fields.
+    v1ExportLogsPartialSuccess:
+      type: object
+      properties:
+        rejectedLogRecords:
+          type: string
+          description: |-
+            The number of rejected log records.
+
+            A `rejected_<signal>` field holding a `0` value indicates that the
+            request was fully accepted.
+          format: int64
+        errorMessage:
+          type: string
+          description: |-
+            A developer-facing human-readable message in English. It should be used
+            either to explain why the server rejected parts of the data during a partial
+            success or to convey warnings/suggestions during a full success. The message
+            should offer guidance on how users can address such issues.
+
+            error_message is an optional field. An error_message with an empty value
+            is equivalent to it not being set.
     v1ExportLogsServiceRequest:
       type: object
       properties:
-        resource_logs:
+        resourceLogs:
           type: array
           description: |-
             An array of ResourceLogs.
@@ -111,31 +128,31 @@ components:
             $ref: '#/components/schemas/v1ResourceLogs'
     v1ExportLogsServiceResponse:
       type: object
-    v1InstrumentationLibrary:
+      properties:
+        partialSuccess:
+          $ref: '#/components/schemas/v1ExportLogsPartialSuccess'
+    v1InstrumentationScope:
       type: object
       properties:
         name:
           type: string
-          description: An empty instrumentation library name means the name is unknown.
+          description: An empty instrumentation scope name means the name is unknown.
         version:
           type: string
-      description: |-
-        InstrumentationLibrary is a message representing the instrumentation library information
-        such as the fully qualified name and version.
-    v1InstrumentationLibraryLogs:
-      type: object
-      properties:
-        instrumentation_library:
-          $ref: '#/components/schemas/v1InstrumentationLibrary'
-        logs:
+        attributes:
           type: array
-          description: A list of log records.
+          description: |-
+            Additional attributes that describe the scope. [Optional].
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
-            $ref: '#/components/schemas/v1LogRecord'
-        schema_url:
-          type: string
-          description: This schema_url applies to all logs in the "logs" field.
-      description: A collection of Logs produced by an InstrumentationLibrary.
+            $ref: '#/components/schemas/v1KeyValue'
+        droppedAttributesCount:
+          type: integer
+          format: int64
+      description: |-
+        InstrumentationScope is a message representing the instrumentation scope information
+        such as the fully qualified name and version.
     v1KeyValue:
       type: object
       properties:
@@ -154,6 +171,8 @@ components:
           description: |-
             A collection of key/value pairs of key-value pairs. The list may be empty (may
             contain 0 elements).
+            The keys MUST be unique (it is not allowed to have more than one
+            value with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
       description: |-
@@ -168,35 +187,50 @@ components:
         https://github.com/open-telemetry/oteps/blob/main/text/logs/0097-log-data-model.md
       type: object
       properties:
-        time_unix_nano:
+        timeUnixNano:
           type: string
           description: |-
             time_unix_nano is the time when the event occurred.
             Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
             Value of 0 indicates unknown or missing timestamp.
           format: uint64
-        severity_number:
+        observedTimeUnixNano:
+          type: string
+          description: |-
+            Time when the event was observed by the collection system.
+            For events that originate in OpenTelemetry (e.g. using OpenTelemetry Logging SDK)
+            this timestamp is typically set at the generation time and is equal to Timestamp.
+            For events originating externally and collected by OpenTelemetry (e.g. using
+            Collector) this is the time when OpenTelemetry's code observed the event measured
+            by the clock of the OpenTelemetry code. This field MUST be set once the event is
+            observed by OpenTelemetry.
+
+            For converting OpenTelemetry log data to formats that support only one timestamp or
+            when receiving OpenTelemetry log data by recipients that support only one timestamp
+            internally the following logic is recommended:
+              - Use time_unix_nano if it is present, otherwise use observed_time_unix_nano.
+
+            Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
+            Value of 0 indicates unknown or missing timestamp.
+          format: uint64
+        severityNumber:
           $ref: '#/components/schemas/v1SeverityNumber'
-        severity_text:
+        severityText:
           type: string
           description: |-
             The severity text (also known as log level). The original string representation as
             it is known at the source. [Optional].
-        name:
-          type: string
-          description: |-
-            Short event identifier that does not contain varying parts. Name describes
-            what happened (e.g. "ProcessStarted"). Recommended to be no longer than 50
-            characters. Not guaranteed to be unique in any way. [Optional].
         body:
           $ref: '#/components/schemas/v1AnyValue'
         attributes:
           type: array
-          description: Additional attributes that describe the specific event occurrence.
-            [Optional].
+          description: |-
+            Additional attributes that describe the specific event occurrence. [Optional].
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        dropped_attributes_count:
+        droppedAttributesCount:
           type: integer
           format: int64
         flags:
@@ -206,35 +240,53 @@ components:
             defined in W3C Trace Context specification. 24 most significant bits are reserved
             and must be set to 0. Readers must not assume that 24 most significant bits
             will be zero and must correctly mask the bits when reading 8-bit trace flag (use
-            flags & TRACE_FLAGS_MASK). [Optional].
+            flags & LOG_RECORD_FLAGS_TRACE_FLAGS_MASK). [Optional].
           format: int64
-        trace_id:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+        traceId:
+          pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
           type: string
           description: |-
             A unique identifier for a trace. All logs from the same trace share
-            the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes
-            is considered invalid. Can be set for logs that are part of request processing
-            and have an assigned trace id. [Optional].
+            the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes OR
+            of length other than 16 bytes is considered invalid (empty string in OTLP/JSON
+            is zero-length and thus is also invalid).
+
+            This field is optional.
+
+            The receivers SHOULD assume that the log record is not associated with a
+            trace if any of the following is true:
+              - the field is not present,
+              - the field contains an invalid value.
           format: byte
-        span_id:
-          pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+        spanId:
+          pattern: "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
           type: string
           description: |-
             A unique identifier for a span within a trace, assigned when the span
-            is created. The ID is an 8-byte array. An ID with all zeroes is considered
-            invalid. Can be set for logs that are part of a particular processing span.
-            If span_id is present trace_id SHOULD be also present. [Optional].
+            is created. The ID is an 8-byte array. An ID with all zeroes OR of length
+            other than 8 bytes is considered invalid (empty string in OTLP/JSON
+            is zero-length and thus is also invalid).
+
+            This field is optional. If the sender specifies a valid span_id then it SHOULD also
+            specify a valid trace_id.
+
+            The receivers SHOULD assume that the log record is not associated with a
+            span if any of the following is true:
+              - the field is not present,
+              - the field contains an invalid value.
           format: byte
     v1Resource:
       type: object
       properties:
         attributes:
           type: array
-          description: Set of labels that describe the resource.
+          description: |-
+            Set of attributes that describe the resource.
+            Attribute keys MUST be unique (it is not allowed to have more than one
+            attribute with the same key).
           items:
             $ref: '#/components/schemas/v1KeyValue'
-        dropped_attributes_count:
+        droppedAttributesCount:
           type: integer
           description: |-
             dropped_attributes_count is the number of dropped attributes. If the value is 0, then
@@ -246,19 +298,38 @@ components:
       properties:
         resource:
           $ref: '#/components/schemas/v1Resource'
-        instrumentation_library_logs:
+        scopeLogs:
           type: array
-          description: A list of InstrumentationLibraryLogs that originate from a
-            resource.
+          description: A list of ScopeLogs that originate from a resource.
           items:
-            $ref: '#/components/schemas/v1InstrumentationLibraryLogs'
-        schema_url:
+            $ref: '#/components/schemas/v1ScopeLogs'
+        schemaUrl:
           type: string
           description: |-
+            The Schema URL, if known. This is the identifier of the Schema that the resource data
+            is recorded in. To learn more about Schema URL see
+            https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
             This schema_url applies to the data in the "resource" field. It does not apply
-            to the data in the "instrumentation_library_logs" field which have their own
-            schema_url field.
-      description: A collection of InstrumentationLibraryLogs from a Resource.
+            to the data in the "scope_logs" field which have their own schema_url field.
+      description: A collection of ScopeLogs from a Resource.
+    v1ScopeLogs:
+      type: object
+      properties:
+        scope:
+          $ref: '#/components/schemas/v1InstrumentationScope'
+        logRecords:
+          type: array
+          description: A list of log records.
+          items:
+            $ref: '#/components/schemas/v1LogRecord'
+        schemaUrl:
+          type: string
+          description: |-
+            The Schema URL, if known. This is the identifier of the Schema that the log data
+            is recorded in. To learn more about Schema URL see
+            https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
+            This schema_url applies to all logs in the "logs" field.
+      description: A collection of Logs produced by a Scope.
     v1SeverityNumber:
       type: string
       description: |-
@@ -292,3 +363,4 @@ components:
       - SEVERITY_NUMBER_FATAL2
       - SEVERITY_NUMBER_FATAL3
       - SEVERITY_NUMBER_FATAL4
+x-original-swagger-version: "2.0"

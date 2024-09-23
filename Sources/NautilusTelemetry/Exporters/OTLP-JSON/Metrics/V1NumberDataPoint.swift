@@ -6,23 +6,29 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1NumberDataPoint")
+typealias V1NumberDataPoint = OTLP.V1NumberDataPoint
 
 extension OTLP {
 	/** NumberDataPoint is a single data point in a timeseries that describes the time-varying scalar value of a metric. */
-	struct V1NumberDataPoint: Codable, Equatable {
-		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). */
-		internal let attributes: [V1KeyValue]?
+	struct V1NumberDataPoint: Codable, Hashable {
+		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
 		/** StartTimeUnixNano is optional but strongly encouraged, see the the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let startTimeUnixNano: String?
+		var startTimeUnixNano: String?
 		/** TimeUnixNano is required, see the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let timeUnixNano: String?
-		internal let asDouble: Double?
-		internal let asInt: String?
-		internal let exemplars: [V1Exemplar]?
+		var timeUnixNano: String?
+		var asDouble: Double?
+		var asInt: String?
+		var exemplars: [V1Exemplar]?
 		/** Flags that apply to this specific data point.  See DataPointFlags for the available flags and their meaning. */
-		internal let flags: Int64?
+		var flags: Int64?
 
-		internal init(attributes: [V1KeyValue]?, startTimeUnixNano: String?, timeUnixNano: String?, asDouble: Double?, asInt: String?, exemplars: [V1Exemplar]?, flags: Int64?) {
+		init(attributes: [V1KeyValue]? = nil, startTimeUnixNano: String? = nil, timeUnixNano: String? = nil, asDouble: Double? = nil, asInt: String? = nil, exemplars: [V1Exemplar]? = nil, flags: Int64? = nil) {
 			self.attributes = attributes
 			self.startTimeUnixNano = startTimeUnixNano
 			self.timeUnixNano = timeUnixNano
@@ -32,14 +38,27 @@ extension OTLP {
 			self.flags = flags
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
+		enum CodingKeys: String, CodingKey, CaseIterable {
 			case attributes
-			case startTimeUnixNano = "start_time_unix_nano"
-			case timeUnixNano = "time_unix_nano"
-			case asDouble = "as_double"
-			case asInt = "as_int"
+			case startTimeUnixNano
+			case timeUnixNano
+			case asDouble
+			case asInt
 			case exemplars
 			case flags
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(startTimeUnixNano, forKey: .startTimeUnixNano)
+			try container.encodeIfPresent(timeUnixNano, forKey: .timeUnixNano)
+			try container.encodeIfPresent(asDouble, forKey: .asDouble)
+			try container.encodeIfPresent(asInt, forKey: .asInt)
+			try container.encodeIfPresent(exemplars, forKey: .exemplars)
+			try container.encodeIfPresent(flags, forKey: .flags)
 		}
 	}
 }

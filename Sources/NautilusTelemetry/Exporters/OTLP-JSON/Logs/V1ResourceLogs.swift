@@ -6,26 +6,41 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1ResourceLogs")
+typealias V1ResourceLogs = OTLP.V1ResourceLogs
 
 extension OTLP {
-	/** A collection of InstrumentationLibraryLogs from a Resource. */
-	struct V1ResourceLogs: Codable, Equatable {
-		internal let resource: V1Resource?
-		/** A list of InstrumentationLibraryLogs that originate from a resource. */
-		internal let instrumentationLibraryLogs: [V1InstrumentationLibraryLogs]?
-		/** This schema_url applies to the data in the \"resource\" field. It does not apply to the data in the \"instrumentation_library_logs\" field which have their own schema_url field. */
-		internal let schemaUrl: String?
+	/** A collection of ScopeLogs from a Resource. */
+	struct V1ResourceLogs: Codable, Hashable {
+		var resource: V1Resource?
+		/** A list of ScopeLogs that originate from a resource. */
+		var scopeLogs: [V1ScopeLogs]?
+		/** The Schema URL, if known. This is the identifier of the Schema that the resource data is recorded in. To learn more about Schema URL see https://opentelemetry.io/docs/specs/otel/schemas/#schema-url This schema_url applies to the data in the \"resource\" field. It does not apply to the data in the \"scope_logs\" field which have their own schema_url field. */
+		var schemaUrl: String?
 
-		internal init(resource: V1Resource?, instrumentationLibraryLogs: [V1InstrumentationLibraryLogs]?, schemaUrl: String?) {
+		init(resource: V1Resource? = nil, scopeLogs: [V1ScopeLogs]? = nil, schemaUrl: String? = nil) {
 			self.resource = resource
-			self.instrumentationLibraryLogs = instrumentationLibraryLogs
+			self.scopeLogs = scopeLogs
 			self.schemaUrl = schemaUrl
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
+		enum CodingKeys: String, CodingKey, CaseIterable {
 			case resource
-			case instrumentationLibraryLogs = "instrumentation_library_logs"
-			case schemaUrl = "schema_url"
+			case scopeLogs
+			case schemaUrl
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(resource, forKey: .resource)
+			try container.encodeIfPresent(scopeLogs, forKey: .scopeLogs)
+			try container.encodeIfPresent(schemaUrl, forKey: .schemaUrl)
 		}
 	}
 }

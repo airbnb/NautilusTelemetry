@@ -6,25 +6,40 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1Sum")
+typealias V1Sum = OTLP.V1Sum
 
 extension OTLP {
 	/** Sum represents the type of a scalar metric that is calculated as a sum of all reported measurements over a time interval. */
-	struct V1Sum: Codable, Equatable {
-		internal let dataPoints: [V1NumberDataPoint]?
-		internal let aggregationTemporality: V1AggregationTemporality?
+	struct V1Sum: Codable, Hashable {
+		var dataPoints: [V1NumberDataPoint]?
+		var aggregationTemporality: V1AggregationTemporality?
 		/** If \"true\" means that the sum is monotonic. */
-		internal let isMonotonic: Bool?
+		var isMonotonic: Bool?
 
-		internal init(dataPoints: [V1NumberDataPoint]?, aggregationTemporality: V1AggregationTemporality?, isMonotonic: Bool?) {
+		init(dataPoints: [V1NumberDataPoint]? = nil, aggregationTemporality: V1AggregationTemporality? = nil, isMonotonic: Bool? = nil) {
 			self.dataPoints = dataPoints
 			self.aggregationTemporality = aggregationTemporality
 			self.isMonotonic = isMonotonic
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case dataPoints = "data_points"
-			case aggregationTemporality = "aggregation_temporality"
-			case isMonotonic = "is_monotonic"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case dataPoints
+			case aggregationTemporality
+			case isMonotonic
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(dataPoints, forKey: .dataPoints)
+			try container.encodeIfPresent(aggregationTemporality, forKey: .aggregationTemporality)
+			try container.encodeIfPresent(isMonotonic, forKey: .isMonotonic)
 		}
 	}
 }

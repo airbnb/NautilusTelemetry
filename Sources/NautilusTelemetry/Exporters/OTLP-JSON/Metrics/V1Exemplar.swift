@@ -6,21 +6,27 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1Exemplar")
+typealias V1Exemplar = OTLP.V1Exemplar
 
 extension OTLP {
 	/** A representation of an exemplar, which is a sample input measurement. Exemplars also hold information about the environment when the measurement was recorded, for example the span and trace ID of the active span when the exemplar was recorded. */
-	struct V1Exemplar: Codable, Equatable {
-		internal let filteredAttributes: [V1KeyValue]?
+	struct V1Exemplar: Codable, Hashable {
+		var filteredAttributes: [V1KeyValue]?
 		/** Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let timeUnixNano: String?
-		internal let asDouble: Double?
-		internal let asInt: String?
+		var timeUnixNano: String?
+		var asDouble: Double?
+		var asInt: String?
 		/** (Optional) Span ID of the exemplar trace. span_id may be missing if the measurement is not recorded inside a trace or if the trace is not sampled. */
-		internal let spanId: Data?
+		var spanId: Data?
 		/** (Optional) Trace ID of the exemplar trace. trace_id may be missing if the measurement is not recorded inside a trace or if the trace is not sampled. */
-		internal let traceId: Data?
+		var traceId: Data?
 
-		internal init(filteredAttributes: [V1KeyValue]?, timeUnixNano: String?, asDouble: Double?, asInt: String?, spanId: Data?, traceId: Data?) {
+		init(filteredAttributes: [V1KeyValue]? = nil, timeUnixNano: String? = nil, asDouble: Double? = nil, asInt: String? = nil, spanId: Data? = nil, traceId: Data? = nil) {
 			self.filteredAttributes = filteredAttributes
 			self.timeUnixNano = timeUnixNano
 			self.asDouble = asDouble
@@ -29,13 +35,25 @@ extension OTLP {
 			self.traceId = traceId
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case filteredAttributes = "filtered_attributes"
-			case timeUnixNano = "time_unix_nano"
-			case asDouble = "as_double"
-			case asInt = "as_int"
-			case spanId = "span_id"
-			case traceId = "trace_id"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case filteredAttributes
+			case timeUnixNano
+			case asDouble
+			case asInt
+			case spanId
+			case traceId
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(filteredAttributes, forKey: .filteredAttributes)
+			try container.encodeIfPresent(timeUnixNano, forKey: .timeUnixNano)
+			try container.encodeIfPresent(asDouble, forKey: .asDouble)
+			try container.encodeIfPresent(asInt, forKey: .asInt)
+			try container.encodeIfPresent(spanId, forKey: .spanId)
+			try container.encodeIfPresent(traceId, forKey: .traceId)
 		}
 	}
 }
