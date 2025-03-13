@@ -11,10 +11,10 @@ struct MetricValues<T: MetricNumeric> {
 
 	private var values = [TelemetryAttributes: T]()
 	
-	var allValues: [TelemetryAttributes: T] { Meter.valueLock.sync { values } }
+	var allValues: [TelemetryAttributes: T] { Meter.valueLock.withLockUnchecked { values } }
 
 	mutating func add(_ number: T, attributes: TelemetryAttributes = [:]) {
-		Meter.valueLock.sync {
+		Meter.valueLock.withLockUnchecked {
 			var metricValue = values[attributes] ?? number
 			metricValue += number
 			values[attributes] = metricValue
@@ -22,18 +22,18 @@ struct MetricValues<T: MetricNumeric> {
 	}
 
 	mutating func set(_ number: T, attributes: TelemetryAttributes = [:]) {
-		Meter.valueLock.sync {
+		Meter.valueLock.withLockUnchecked {
 			values[attributes] = number
 		}
 	}
 
 	mutating func reset() {
-		Meter.valueLock.sync {
+		Meter.valueLock.withLockUnchecked {
 			values.removeAll()
 		}
 	}
 	
 	func valueFor(attributes: TelemetryAttributes) -> T? {
-		Meter.valueLock.sync { values[attributes] }
+		Meter.valueLock.withLockUnchecked { values[attributes] }
 	}
 }

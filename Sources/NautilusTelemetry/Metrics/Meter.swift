@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
@@ -14,7 +15,7 @@ import Foundation
 public final class Meter {
 	
 	// Used for protecting *Values structures
-	static let valueLock = UnfairLock()
+	static let valueLock = OSAllocatedUnfairLock()
 
 	public init() {
 	}

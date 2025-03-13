@@ -49,10 +49,10 @@ struct HistogramValues<T: MetricNumeric> {
 	}
 
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
-	var allValues: [TelemetryAttributes: HistogramBuckets<T>] { Meter.valueLock.sync { values } }
+	var allValues: [TelemetryAttributes: HistogramBuckets<T>] { Meter.valueLock.withLockUnchecked { values } }
 
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		Meter.valueLock.sync {
+		Meter.valueLock.withLockUnchecked {
 			var value = values[attributes]
 			if value == nil {
 				value = HistogramBuckets<T>(explicitBounds: explicitBounds)
@@ -67,7 +67,7 @@ struct HistogramValues<T: MetricNumeric> {
 	}
 	
 	mutating func reset() {
-		Meter.valueLock.sync {
+		Meter.valueLock.withLockUnchecked {
 			values.removeAll()
 		}
 	}

@@ -28,23 +28,23 @@ public final class MetricKitInstrument: NSObject, MXMetricManagerSubscriber {
 			let pastPayloads = metricManager.pastPayloads
 			
 			if pastPayloads.count > 0 {
-				print("MetricKitInstrument: \(pastPayloads)")
+				logger.debug("MetricKitInstrument: \(pastPayloads)")
 			}
 		
 			let diagnosticPayloads = metricManager.pastDiagnosticPayloads
 			if diagnosticPayloads.count > 0 {
-				print("MetricKitInstrument: \(diagnosticPayloads)")
+				logger.debug("MetricKitInstrument: \(diagnosticPayloads)")
 			}
 		}
 	}
 	
 	public func didReceive(_ payloads: [MXMetricPayload]) {
-		print("MetricKitInstrument: \(payloads)")
+		logger.debug("MetricKitInstrument: \(payloads)")
 		
 		for payload in payloads {
 			let json = payload.jsonRepresentation() // try JSON representation
 			if let jsonString = String(data: json, encoding: .utf8) {
-				print("\(jsonString)")
+				logger.debug("\(jsonString)")
 			}
 			
 			dump(payload: payload)
@@ -53,12 +53,12 @@ public final class MetricKitInstrument: NSObject, MXMetricManagerSubscriber {
 	
 	@available(iOS 14.0, *)
 	public func didReceive(_ payloads: [MXDiagnosticPayload]) {
-		print("MetricKitInstrument: \(payloads)")
+		logger.debug("MetricKitInstrument: \(payloads)")
 		
 		for payload in payloads {
 			let json = payload.jsonRepresentation() // could pull this apart, but JSON representation may be most useful
 			if let jsonString = String(data: json, encoding: .utf8) {
-				print("\(jsonString)")
+				logger.debug("\(jsonString)")
 			}
 		}
 	}
@@ -66,81 +66,81 @@ public final class MetricKitInstrument: NSObject, MXMetricManagerSubscriber {
 	func dump<UnitType>(histogram: MXHistogram<UnitType>) where UnitType : Unit {
 		for bucket in histogram.bucketEnumerator {
 			if let bucket = bucket as? MXHistogramBucket<UnitType> {
-				print("\(bucket.bucketStart)-\(bucket.bucketEnd): \(bucket.bucketCount)")
+				logger.debug("\(bucket.bucketStart)-\(bucket.bucketEnd): \(bucket.bucketCount)")
 			}
 		}
 	}
 	
 	func dump(payload: MXMetricPayload) {
-		print("latestApplicationVersion: \(payload.latestApplicationVersion)")
-		print("timeStampBegin: \(payload.timeStampBegin)")
-		print("timeStampEnd: \(payload.timeStampEnd)")
+		logger.debug("latestApplicationVersion: \(payload.latestApplicationVersion)")
+		logger.debug("timeStampBegin: \(payload.timeStampBegin)")
+		logger.debug("timeStampEnd: \(payload.timeStampEnd)")
 
 		if let cpuMetrics = payload.cpuMetrics {
-			print("cpuMetrics: \(cpuMetrics)")
+			logger.debug("cpuMetrics: \(cpuMetrics)")
 		}
 
 		if let gpuMetrics = payload.gpuMetrics {
-			print("gpuMetrics: \(gpuMetrics)")
+			logger.debug("gpuMetrics: \(gpuMetrics)")
 		}
 
 		if let cellularConditionMetrics = payload.cellularConditionMetrics {
-			print("cellularConditionMetrics: \(cellularConditionMetrics)")
+			logger.debug("cellularConditionMetrics: \(cellularConditionMetrics)")
 			dump(histogram: cellularConditionMetrics.histogrammedCellularConditionTime)
 		}
 
 		if let applicationTimeMetrics = payload.applicationTimeMetrics {
-			print("applicationTimeMetrics: \(applicationTimeMetrics)")
+			logger.debug("applicationTimeMetrics: \(applicationTimeMetrics)")
 		}
 
 		if let locationActivityMetrics = payload.locationActivityMetrics {
-			print("locationActivityMetrics: \(locationActivityMetrics)")
+			logger.debug("locationActivityMetrics: \(locationActivityMetrics)")
 		}
 
 		if let networkTransferMetrics = payload.networkTransferMetrics {
-			print("networkTransferMetrics: \(networkTransferMetrics)")
+			logger.debug("networkTransferMetrics: \(networkTransferMetrics)")
 		}
 
 		if let applicationLaunchMetrics = payload.applicationLaunchMetrics {
-			print("applicationLaunchMetrics: \(applicationLaunchMetrics)")
+			logger.debug("applicationLaunchMetrics: \(applicationLaunchMetrics)")
 			dump(histogram: applicationLaunchMetrics.histogrammedTimeToFirstDraw)
 			dump(histogram: applicationLaunchMetrics.histogrammedApplicationResumeTime)
 
 		}
 
 		if let applicationResponsivenessMetrics = payload.applicationResponsivenessMetrics {
-			print("applicationResponsivenessMetrics: \(applicationResponsivenessMetrics)")
+			logger.debug("applicationResponsivenessMetrics: \(applicationResponsivenessMetrics)")
 			dump(histogram: applicationResponsivenessMetrics.histogrammedApplicationHangTime)
 		}
 
 		if let diskIOMetrics = payload.diskIOMetrics {
-			print("diskIOMetrics: \(diskIOMetrics)")
+			logger.debug("diskIOMetrics: \(diskIOMetrics)")
 		}
 
 		if let memoryMetrics = payload.memoryMetrics {
-			print("memoryMetrics: \(memoryMetrics)")
+			logger.debug("memoryMetrics: \(memoryMetrics)")
 		}
 
 		if let displayMetrics = payload.displayMetrics {
-			print("displayMetrics: \(displayMetrics)")
+			logger.debug("displayMetrics: \(displayMetrics)")
 		}
 
 		if #available(iOS 14.0, *) {
 			if let animationMetrics = payload.animationMetrics {
-				print("animationMetrics: \(animationMetrics)")
+				logger.debug("animationMetrics: \(animationMetrics)")
 			}
 
 			if let applicationExitMetrics = payload.applicationExitMetrics {
-				print("applicationExitMetrics: \(applicationExitMetrics)")
+				logger.debug("applicationExitMetrics: \(applicationExitMetrics)")
 			}
 		}
 		
 		if let signpostMetrics = payload.signpostMetrics {
-			print("signpostMetrics: \(signpostMetrics)")
+			logger.debug("signpostMetrics: \(signpostMetrics)")
 		}
 
 		if let metaData = payload.metaData {
-			print("metaData: \(metaData)")
+			logger.debug("metaData: \(metaData)")
 		}
 	}
 }

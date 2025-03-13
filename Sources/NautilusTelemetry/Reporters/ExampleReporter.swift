@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 #if canImport(UIKit)
 	import UIKit
 #endif
@@ -22,7 +23,7 @@ public class ExampleReporter: Reporter {
 		case failure
 	}
 
-	static let lock = UnfairLock()
+	static let lock = OSAllocatedUnfairLock()
 	
 	let timeReference = TimeReference(serverOffset: 0) // Ideally the offset to server time should be computed
 	
@@ -55,7 +56,7 @@ public class ExampleReporter: Reporter {
 	
 	static private var _sessionGUID: Data?
 	static var sessionGUID: Data {
-		lock.sync {
+		lock.withLock {
 			if let guid = _sessionGUID {
 				return guid
 			} else {
@@ -67,7 +68,7 @@ public class ExampleReporter: Reporter {
 	}
 	
 	static func resetSessionGUID() {
-		lock.sync {
+		lock.withLock {
 			_sessionGUID = nil
 		}
 	}
@@ -137,9 +138,9 @@ public class ExampleReporter: Reporter {
 		urlRequest.addValue(contentEncoding, forHTTPHeaderField: "Content-Encoding")
 		let task = urlSession.dataTask(with: urlRequest) { data, urlResponse, error in
 			if self.success(urlResponse) {
-				print("\(url): success, traceId = \(traceIdString)")
+				logger.debug("\(url): success, traceId = \(traceIdString)")
 			} else {
-				print("\(url): error=\(String(describing: error))")
+				logger.debug("\(url): error=\(String(describing: error))")
 			}
 		}
 		

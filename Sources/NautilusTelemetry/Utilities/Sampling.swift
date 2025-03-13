@@ -7,6 +7,7 @@
 
 import Foundation
 import CryptoKit
+import os
 
 public protocol Sampler {
 	var shouldSample: Bool { get }
@@ -16,7 +17,7 @@ public protocol Sampler {
 /// Intended to be used for session-based sampling or similar use cases
 public final class StableGuidSampler: Sampler {
 	
-	private let lock = UnfairLock()
+	private let lock = OSAllocatedUnfairLock()
 
 	/// Initialize a sampler that uses
 	/// - Parameters:
@@ -50,14 +51,14 @@ public final class StableGuidSampler: Sampler {
 	public var guid: Data {
 		// actors would be great here!
 		get {
-			lock.sync { return _guid }
+			lock.withLock { return _guid }
 		}
 		
 		set {
 			assert(newValue.count >= 0, "expected at least 1 byte of data")
 
 			var didChange = false
-			lock.sync {
+			lock.withLockUnchecked {
 				if newValue != _guid {
 					_guid = newValue
 					didChange = true
