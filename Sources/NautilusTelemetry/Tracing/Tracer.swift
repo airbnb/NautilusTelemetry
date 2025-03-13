@@ -6,22 +6,13 @@
 //
 
 import Foundation
+import os
 
 public final class Tracer {
-	static let lock = UnfairLock()
+	static let lock = OSAllocatedUnfairLock()
 	
 	var currentBaggage: Baggage {
-		var baggage: Baggage? = nil
-		
-#if compiler(>=5.6.0) && canImport(_Concurrency)
-		baggage = Baggage.currentBaggageTaskLocal
-#endif
-		
-		if baggage == nil {
-			baggage = Baggage.get()
-		}
-		
-		if let baggage = baggage {
+		if let baggage = Baggage.currentBaggageTaskLocal {
 			return baggage
 		} else {
 			return Baggage(span: root)
@@ -43,7 +34,7 @@ public final class Tracer {
 	public var currentSpan: Span { currentBaggage.span }
 	
 	func retire(span: Span) {
-		Tracer.lock.sync {
+		Tracer.lock.withLock {
 			retiredSpans.append(span)
 		}
 	}
@@ -52,7 +43,7 @@ public final class Tracer {
 	public func flushTrace() {
 		root.end() // this implicitly retires
 		
-		Tracer.lock.sync {
+		Tracer.lock.withLock {
 			traceId = Identifiers.generateTraceId()
 			root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
 		}
@@ -61,7 +52,7 @@ public final class Tracer {
 	}
 	
 	func flushRetiredSpans() {
-		let spansToReport: [Span] = Tracer.lock.sync {
+		let spansToReport: [Span] = Tracer.lock.withLock {
 			// copy and empty the array
 			let spans = retiredSpans
 			retiredSpans.removeAll()
@@ -114,21 +105,17 @@ public final class Tracer {
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: the result of the wrapped code
 	public func withSpan<T>(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil, block: () throws -> T) rethrows -> T {
-		let previousBaggage = currentBaggage
-		let resolvedBaggage = baggage ?? previousBaggage
+		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
 		let span = Span(name: name, kind: finalKind, attributes: attributes, traceId: resolvedBaggage.span.traceId, parentId: resolvedBaggage.span.id, retireCallback: retire)
 		
 		defer {
 			span.end() // automatically retires the span
-			Baggage.set(baggage: previousBaggage)
 		}
 		
 		let baggage = Baggage(span: span)
-		Baggage.set(baggage: baggage)
-		
+
 		// Still need to set the task local if possible
-#if compiler(>=5.6.0) && canImport(_Concurrency)
 		return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
 			do {
 				return try block()
@@ -137,14 +124,6 @@ public final class Tracer {
 				throw error // rethrow
 			}
 		}
-#else
-		do {
-			return try block()
-		} catch {
-			span.recordError(error)
-			throw error // rethrow
-		}
-#endif
 	}
 	
 	/// Create a span that measures a specific async block
@@ -154,10 +133,8 @@ public final class Tracer {
 	///   - attributes: optional attributes
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: the result of the wrapped code
-#if compiler(>=5.6.0) && canImport(_Concurrency)
 	public func withSpan<T>(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil, block: () async throws -> T) async rethrows -> T {
-		let previousBaggage = currentBaggage
-		let resolvedBaggage = baggage ?? previousBaggage
+		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
 		let span = Span(name: name, kind: finalKind, attributes: attributes, traceId: resolvedBaggage.span.traceId, parentId: resolvedBaggage.span.id, retireCallback: retire)
 		
@@ -175,5 +152,4 @@ public final class Tracer {
 			}
 		}
 	}
-#endif
 }

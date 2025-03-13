@@ -35,6 +35,7 @@ public struct Compression {
 	}
 	
 	// Not very fast == may be better to use zlib's implementation
+  // https://forums.swift.org/t/optimizing-swift-adler32-checksum/63596/28
 	private static func adler32(_ data: Data) -> UInt32 {
 		var s1: UInt32 = 1
 		var s2: UInt32 = 0

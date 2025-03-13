@@ -80,10 +80,11 @@ public struct ResourceAttributes {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/README.md
 		attributes["service.name"] = bundleIdentifier
 		attributes["service.version"] = applicationVersion
-		attributes["telemetry.sdk.name"] = "NautilusTracing"
+		attributes["telemetry.sdk.name"] = "NautilusTelemetry"
 		attributes["telemetry.sdk.language"] = "swift"
 		attributes["device.id"] = vendorIdentifier
-		
+		// Can we set "deployment.environment" here?
+    
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/device.md
 		attributes["device.manufacturer"] = "Apple"
 		attributes["device.model"] = deviceModelIdentifier
