@@ -119,8 +119,8 @@ final class TraceExporterTests: XCTestCase {
 		let jsonString = try XCTUnwrap(String(data: json, encoding: .utf8))
 		print(jsonString)
 
-		if testWithSherlock {
-			try postJSON(url: sherlockTraceEndpoint, json: json)
+		if testWithRemoteCollector {
+			try postJSON(url: remoteCollectorEndpoint, json: json)
 		}
 		
 		if testWithLocalCollector {
