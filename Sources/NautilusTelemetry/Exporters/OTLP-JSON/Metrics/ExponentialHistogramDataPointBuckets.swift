@@ -6,23 +6,37 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.ExponentialHistogramDataPointBuckets")
+typealias ExponentialHistogramDataPointBuckets = OTLP.ExponentialHistogramDataPointBuckets
 
 extension OTLP {
 	/** Buckets are a set of bucket counts, encoded in a contiguous array of counts. */
-	struct ExponentialHistogramDataPointBuckets: Codable, Equatable {
+	struct ExponentialHistogramDataPointBuckets: Codable, Hashable {
 		/** Offset is the bucket index of the first entry in the bucket_counts array.  Note: This uses a varint encoding as a simple form of compression. */
-		internal let offset: Int?
-		/** Count is an array of counts, where count[i] carries the count of the bucket at index (offset+i).  count[i] is the count of values greater than or equal to base^(offset+i) and less than base^(offset+i+1).  Note: By contrast, the explicit HistogramDataPoint uses fixed64.  This field is expected to have many buckets, especially zeros, so uint64 has been selected to ensure varint encoding. */
-		internal let bucketCounts: [String]?
+		var offset: Int?
+		/** bucket_counts is an array of count values, where bucket_counts[i] carries the count of the bucket at index (offset+i). bucket_counts[i] is the count of values greater than base^(offset+i) and less than or equal to base^(offset+i+1).  Note: By contrast, the explicit HistogramDataPoint uses fixed64.  This field is expected to have many buckets, especially zeros, so uint64 has been selected to ensure varint encoding. */
+		var bucketCounts: [String]?
 
-		internal init(offset: Int?, bucketCounts: [String]?) {
+		init(offset: Int? = nil, bucketCounts: [String]? = nil) {
 			self.offset = offset
 			self.bucketCounts = bucketCounts
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
+		enum CodingKeys: String, CodingKey, CaseIterable {
 			case offset
-			case bucketCounts = "bucket_counts"
+			case bucketCounts
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(offset, forKey: .offset)
+			try container.encodeIfPresent(bucketCounts, forKey: .bucketCounts)
 		}
 	}
 }

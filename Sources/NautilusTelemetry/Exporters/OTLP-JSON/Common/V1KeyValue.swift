@@ -6,16 +6,35 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1KeyValue")
+typealias V1KeyValue = OTLP.V1KeyValue
 
 extension OTLP {
 	/** KeyValue is a key-value pair that is used to store Span attributes, Link attributes, etc. */
-	struct V1KeyValue: Codable, Equatable {
-		internal let key: String?
-		internal let value: V1AnyValue?
+	struct V1KeyValue: Codable, Hashable {
+		var key: String?
+		var value: V1AnyValue?
 
-		internal init(key: String?, value: V1AnyValue?) {
+		init(key: String? = nil, value: V1AnyValue? = nil) {
 			self.key = key
 			self.value = value
+		}
+
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case key
+			case value
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(key, forKey: .key)
+			try container.encodeIfPresent(value, forKey: .value)
 		}
 	}
 }

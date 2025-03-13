@@ -6,29 +6,39 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1HistogramDataPoint")
+typealias V1HistogramDataPoint = OTLP.V1HistogramDataPoint
 
 extension OTLP {
-	/** HistogramDataPoint is a single data point in a timeseries that describes the time-varying values of a Histogram. A Histogram contains summary statistics for a population of values, it may optionally contain the distribution of those values across a set of buckets.  If the histogram contains the distribution of values, then both \"explicit_bounds\" and \"bucket counts\" fields must be defined. If the histogram does not contain the distribution of values, then both \"explicit_bounds\" and \"bucket_counts\" must be omitted and only \"count\" and \"sum\" are known. */
-	struct V1HistogramDataPoint: Codable, Equatable {
-		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). */
-		internal let attributes: [V1KeyValue]?
+	/** HistogramDataPoint is a single data point in a timeseries that describes the time-varying values of a Histogram. A Histogram contains summary statistics for a population of values, it may optionally contain the distribution of those values across a set of buckets.  If the histogram contains the distribution of values, then both \&quot;explicit_bounds\&quot; and \&quot;bucket counts\&quot; fields must be defined. If the histogram does not contain the distribution of values, then both \&quot;explicit_bounds\&quot; and \&quot;bucket_counts\&quot; must be omitted and only \&quot;count\&quot; and \&quot;sum\&quot; are known. */
+	struct V1HistogramDataPoint: Codable, Hashable {
+		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
 		/** StartTimeUnixNano is optional but strongly encouraged, see the the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let startTimeUnixNano: String?
+		var startTimeUnixNano: String?
 		/** TimeUnixNano is required, see the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
-		internal let timeUnixNano: String?
+		var timeUnixNano: String?
 		/** count is the number of values in the population. Must be non-negative. This value must be equal to the sum of the \"count\" fields in buckets if a histogram is provided. */
-		internal let count: String?
+		var count: String?
 		/** sum of the values in the population. If count is zero then this field must be zero.  Note: Sum should only be filled out when measuring non-negative discrete events, and is assumed to be monotonic over the values of these events. Negative events *can* be recorded, but sum should not be filled out when doing so.  This is specifically to enforce compatibility w/ OpenMetrics, see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#histogram */
-		internal let sum: Double?
+		var sum: Double?
 		/** bucket_counts is an optional field contains the count values of histogram for each bucket.  The sum of the bucket_counts must equal the value in the count field.  The number of elements in bucket_counts array must be by one greater than the number of elements in explicit_bounds array. */
-		internal let bucketCounts: [String]?
+		var bucketCounts: [String]?
 		/** explicit_bounds specifies buckets with explicitly defined bounds for values.  The boundaries for bucket at index i are:  (-infinity, explicit_bounds[i]] for i == 0 (explicit_bounds[i-1], explicit_bounds[i]] for 0 < i < size(explicit_bounds) (explicit_bounds[i-1], +infinity) for i == size(explicit_bounds)  The values in the explicit_bounds array must be strictly increasing.  Histogram buckets are inclusive of their upper boundary, except the last bucket where the boundary is at infinity. This format is intentionally compatible with the OpenMetrics histogram definition. */
-		internal let explicitBounds: [Double]?
-		internal let exemplars: [V1Exemplar]?
+		var explicitBounds: [Double]?
+		var exemplars: [V1Exemplar]?
 		/** Flags that apply to this specific data point.  See DataPointFlags for the available flags and their meaning. */
-		internal let flags: Int64?
+		var flags: Int64?
+		/** min is the minimum value over (start_time, end_time]. */
+		var min: Double?
+		/** max is the maximum value over (start_time, end_time]. */
+		var max: Double?
 
-		internal init(attributes: [V1KeyValue]?, startTimeUnixNano: String?, timeUnixNano: String?, count: String?, sum: Double?, bucketCounts: [String]?, explicitBounds: [Double]?, exemplars: [V1Exemplar]?, flags: Int64?) {
+		init(attributes: [V1KeyValue]? = nil, startTimeUnixNano: String? = nil, timeUnixNano: String? = nil, count: String? = nil, sum: Double? = nil, bucketCounts: [String]? = nil, explicitBounds: [Double]? = nil, exemplars: [V1Exemplar]? = nil, flags: Int64? = nil, min: Double? = nil, max: Double? = nil) {
 			self.attributes = attributes
 			self.startTimeUnixNano = startTimeUnixNano
 			self.timeUnixNano = timeUnixNano
@@ -38,18 +48,39 @@ extension OTLP {
 			self.explicitBounds = explicitBounds
 			self.exemplars = exemplars
 			self.flags = flags
+			self.min = min
+			self.max = max
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
+		enum CodingKeys: String, CodingKey, CaseIterable {
 			case attributes
-			case startTimeUnixNano = "start_time_unix_nano"
-			case timeUnixNano = "time_unix_nano"
+			case startTimeUnixNano
+			case timeUnixNano
 			case count
 			case sum
-			case bucketCounts = "bucket_counts"
-			case explicitBounds = "explicit_bounds"
+			case bucketCounts
+			case explicitBounds
 			case exemplars
 			case flags
+			case min
+			case max
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(startTimeUnixNano, forKey: .startTimeUnixNano)
+			try container.encodeIfPresent(timeUnixNano, forKey: .timeUnixNano)
+			try container.encodeIfPresent(count, forKey: .count)
+			try container.encodeIfPresent(sum, forKey: .sum)
+			try container.encodeIfPresent(bucketCounts, forKey: .bucketCounts)
+			try container.encodeIfPresent(explicitBounds, forKey: .explicitBounds)
+			try container.encodeIfPresent(exemplars, forKey: .exemplars)
+			try container.encodeIfPresent(flags, forKey: .flags)
+			try container.encodeIfPresent(min, forKey: .min)
+			try container.encodeIfPresent(max, forKey: .max)
 		}
 	}
 }

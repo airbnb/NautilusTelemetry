@@ -77,7 +77,7 @@ final class ExporterTests: XCTestCase {
 		let dataValue = try XCTUnwrap(exporter.convertToOTLP(value: data))
 		XCTAssertEqual(dataValue.bytesValue, data)
 		let encodedJsonString = String(data: try exporter.encodeJSON(dataValue), encoding: .utf8)
-		XCTAssertEqual(encodedJsonString, #"{"bytes_value":"f09f9380"}"#)
+		XCTAssertEqual(encodedJsonString, #"{"bytesValue":"f09f9380"}"#)
 		
 		let array: [Any] = ["foo", 1]
 		let arrayValue = try XCTUnwrap(exporter.convertToOTLP(value: array))

@@ -18,13 +18,13 @@ public typealias TelemetryAttributes = [String: AnyHashable]
 public typealias SpanId = Data
 public typealias TraceId = Data
 
-internal struct Identifiers {
+public struct Identifiers {
 	// MARK: utilities
 	private static var random = SystemRandomNumberGenerator()
 	
 	/// Generates a 128 session GUID
 	/// - Returns: 128 bit identifier as Data
-	static func generateSessionGUID() -> TraceId {
+    public static func generateSessionGUID() -> TraceId {
 		let bytes = [random.next(), random.next()]
 		return bytes.withUnsafeBufferPointer { Data(buffer: $0) }
 	}

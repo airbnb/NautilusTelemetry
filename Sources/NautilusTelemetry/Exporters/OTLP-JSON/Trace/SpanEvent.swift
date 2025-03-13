@@ -6,31 +6,47 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.SpanEvent")
+typealias SpanEvent = OTLP.SpanEvent
 
 extension OTLP {
 	/** Event is a time-stamped annotation of the span, consisting of user-supplied text description and key-value pairs. */
-	struct SpanEvent: Codable, Equatable {
+	struct SpanEvent: Codable, Hashable {
 		/** time_unix_nano is the time the event occurred. */
-		internal let timeUnixNano: String?
+		var timeUnixNano: String?
 		/** name of the event. This field is semantically required to be set to non-empty string. */
-		internal let name: String?
-		/** attributes is a collection of attribute key/value pairs on the event. */
-		internal let attributes: [V1KeyValue]?
+		var name: String?
+		/** attributes is a collection of attribute key/value pairs on the event. Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var attributes: [V1KeyValue]?
 		/** dropped_attributes_count is the number of dropped attributes. If the value is 0, then no attributes were dropped. */
-		internal let droppedAttributesCount: Int64?
+		var droppedAttributesCount: Int64?
 
-		internal init(timeUnixNano: String?, name: String?, attributes: [V1KeyValue]?, droppedAttributesCount: Int64?) {
+		init(timeUnixNano: String? = nil, name: String? = nil, attributes: [V1KeyValue]? = nil, droppedAttributesCount: Int64? = nil) {
 			self.timeUnixNano = timeUnixNano
 			self.name = name
 			self.attributes = attributes
 			self.droppedAttributesCount = droppedAttributesCount
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case timeUnixNano = "time_unix_nano"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case timeUnixNano
 			case name
 			case attributes
-			case droppedAttributesCount = "dropped_attributes_count"
+			case droppedAttributesCount
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(timeUnixNano, forKey: .timeUnixNano)
+			try container.encodeIfPresent(name, forKey: .name)
+			try container.encodeIfPresent(attributes, forKey: .attributes)
+			try container.encodeIfPresent(droppedAttributesCount, forKey: .droppedAttributesCount)
 		}
 	}
 }

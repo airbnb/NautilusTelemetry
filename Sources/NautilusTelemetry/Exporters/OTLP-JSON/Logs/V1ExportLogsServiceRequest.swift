@@ -6,18 +6,31 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1ExportLogsServiceRequest")
+typealias V1ExportLogsServiceRequest = OTLP.V1ExportLogsServiceRequest
 
 extension OTLP {
-	struct V1ExportLogsServiceRequest: Codable, Equatable {
+	struct V1ExportLogsServiceRequest: Codable, Hashable {
 		/** An array of ResourceLogs. For data coming from a single resource this array will typically contain one element. Intermediary nodes (such as OpenTelemetry Collector) that receive data from multiple origins typically batch the data before forwarding further and in that case this array will contain multiple elements. */
-		internal let resourceLogs: [V1ResourceLogs]?
+		var resourceLogs: [V1ResourceLogs]?
 
-		internal init(resourceLogs: [V1ResourceLogs]?) {
+		init(resourceLogs: [V1ResourceLogs]? = nil) {
 			self.resourceLogs = resourceLogs
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case resourceLogs = "resource_logs"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case resourceLogs
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(resourceLogs, forKey: .resourceLogs)
 		}
 	}
 }

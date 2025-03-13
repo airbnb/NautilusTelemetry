@@ -5,15 +5,16 @@ receivers:
     protocols:
       grpc:
       http:
-        cors_allowed_origins:
-        - "*"
+        cors:
+          allowed_origins:
+            - "*"
 
 processors:
   batch:
 
 exporters:
   logging:
-    logLevel: debug
+    loglevel: debug
 
   prometheus:
     endpoint: "localhost:8889"

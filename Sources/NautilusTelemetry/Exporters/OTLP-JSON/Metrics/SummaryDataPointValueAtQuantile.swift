@@ -6,18 +6,37 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.SummaryDataPointValueAtQuantile")
+typealias SummaryDataPointValueAtQuantile = OTLP.SummaryDataPointValueAtQuantile
 
 extension OTLP {
 	/** Represents the value at a given quantile of a distribution.  To record Min and Max values following conventions are used: - The 1.0 quantile is equivalent to the maximum value observed. - The 0.0 quantile is equivalent to the minimum value observed.  See the following issue for more context: https://github.com/open-telemetry/opentelemetry-proto/issues/125 */
-	struct SummaryDataPointValueAtQuantile: Codable, Equatable {
+	struct SummaryDataPointValueAtQuantile: Codable, Hashable {
 		/** The quantile of a distribution. Must be in the interval [0.0, 1.0]. */
-		internal let quantile: Double?
+		var quantile: Double?
 		/** The value at the given quantile of a distribution.  Quantile values must NOT be negative. */
-		internal let value: Double?
+		var value: Double?
 
-		internal init(quantile: Double?, value: Double?) {
+		init(quantile: Double? = nil, value: Double? = nil) {
 			self.quantile = quantile
 			self.value = value
+		}
+
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case quantile
+			case value
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(quantile, forKey: .quantile)
+			try container.encodeIfPresent(value, forKey: .value)
 		}
 	}
 }

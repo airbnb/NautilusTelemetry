@@ -6,108 +6,31 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1Metric")
+typealias V1Metric = OTLP.V1Metric
 
 extension OTLP {
-	
-	// Defines a Metric which has one or more timeseries.  The following is a
-	// brief summary of the Metric data model.  For more details, see:
-	//
-	//   https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
-	//
-	//
-	// The data model and relation between entities is shown in the
-	// diagram below. Here, "DataPoint" is the term used to refer to any
-	// one of the specific data point value types, and "points" is the term used
-	// to refer to any one of the lists of points contained in the Metric.
-	//
-	// - Metric is composed of a metadata and data.
-	// - Metadata part contains a name, description, unit.
-	// - Data is one of the possible types (Sum, Gauge, Histogram, Summary).
-	// - DataPoint contains timestamps, attributes, and one of the possible value type
-	//   fields.
-	//
-	//     Metric
-	//  +------------+
-	//  |name        |
-	//  |description |
-	//  |unit        |     +------------------------------------+
-	//  |data        |---> |Gauge, Sum, Histogram, Summary, ... |
-	//  +------------+     +------------------------------------+
-	//
-	//    Data [One of Gauge, Sum, Histogram, Summary, ...]
-	//  +-----------+
-	//  |...        |  // Metadata about the Data.
-	//  |points     |--+
-	//  +-----------+  |
-	//                 |      +---------------------------+
-	//                 |      |DataPoint 1                |
-	//                 v      |+------+------+   +------+ |
-	//              +-----+   ||label |label |...|label | |
-	//              |  1  |-->||value1|value2|...|valueN| |
-	//              +-----+   |+------+------+   +------+ |
-	//              |  .  |   |+-----+                    |
-	//              |  .  |   ||value|                    |
-	//              |  .  |   |+-----+                    |
-	//              |  .  |   +---------------------------+
-	//              |  .  |                   .
-	//              |  .  |                   .
-	//              |  .  |                   .
-	//              |  .  |   +---------------------------+
-	//              |  .  |   |DataPoint M                |
-	//              +-----+   |+------+------+   +------+ |
-	//              |  M  |-->||label |label |...|label | |
-	//              +-----+   ||value1|value2|...|valueN| |
-	//                        |+------+------+   +------+ |
-	//                        |+-----+                    |
-	//                        ||value|                    |
-	//                        |+-----+                    |
-	//                        +---------------------------+
-	//
-	// Each distinct type of DataPoint represents the output of a specific
-	// aggregation function, the result of applying the DataPoint's
-	// associated function of to one or more measurements.
-	//
-	// All DataPoint types have three common fields:
-	// - Attributes includes key-value pairs associated with the data point
-	// - TimeUnixNano is required, set to the end time of the aggregation
-	// - StartTimeUnixNano is optional, but strongly encouraged for DataPoints
-	//   having an AggregationTemporality field, as discussed below.
-	//
-	// Both TimeUnixNano and StartTimeUnixNano values are expressed as
-	// UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
-	//
-	// # TimeUnixNano
-	//
-	// This field is required, having consistent interpretation across
-	// DataPoint types.  TimeUnixNano is the moment corresponding to when
-	// the data point's aggregate value was captured.
-	//
-	// Data points with the 0 value for TimeUnixNano SHOULD be rejected
-	// by consumers.
-	//
-	// # StartTimeUnixNano
-	//
-	// StartTimeUnixNano in general allows detecting when a sequence of
-	// observations is unbroken.  This field indicates to consumers the
-	// start time for points with cumulative and delta
-	// AggregationTemporality, and it should be included whenever possible
-	// to support correct rate calculation.  Although it may be omitted
-	// when the start time is truly unknown, setting StartTimeUnixNano is
-	// strongly encouraged.
-	struct V1Metric: Codable, Equatable {
-		/** name of the metric, including its DNS name prefix. It must be unique. */
-		internal let name: String?
+	/** https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md   The data model and relation between entities is shown in the diagram below. Here, \&quot;DataPoint\&quot; is the term used to refer to any one of the specific data point value types, and \&quot;points\&quot; is the term used to refer to any one of the lists of points contained in the Metric.  - Metric is composed of a metadata and data. - Metadata part contains a name, description, unit. - Data is one of the possible types (Sum, Gauge, Histogram, Summary). - DataPoint contains timestamps, attributes, and one of the possible value type   fields.      Metric  +------------+  |name        |  |description |  |unit        |     +------------------------------------+  |data        |---&gt; |Gauge, Sum, Histogram, Summary, ... |  +------------+     +------------------------------------+     Data [One of Gauge, Sum, Histogram, Summary, ...]  +-----------+  |...        |  // Metadata about the Data.  |points     |--+  +-----------+  |                 |      +---------------------------+                 |      |DataPoint 1                |                 v      |+------+------+   +------+ |              +-----+   ||label |label |...|label | |              |  1  |--&gt;||value1|value2|...|valueN| |              +-----+   |+------+------+   +------+ |              |  .  |   |+-----+                    |              |  .  |   ||value|                    |              |  .  |   |+-----+                    |              |  .  |   +---------------------------+              |  .  |                   .              |  .  |                   .              |  .  |                   .              |  .  |   +---------------------------+              |  .  |   |DataPoint M                |              +-----+   |+------+------+   +------+ |              |  M  |--&gt;||label |label |...|label | |              +-----+   ||value1|value2|...|valueN| |                        |+------+------+   +------+ |                        |+-----+                    |                        ||value|                    |                        |+-----+                    |                        +---------------------------+  Each distinct type of DataPoint represents the output of a specific aggregation function, the result of applying the DataPoint&#39;s associated function of to one or more measurements.  All DataPoint types have three common fields: - Attributes includes key-value pairs associated with the data point - TimeUnixNano is required, set to the end time of the aggregation - StartTimeUnixNano is optional, but strongly encouraged for DataPoints   having an AggregationTemporality field, as discussed below.  Both TimeUnixNano and StartTimeUnixNano values are expressed as UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.  # TimeUnixNano  This field is required, having consistent interpretation across DataPoint types.  TimeUnixNano is the moment corresponding to when the data point&#39;s aggregate value was captured.  Data points with the 0 value for TimeUnixNano SHOULD be rejected by consumers.  # StartTimeUnixNano  StartTimeUnixNano in general allows detecting when a sequence of observations is unbroken.  This field indicates to consumers the start time for points with cumulative and delta AggregationTemporality, and it should be included whenever possible to support correct rate calculation.  Although it may be omitted when the start time is truly unknown, setting StartTimeUnixNano is strongly encouraged. */
+	struct V1Metric: Codable, Hashable {
+		/** name of the metric. */
+		var name: String?
 		/** description of the metric, which can be used in documentation. */
-		internal let description: String?
+		var description: String?
 		/** unit in which the metric value is reported. Follows the format described by http://unitsofmeasure.org/ucum.html. */
-		internal let unit: String?
-		internal let gauge: V1Gauge?
-		internal let sum: V1Sum?
-		internal let histogram: V1Histogram?
-		internal let exponentialHistogram: V1ExponentialHistogram?
-		internal let summary: V1Summary?
+		var unit: String?
+		var gauge: V1Gauge?
+		var sum: V1Sum?
+		var histogram: V1Histogram?
+		var exponentialHistogram: V1ExponentialHistogram?
+		var summary: V1Summary?
+		/** Additional metadata attributes that describe the metric. [Optional]. Attributes are non-identifying. Consumers SHOULD NOT need to be aware of these attributes. These attributes MAY be used to encode information allowing for lossless roundtrip translation to / from another data model. Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
+		var metadata: [V1KeyValue]?
 
-		internal init(name: String?, description: String?, unit: String?, gauge: V1Gauge? = nil, sum: V1Sum? = nil, histogram: V1Histogram? = nil, exponentialHistogram: V1ExponentialHistogram? = nil, summary: V1Summary? = nil) {
+		init(name: String? = nil, description: String? = nil, unit: String? = nil, gauge: V1Gauge? = nil, sum: V1Sum? = nil, histogram: V1Histogram? = nil, exponentialHistogram: V1ExponentialHistogram? = nil, summary: V1Summary? = nil, metadata: [V1KeyValue]? = nil) {
 			self.name = name
 			self.description = description
 			self.unit = unit
@@ -116,17 +39,34 @@ extension OTLP {
 			self.histogram = histogram
 			self.exponentialHistogram = exponentialHistogram
 			self.summary = summary
+			self.metadata = metadata
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
+		enum CodingKeys: String, CodingKey, CaseIterable {
 			case name
 			case description
 			case unit
 			case gauge
 			case sum
 			case histogram
-			case exponentialHistogram = "exponential_histogram"
+			case exponentialHistogram
 			case summary
+			case metadata
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(name, forKey: .name)
+			try container.encodeIfPresent(description, forKey: .description)
+			try container.encodeIfPresent(unit, forKey: .unit)
+			try container.encodeIfPresent(gauge, forKey: .gauge)
+			try container.encodeIfPresent(sum, forKey: .sum)
+			try container.encodeIfPresent(histogram, forKey: .histogram)
+			try container.encodeIfPresent(exponentialHistogram, forKey: .exponentialHistogram)
+			try container.encodeIfPresent(summary, forKey: .summary)
+			try container.encodeIfPresent(metadata, forKey: .metadata)
 		}
 	}
 }

@@ -6,10 +6,15 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.StatusStatusCode")
+typealias StatusStatusCode = OTLP.StatusStatusCode
 
 extension OTLP {
-	/** - STATUS_CODE_UNSET: The default status.  - STATUS_CODE_OK: The Span has been validated by an Application developers or Operator to have completed successfully.  - STATUS_CODE_ERROR: The Span contains an error. */
-		
+	/** - STATUS_CODE_UNSET: The default status.  - STATUS_CODE_OK: The Span has been validated by an Application developer or Operator to  have completed successfully.  - STATUS_CODE_ERROR: The Span contains an error. */
 	enum StatusStatusCode: String, Codable, CaseIterable {
 		case unset = "STATUS_CODE_UNSET"
 		case ok = "STATUS_CODE_OK"

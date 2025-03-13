@@ -1,0 +1,8 @@
+{
+	"nonPublicApi" : true,
+	"projectName" : "OTLP",
+	"swiftUseApiNamespace" : true,
+	"useJsonEncodable" : false,
+	"hideGenerationTimestamp" : false,
+	"enablePostProcessFile" : true
+}

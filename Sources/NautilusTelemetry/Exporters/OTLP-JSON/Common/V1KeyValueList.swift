@@ -6,15 +6,32 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1KeyValueList")
+typealias V1KeyValueList = OTLP.V1KeyValueList
 
 extension OTLP {
-	/** KeyValueList is a list of KeyValue messages. We need KeyValueList as a message since `oneof` in AnyValue does not allow repeated fields. Everywhere else where we need a list of KeyValue messages (e.g. in Span) we use `repeated KeyValue` directly to avoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches are semantically equivalent. */
-	struct V1KeyValueList: Codable, Equatable {
-		/** A collection of key/value pairs of key-value pairs. The list may be empty (may contain 0 elements). */
-		internal let values: [V1KeyValue]?
+	/** KeyValueList is a list of KeyValue messages. We need KeyValueList as a message since &#x60;oneof&#x60; in AnyValue does not allow repeated fields. Everywhere else where we need a list of KeyValue messages (e.g. in Span) we use &#x60;repeated KeyValue&#x60; directly to avoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches are semantically equivalent. */
+	struct V1KeyValueList: Codable, Hashable {
+		/** A collection of key/value pairs of key-value pairs. The list may be empty (may contain 0 elements). The keys MUST be unique (it is not allowed to have more than one value with the same key). */
+		var values: [V1KeyValue]?
 
-		internal init(values: [V1KeyValue]?) {
+		init(values: [V1KeyValue]? = nil) {
 			self.values = values
+		}
+
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case values
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(values, forKey: .values)
 		}
 	}
 }

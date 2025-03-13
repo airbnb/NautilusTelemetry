@@ -6,19 +6,25 @@
 //
 
 import Foundation
+#if canImport(AnyCodable)
+	import AnyCodable
+#endif
+
+@available(*, deprecated, renamed: "OTLP.V1AnyValue")
+typealias V1AnyValue = OTLP.V1AnyValue
 
 extension OTLP {
 	/** AnyValue is used to represent any type of attribute value. AnyValue may contain a primitive value such as a string or integer or it may contain an arbitrary nested object containing arrays, key-value lists and primitives. */
-	struct V1AnyValue: Codable, Equatable {
-		internal let stringValue: String?
-		internal let boolValue: Bool?
-		internal let intValue: String?
-		internal let doubleValue: Double?
-		internal let arrayValue: V1ArrayValue?
-		internal let kvlistValue: V1KeyValueList?
-		internal let bytesValue: Data?
+	struct V1AnyValue: Codable, Hashable {
+		var stringValue: String?
+		var boolValue: Bool?
+		var intValue: String?
+		var doubleValue: Double?
+		var arrayValue: V1ArrayValue?
+		var kvlistValue: V1KeyValueList?
+		var bytesValue: Data?
 
-		internal init(stringValue: String? = nil, boolValue: Bool? = nil, intValue: String? = nil, doubleValue: Double? = nil, arrayValue: V1ArrayValue? = nil, kvlistValue: V1KeyValueList? = nil, bytesValue: Data? = nil) {
+		init(stringValue: String? = nil, boolValue: Bool? = nil, intValue: String? = nil, doubleValue: Double? = nil, arrayValue: V1ArrayValue? = nil, kvlistValue: V1KeyValueList? = nil, bytesValue: Data? = nil) {
 			self.stringValue = stringValue
 			self.boolValue = boolValue
 			self.intValue = intValue
@@ -28,14 +34,27 @@ extension OTLP {
 			self.bytesValue = bytesValue
 		}
 
-		internal enum CodingKeys: String, CodingKey, CaseIterable {
-			case stringValue = "string_value"
-			case boolValue = "bool_value"
-			case intValue = "int_value"
-			case doubleValue = "double_value"
-			case arrayValue = "array_value"
-			case kvlistValue = "kvlist_value"
-			case bytesValue = "bytes_value"
+		enum CodingKeys: String, CodingKey, CaseIterable {
+			case stringValue
+			case boolValue
+			case intValue
+			case doubleValue
+			case arrayValue
+			case kvlistValue
+			case bytesValue
+		}
+
+		// Encodable protocol methods
+
+		func encode(to encoder: Encoder) throws {
+			var container = encoder.container(keyedBy: CodingKeys.self)
+			try container.encodeIfPresent(stringValue, forKey: .stringValue)
+			try container.encodeIfPresent(boolValue, forKey: .boolValue)
+			try container.encodeIfPresent(intValue, forKey: .intValue)
+			try container.encodeIfPresent(doubleValue, forKey: .doubleValue)
+			try container.encodeIfPresent(arrayValue, forKey: .arrayValue)
+			try container.encodeIfPresent(kvlistValue, forKey: .kvlistValue)
+			try container.encodeIfPresent(bytesValue, forKey: .bytesValue)
 		}
 	}
 }

@@ -1,6 +1,0 @@
-{
-	"nonPublicApi" : true,
-	"projectName" : "OTLP",
-	"swiftUseApiNamespace" : true,
-	"hideGenerationTimestamp" : false
-}

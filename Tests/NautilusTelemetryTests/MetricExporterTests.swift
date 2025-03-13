@@ -12,7 +12,7 @@ import XCTest
 
 final class MetricExporterTests: XCTestCase {
 
-	let redaction = ["start_time_unix_nano", "time_unix_nano"]
+	let redaction = ["startTimeUnixNano", "timeUnixNano"]
 	let unit = Unit(symbol: "bytes")
 
 	func testexportOTLPToJSON() throws {
@@ -27,7 +27,7 @@ final class MetricExporterTests: XCTestCase {
 		// redact the attribute list as well
 		let normalizedJsonString = try XCTUnwrap(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction + ["attributes"]))
 
-		let expectedOutput = #"{"resource_metrics":[{"instrumentation_library_metrics":[{"instrumentation_library":{"name":"NautilusTelemetry","version":"1.0"},"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregation_temporality":"AGGREGATION_TEMPORALITY_DELTA","data_points":[{"as_int":"200","attributes":"***","start_time_unix_nano":"***","time_unix_nano":"***"}],"is_monotonic":true},"unit":"bytes"}]}],"resource":{"attributes":"***"}}]}"#
+		let expectedOutput = #"{"resourceMetrics":[{"resource":{"attributes":"***"},"scopeMetrics":[{"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":"***","startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}],"scope":{"name":"NautilusTelemetry","version":"1.0"}}]}]}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -42,9 +42,9 @@ final class MetricExporterTests: XCTestCase {
 		let metric = counter.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 		
-		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
+		let normalizedJsonString = try XCTUnwrap(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 		
-		let expectedOutput = #"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregation_temporality":"AGGREGATION_TEMPORALITY_DELTA","data_points":[{"as_int":"200","attributes":[],"start_time_unix_nano":"***","time_unix_nano":"***"}],"is_monotonic":true},"unit":"bytes"}"#
+		let expectedOutput = #"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 		counter.reset()
@@ -62,9 +62,9 @@ final class MetricExporterTests: XCTestCase {
 		let metric = counter.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 		
-		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 		
-		let expectedOutput = #"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregation_temporality":"AGGREGATION_TEMPORALITY_DELTA","data_points":[{"as_int":"200","attributes":[],"start_time_unix_nano":"***","time_unix_nano":"***"}],"is_monotonic":false},"unit":"bytes"}"#
+		let expectedOutput = #"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 		counter.reset()
@@ -86,7 +86,7 @@ final class MetricExporterTests: XCTestCase {
 		
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 		
-		let expectedOutput = #"{"description":"Test observable Counter","name":"Test","sum":{"aggregation_temporality":"AGGREGATION_TEMPORALITY_DELTA","data_points":[{"as_int":"500","attributes":[],"start_time_unix_nano":"***","time_unix_nano":"***"}],"is_monotonic":true},"unit":"bytes"}"#
+		let expectedOutput = #"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 		counter.reset()
@@ -106,7 +106,7 @@ final class MetricExporterTests: XCTestCase {
 		
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 		
-		let expectedOutput = #"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregation_temporality":"AGGREGATION_TEMPORALITY_DELTA","data_points":[{"as_int":"500","attributes":[],"start_time_unix_nano":"***","time_unix_nano":"***"}],"is_monotonic":false},"unit":"bytes"}"#
+		let expectedOutput = #"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 		counter.reset()
@@ -126,7 +126,7 @@ final class MetricExporterTests: XCTestCase {
 		
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 		
-		let expectedOutput = #"{"description":"Test observable gauge","gauge":{"data_points":[{"as_int":"500","attributes":[],"start_time_unix_nano":"***","time_unix_nano":"***"}]},"name":"Test","unit":"bytes"}"#
+		let expectedOutput = #"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 		gauge.reset()
@@ -150,7 +150,7 @@ final class MetricExporterTests: XCTestCase {
 		
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 		
-		let expectedOutput = #"{"description":"Counts byte sizes by bucket","histogram":{"aggregation_temporality":"AGGREGATION_TEMPORALITY_DELTA","data_points":[{"attributes":[],"bucket_counts":["1","0","0","1","1"],"count":"3","explicit_bounds":[1024,2048,3072,4096],"start_time_unix_nano":"***","sum":20100,"time_unix_nano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
+		let expectedOutput = #"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
 		
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 		histogram.reset()
