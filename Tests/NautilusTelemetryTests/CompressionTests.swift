@@ -19,10 +19,38 @@ final class CompressionTests: XCTestCase {
 		XCTAssertEqual(zlibOut.count, 2338, accuracy: 200) // 2338 bytes expected output size -- future lib versions may vary in size
 	}
 
+	func testAdler32() throws {
+		let adler_swift = Compression.adler32_swift(logData)
+		let adler_zlib = Compression.adler32_zlib(logData)
+
+		XCTAssertEqual(adler_swift, adler_zlib)
+	}
+
+	// Compiling in release mode, with `swiftSettings: [.unsafeFlags(["-enable-testing"])]` added to the target
+	// we get 0.276 sec for the Swift implementation, vs. 0.003 seconds for Zlib. 92x faster! In debug mode, it's 142x faster.
+	let iterations = 1000
+	func testAdlerSwiftPerformance () throws {
+		measure {
+			for _ in 0..<iterations {
+				_ = Compression.adler32_swift(logData)
+			}
+		}
+	}
+
+	func testAdlerZlibPerformance () throws {
+		measure {
+			for _ in 0..<iterations {
+				_ = Compression.adler32_zlib(logData)
+			}
+		}
+	}
+
 	func testDeflatePerformance () throws {
 		measure {
 			do {
-				_ = try Compression.compressDeflate(data: logData)
+				for _ in 0..<iterations {
+					_ = try Compression.compressDeflate(data: logData)
+				}
 			}
 			catch {
 				XCTFail()

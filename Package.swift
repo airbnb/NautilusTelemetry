@@ -12,7 +12,7 @@ let package = Package(
 		.library(
 			name: "NautilusTelemetry",
 			type: .static,
-			targets: ["NautilusTelemetry"]),
+			targets: ["NautilusTelemetry"])
 	],
 	dependencies: [
 	],
@@ -28,7 +28,11 @@ let package = Package(
 				"Exporters/OTLP-JSON/Trace/trace_service.yaml",
 				"Exporters/OTLP-JSON/Logs/logs_service.yaml",
 				"Instrumentation/MetricKit-sample.json"
-			]),
+			],
+			// For unit testing in release mode:
+			// swiftSettings: [.unsafeFlags(["-enable-testing"])],
+			),
+
 		.testTarget(
 			name: "NautilusTelemetryTests",
 			dependencies: ["NautilusTelemetry"]),

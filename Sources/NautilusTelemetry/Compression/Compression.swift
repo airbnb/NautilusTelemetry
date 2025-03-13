@@ -7,6 +7,7 @@
 
 import Foundation
 import Compression
+import zlib
 
 /// Implements simple one-shot compressors for telemetry payloads
 /// Maybe worth using a more complete implementation such as: https://github.com/mw99/DataCompression
@@ -23,7 +24,7 @@ public struct Compression {
 		// Now stick on the header and adler to make it deflate format
 		var output = Data([0x78, 0x5e])
 		output.append(compressed)
-		var adler = adler32(data).bigEndian
+		var adler = adler32_zlib(data).bigEndian
 		output.append(Data(bytes: &adler, count: MemoryLayout<UInt32>.size))
 		
 		return output
@@ -34,9 +35,9 @@ public struct Compression {
 		return try compress(source: data, algorithm: COMPRESSION_BROTLI)
 	}
 	
-	// Not very fast == may be better to use zlib's implementation
-  // https://forums.swift.org/t/optimizing-swift-adler32-checksum/63596/28
-	private static func adler32(_ data: Data) -> UInt32 {
+	// Not very fast == better to use zlib's implementation
+	// https://forums.swift.org/t/optimizing-swift-adler32-checksum/63596/28
+	static func adler32_swift(_ data: Data) -> UInt32 {
 		var s1: UInt32 = 1
 		var s2: UInt32 = 0
 		let prime: UInt32 = 65521
@@ -48,6 +49,12 @@ public struct Compression {
 			if s2 >= prime { s2 = s2 % prime }
 		}
 		return (s2 << 16) | s1
+	}
+
+	static func adler32_zlib(_ data: Data) -> UInt32 {
+		data.withUnsafeBytes {
+			UInt32(zlib.adler32(1, $0.baseAddress, UInt32($0.count)))
+		}
 	}
 
 	private static func compress(source: Data, algorithm: compression_algorithm) throws -> Data {
