@@ -26,12 +26,12 @@ final class TraceExporterTests: XCTestCase {
 	/// https://docs.docker.com/desktop/mac/install/
 	/// See detailed instructions in OpenTelemetryCollector directory
 	let testWithLocalCollector = TraceExporterTests.testEnabled("testWithLocalCollector")
-	let testWithSherlock = TraceExporterTests.testEnabled("testWithSherlock")
-	
+	let testWithRemoteCollector = TraceExporterTests.testEnabled("testWithRemoteCollector")
+
 	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 	let schemaUrl = "https://api.ebay.com/nautilus-tracing"
 	
-	let sherlockTraceEndpoint = "https://otel-collector-http.sherlock-tracing.svc.130.tess.io/v1/traces"
+	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
 	let localEndpointBase = "http://localhost:55681"
 	
 	enum TestError: Error {
@@ -103,8 +103,8 @@ final class TraceExporterTests: XCTestCase {
 		let jsonString = try XCTUnwrap(String(data: json, encoding: .utf8))
 		print(jsonString)
 
-		if testWithSherlock {
-			try postJSON(url: sherlockTraceEndpoint, json: json)
+		if testWithRemoteCollector {
+			try postJSON(url: remoteCollectorEndpoint, json: json)
 		}
 		
 		if testWithLocalCollector {

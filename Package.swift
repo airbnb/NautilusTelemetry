@@ -12,7 +12,7 @@ let package = Package(
 		.library(
 			name: "NautilusTelemetry",
 			type: .static,
-			targets: ["NautilusTelemetry"]),
+			targets: ["NautilusTelemetry"])
 	],
 	dependencies: [
 	],
