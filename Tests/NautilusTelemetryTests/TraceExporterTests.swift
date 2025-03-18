@@ -32,8 +32,8 @@ final class TraceExporterTests: XCTestCase {
 	let testLogs = TraceExporterTests.testEnabled("testLogs")
 
 	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
-	let schemaUrl = "https://api.ebay.com/nautilus-tracing"
-	
+	let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
+
 	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
 
 	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.4/getting-started/
