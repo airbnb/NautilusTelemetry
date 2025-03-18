@@ -34,22 +34,6 @@ public struct Compression {
 	public static func compressBrotli(data: Data) throws -> Data {
 		return try compress(source: data, algorithm: .brotli)
 	}
-	
-	// Not very fast == it's better to use zlib's implementation
-	// https://forums.swift.org/t/optimizing-swift-adler32-checksum/63596/28
-	static func adler32_swift(_ data: Data) -> UInt32 {
-		var s1: UInt32 = 1
-		var s2: UInt32 = 0
-		let prime: UInt32 = 65521
-		
-		for byte in data {
-			s1 += UInt32(byte)
-			if s1 >= prime { s1 = s1 % prime }
-			s2 += s1
-			if s2 >= prime { s2 = s2 % prime }
-		}
-		return (s2 << 16) | s1
-	}
 
 	static func adler32_zlib(_ data: Data) -> UInt32 {
 		data.withUnsafeBytes {
