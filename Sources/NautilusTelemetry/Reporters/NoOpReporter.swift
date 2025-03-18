@@ -7,13 +7,13 @@
 
 import Foundation
 
-public final class NoOpReporter: Reporter {
+public final class NoOpReporter: NautilusTelemetryReporter {
 	
 	public init() {
 	}
 	
 	public var flushInterval: TimeInterval {
-		return 60
+		return 1
 	}
 		
 	public func reportSpans(_ spans: [Span]) {

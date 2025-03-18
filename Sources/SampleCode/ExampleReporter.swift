@@ -11,10 +11,11 @@ import os
 #if canImport(UIKit)
 	import UIKit
 #endif
+import NautilusTelemetry
 
 /// An example telemetry reporter. Intended to be modified for specific use cases.
 @available(iOS 13.0, *)
-public class ExampleReporter: Reporter {
+public class ExampleReporter: NautilusTelemetryReporter {
 
 	/// If collector supports brotli in the future
 	let brotliAllowed = false
@@ -135,6 +136,8 @@ public class ExampleReporter: Reporter {
 		let traceIdString = InstrumentationSystem.tracer.currentSpan.traceId.hex
 		var urlRequest = URLRequest(url: url)
 		urlRequest.httpBody = compressedPayload
+		urlRequest.httpMethod = "POST"
+		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 		urlRequest.addValue(contentEncoding, forHTTPHeaderField: "Content-Encoding")
 		let task = urlSession.dataTask(with: urlRequest) { data, urlResponse, error in
 			if self.success(urlResponse) {

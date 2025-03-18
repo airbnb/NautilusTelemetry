@@ -3,4 +3,4 @@
 
 import os
 
-let logger = Logger(subsystem: "com.airbnb.telemetry", category: "NautilusTelemetry")
+let logger = Logger(subsystem: "com.airbnb.telemetry", category: "Sample")

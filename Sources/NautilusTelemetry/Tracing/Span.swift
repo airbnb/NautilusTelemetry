@@ -97,7 +97,7 @@ public final class Span: Identifiable {
 	/// - Parameters:
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
 	///   - value: a value
-	public func addAttribute(_ name: String, value: AnyHashable?) {
+	public func addAttribute(_ name: String, _ value: AnyHashable?) {
 		if attributes == nil {
 			attributes = TelemetryAttributes()
 		}
@@ -109,11 +109,11 @@ public final class Span: Identifiable {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/span-general.md#general-thread-attributes
 		
 		if Thread.isMainThread {
-			addAttribute("thread.name", value: "main")
+			addAttribute("thread.name", "main")
 		} else {
 			// No nice way to get the current queue, so we'll try thread name
 			if let threadName = Thread.current.name, threadName.count > 0 {
-				addAttribute("thread.name", value: threadName)
+				addAttribute("thread.name", threadName)
 			}
 		}
 	}

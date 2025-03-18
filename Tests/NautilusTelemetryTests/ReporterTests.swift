@@ -17,7 +17,7 @@ final class ReporterTests: XCTestCase {
 		InstrumentationSystem.bootstrap(reporter: reporter)
 		XCTAssert((InstrumentationSystem.reporter as? NoOpReporter) === reporter)
 		
-		XCTAssertEqual(reporter.flushInterval, 60)
+		XCTAssertEqual(reporter.flushInterval, 1)
 		reporter.reportSpans([])
 		reporter.reportInstruments([])
 		reporter.subscribeToLifecycleEvents()
