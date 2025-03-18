@@ -13,6 +13,10 @@ let package = Package(
 			name: "NautilusTelemetry",
 			type: .static,
 			targets: ["NautilusTelemetry"]),
+		.library(
+			name: "SampleCode",
+			type: .static,
+			targets: ["SampleCode"])
 	],
 	dependencies: [
 	],
@@ -29,6 +33,9 @@ let package = Package(
 				"Exporters/OTLP-JSON/Logs/logs_service.yaml",
 				"Instrumentation/MetricKit-sample.json"
 			]),
+		.target(
+			name: "SampleCode",
+			dependencies: []),
 		.testTarget(
 			name: "NautilusTelemetryTests",
 			dependencies: ["NautilusTelemetry"]),

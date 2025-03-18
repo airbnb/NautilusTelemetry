@@ -16,9 +16,9 @@ public struct InstrumentationSystem {
 	static var metricKitInstrument = MetricKitInstrument()
 #endif
 	
-	static public private(set) var reporter: Reporter? = nil
-	
-	public static func bootstrap(reporter _reporter: Reporter) {
+	static public private(set) var reporter: NautilusTelemetryReporter? = nil
+
+	public static func bootstrap(reporter _reporter: NautilusTelemetryReporter) {
 		
 		NautilusTelemetry.queue.sync {
 			precondition(reporter == nil, "Only bootstrap once!")

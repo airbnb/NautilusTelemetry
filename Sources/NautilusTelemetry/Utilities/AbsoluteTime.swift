@@ -46,6 +46,7 @@ public struct TimeReference {
 }
 
 /// Container for absolute time
+/// FIXME: update to ContinuousClock APIs
 public struct AbsoluteTime: Comparable, Hashable {
 	
 	static let timebaseInfo: mach_timebase_info = {

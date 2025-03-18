@@ -1,5 +1,5 @@
 //
-//  Reporter.swift
+//  NautilusTelemetryReporter.swift
 //  
 //
 //  Created by Van Tol, Ladd on 11/29/21.
@@ -7,8 +7,8 @@
 
 import Foundation
 
-public protocol Reporter {
-	
+public protocol NautilusTelemetryReporter {
+
 	/// Desired flush interval
 	var flushInterval: TimeInterval { get }
 	

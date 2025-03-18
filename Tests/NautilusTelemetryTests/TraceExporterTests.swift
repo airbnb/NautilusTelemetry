@@ -26,14 +26,28 @@ final class TraceExporterTests: XCTestCase {
 	/// https://docs.docker.com/desktop/mac/install/
 	/// See detailed instructions in OpenTelemetryCollector directory
 	let testWithLocalCollector = TraceExporterTests.testEnabled("testWithLocalCollector")
-	let testWithSherlock = TraceExporterTests.testEnabled("testWithSherlock")
-	
+	let testWithRemoteCollector = TraceExporterTests.testEnabled("testWithRemoteCollector")
+	let testTraces = TraceExporterTests.testEnabled("testTraces")
+	let testMetrics = TraceExporterTests.testEnabled("testMetrics")
+	let testLogs = TraceExporterTests.testEnabled("testLogs")
+
 	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 	let schemaUrl = "https://api.ebay.com/nautilus-tracing"
 	
-	let sherlockTraceEndpoint = "https://otel-collector-http.sherlock-tracing.svc.130.tess.io/v1/traces"
-	let localEndpointBase = "http://localhost:55681"
-	
+	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
+
+	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.4/getting-started/
+	//	docker run --rm --name jaeger \
+	//	  -p 16686:16686 \
+	//	  -p 4317:4317 \
+	//	  -p 4318:4318 \
+	//	  -p 5778:5778 \
+	//	  -p 9411:9411 \
+	//	  -v /path/to/local/config.yaml:/jaeger/config.yaml \
+	//	  jaegertracing/jaeger:2.4.0 \
+	//	  --config /jaeger/config.yaml
+	let localEndpointBase = "http://localhost:4318"
+
 	enum TestError: Error {
 		case failure
 	}
@@ -46,6 +60,8 @@ final class TraceExporterTests: XCTestCase {
 	}
 	
 	func testOTLPExporterTraces() throws {
+		guard testTraces else { throw XCTSkip("Skipped, disabled") }
+
 		let timeReference = TimeReference(serverOffset: 0.0)
 		
 		let tracer = Tracer()
@@ -115,7 +131,8 @@ final class TraceExporterTests: XCTestCase {
 	}
 	
 	func testOTLPExporterLogs() throws {
-		
+		guard testLogs else { throw XCTSkip("Skipped, disabled") }
+
 		let timeReference = TimeReference(serverOffset: 0.0)
 		let exporter = Exporter(timeReference: timeReference)
 		
@@ -196,6 +213,8 @@ final class TraceExporterTests: XCTestCase {
 	}
 	
 	func testOTLPExporterMetrics() throws {
+		guard testMetrics else { throw XCTSkip("Skipped, disabled") }
+
 		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 		
 		let tracer = Tracer()

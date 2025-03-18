@@ -18,7 +18,7 @@ public struct Compression {
 	}
 
 	public static func compressDeflate(data: Data) throws -> Data {
-		let compressed = try compress(source: data, algorithm: COMPRESSION_ZLIB)
+		let compressed = try compress(source: data, algorithm: .zlib)
 
 		// Now stick on the header and adler to make it deflate format
 		var output = Data([0x78, 0x5e])
@@ -31,7 +31,7 @@ public struct Compression {
 
 	@available(iOS 15.0, *)
 	public static func compressBrotli(data: Data) throws -> Data {
-		return try compress(source: data, algorithm: COMPRESSION_BROTLI)
+		return try compress(source: data, algorithm: .brotli)
 	}
 	
 	// Not very fast == may be better to use zlib's implementation
@@ -50,39 +50,26 @@ public struct Compression {
 		return (s2 << 16) | s1
 	}
 
-	private static func compress(source: Data, algorithm: compression_algorithm) throws -> Data {
-	
-		// https://developer.apple.com/documentation/accelerate/compressing_and_decompressing_data_with_buffer_compression
-		
-		let dstSize = source.count * 2 // it's possible for the compressed contents to be longer
-		let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: dstSize)
-		defer {
-			destinationBuffer.deallocate()
+	static func adler32_zlib(_ data: Data) -> UInt32 {
+		data.withUnsafeBytes {
+			UInt32(zlib.adler32(1, $0.baseAddress, UInt32($0.count)))
 		}
+	}
 
-		var output = Data()
-		
-		try source.withUnsafeBytes { sourceBuffer in
-			
-			let sourceBufferPointer = sourceBuffer.bindMemory(to: UInt8.self)
-			guard let baseAddress = sourceBufferPointer.baseAddress else {
-				throw CompressionError.failure
-			}
-			
-			let compressedSize = compression_encode_buffer(destinationBuffer, dstSize,
-														   baseAddress, source.count,
-														   nil,
-														   algorithm)
-			if compressedSize > 0 {
-				output.append(destinationBuffer, count: compressedSize)
+	// https://developer.apple.com/documentation/Accelerate/compressing-and-decompressing-data-with-input-and-output-filters
+	private static func compress(source: Data, algorithm: Algorithm) throws -> Data {
+		var compressedData = Data()
+
+		let outputFilter = try OutputFilter(.compress, using: algorithm) {
+			(data: Data?) -> Void in
+			if let data = data {
+				compressedData.append(data)
 			}
 		}
-		
-		if output.count > 0 {
-			return output
-		} else {
-			throw CompressionError.failure
-		}
 
+		try outputFilter.write(source)
+		try outputFilter.finalize()
+
+		return compressedData
 	}
 }
