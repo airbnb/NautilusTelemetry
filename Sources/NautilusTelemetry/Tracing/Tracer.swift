@@ -94,9 +94,22 @@ public final class Tracer {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
 		let span = Span(name: name, kind: finalKind, attributes: attributes, traceId: resolvedBaggage.span.traceId, parentId: resolvedBaggage.span.id, retireCallback: retire)
+
 		return span
 	}
-	
+
+	public func propagateParent<T>(_ span: Span, block: () throws -> T) rethrows -> T {
+		let baggage = Baggage(span: span)
+		return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
+			do {
+				return try block()
+			} catch {
+				span.recordError(error)
+				throw error // rethrow
+			}
+		}
+	}
+
 	/// Create a span that measures a specific block of code
 	/// - Parameters:
 	///   - name: the name of the operation
@@ -113,10 +126,7 @@ public final class Tracer {
 			span.end() // automatically retires the span
 		}
 		
-		let baggage = Baggage(span: span)
-
-		// Still need to set the task local if possible
-		return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
+		return try Baggage.$currentBaggageTaskLocal.withValue(Baggage(span: span)) {
 			do {
 				return try block()
 			} catch {
@@ -142,8 +152,7 @@ public final class Tracer {
 			span.end() // automatically retires the span
 		}
 		
-		let baggage = Baggage(span: span)
-		return try await Baggage.$currentBaggageTaskLocal.withValue(baggage) {
+		return try await Baggage.$currentBaggageTaskLocal.withValue(Baggage(span: span)) {
 			do {
 				return try await block()
 			} catch {
