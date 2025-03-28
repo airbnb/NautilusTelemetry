@@ -21,7 +21,14 @@ public typealias TraceId = Data
 public struct Identifiers {
 	// MARK: utilities
 	private static var random = SystemRandomNumberGenerator()
-	
+
+	/// Hex encodes an identifier
+	/// - Parameter data: a data object
+	/// - Returns: a lowercase hex encoded string, representing the data
+	public static func hexEncodedString(data: Data) -> String {
+		return data.hexEncodedString
+	}
+
 	/// Generates a 128 bit session GUID
 	/// - Returns: 128 bit identifier as Data
     public static func generateSessionGUID() -> TraceId {
@@ -35,7 +42,7 @@ public struct Identifiers {
 		let bytes = [random.next(), random.next()]
 		return bytes.withUnsafeBufferPointer { Data(buffer: $0) }
 	}
-	
+
 	/// Generates a 64 bit span id
 	/// Sequential identifiers might be better for collision avoidance: https://en.wikipedia.org/wiki/Birthday_attack#Mathematics
 	/// - Returns: 64 bit identifier as Data
@@ -46,7 +53,7 @@ public struct Identifiers {
 }
 
 internal extension Data {
-	func hexEncodedString() -> String {
+	var hexEncodedString: String {
 		let hexDigits = "0123456789abcdef"
 		let utf8Digits = Array(hexDigits.utf8)
 		return String(unsafeUninitializedCapacity: 2 * self.count) { (ptr) -> Int in

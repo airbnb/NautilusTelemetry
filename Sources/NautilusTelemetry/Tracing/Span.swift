@@ -50,9 +50,9 @@ public final class Span: Identifiable {
 			var flags: UInt8 = 0x00
 			flags |= sampled ? 1 : 0
 			
-			let hexFlags = Data([flags]).hexEncodedString()
+			let hexFlags = Data([flags]).hexEncodedString
 			/// version, trace-id, parent-id, trace-flags
-			return "00-\(traceId.hexEncodedString())-\(id.hexEncodedString())-\(hexFlags)"
+			return "00-\(traceId.hexEncodedString)-\(id.hexEncodedString)-\(hexFlags)"
 		}
 	}
 	

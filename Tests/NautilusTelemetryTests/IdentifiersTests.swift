@@ -11,6 +11,11 @@ import XCTest
 
 final class IdentifiersTests: XCTestCase {
 
+	func test() {
+		let test = Data(repeating: 0x00, count: 8)
+		XCTAssertEqual(Identifiers.hexEncodedString(data: test), "0000000000000000")
+	}
+
 	func testGenerateTraceId() {
 		let traceId = Identifiers.generateTraceId()
 		XCTAssertEqual(traceId.count, 16)
@@ -24,7 +29,7 @@ final class IdentifiersTests: XCTestCase {
 	func testHexEncoding() {
 		let test = Data(repeating: 0xFF, count: 8)
 		
-		let hex1 = test.hexEncodedString()
+		let hex1 = test.hexEncodedString
 		XCTAssertEqual(hex1, "ffffffffffffffff")
 	}
 }
