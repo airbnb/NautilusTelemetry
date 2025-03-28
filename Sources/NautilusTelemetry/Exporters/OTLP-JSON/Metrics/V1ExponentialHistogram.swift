@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.V1ExponentialHistogram")
 typealias V1ExponentialHistogram = OTLP.V1ExponentialHistogram

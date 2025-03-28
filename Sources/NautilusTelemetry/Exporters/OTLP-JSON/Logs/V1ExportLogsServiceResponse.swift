@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.V1ExportLogsServiceResponse")
 typealias V1ExportLogsServiceResponse = OTLP.V1ExportLogsServiceResponse

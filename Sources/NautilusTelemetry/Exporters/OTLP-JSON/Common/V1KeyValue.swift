@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.V1KeyValue")
 typealias V1KeyValue = OTLP.V1KeyValue

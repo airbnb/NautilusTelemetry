@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.ExponentialHistogramDataPointBuckets")
 typealias ExponentialHistogramDataPointBuckets = OTLP.ExponentialHistogramDataPointBuckets
