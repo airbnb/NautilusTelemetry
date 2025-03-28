@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Dispatch
 import Darwin.C.time
 
 /// pins wall clock time to an absolute time
@@ -20,21 +19,13 @@ public struct TimeReference {
 		serverOffsetNanos = Int64(serverOffset * Double(NSEC_PER_SEC))
 	}
 	
-	public func millisecondsSinceEpoch(from time: AbsoluteTime) -> Int64 {
-		return microsecondsSinceEpoch(from: time) / 1000
-	}
-
-	public func microsecondsSinceEpoch(from time: AbsoluteTime) -> Int64 {
-		return nanosecondsSinceEpoch(from: time) / 1000
-	}
-	
 	// Overflows in the year 2262
-	public func nanosecondsSinceEpoch(from time: AbsoluteTime) -> Int64 {
+	func nanosecondsSinceEpoch(from time: AbsoluteTime) -> Int64 {
 		let delta = AbsoluteTimeInterval(absoluteTimeReference, time).nanoseconds
 		return Int64(wallTimeReference)+delta+serverOffsetNanos
 	}
 	
-	public func nanosecondsSinceEpoch(from date: Date) -> Int64 {
+	func nanosecondsSinceEpoch(from date: Date) -> Int64 {
 		// reduce precision loss by splitting into the integer and fractional parts
 		let timeInterval = date.timeIntervalSince1970
 		let seconds = Int64(timeInterval)
@@ -48,19 +39,13 @@ public struct TimeReference {
 /// Container for absolute time
 /// FIXME: update to ContinuousClock APIs
 public struct AbsoluteTime: Comparable, Hashable {
-	
+
 	static let timebaseInfo: mach_timebase_info = {
 		var info = mach_timebase_info()
 		guard mach_timebase_info(&info) == KERN_SUCCESS, info.denom != 0 else { fatalError("need mach_timebase_info") }
 		return info
 	}()
-	
-	/// Provided for legacy Obj-C compatibility. Not recommended
-	public static func toSeconds(_ time: UInt64) -> Double {
-		let timeNano = time * UInt64(AbsoluteTime.timebaseInfo.numer) / UInt64(AbsoluteTime.timebaseInfo.denom)
-		return Double(timeNano) / Double(NSEC_PER_SEC)
-	}
-	
+		
 	let time: UInt64
 	
 	public init() {

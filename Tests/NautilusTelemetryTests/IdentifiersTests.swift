@@ -26,14 +26,6 @@ final class IdentifiersTests: XCTestCase {
 		
 		let hex1 = test.hexEncodedString()
 		XCTAssertEqual(hex1, "ffffffffffffffff")
-
-		if #available(iOS 14.0, tvOS 14.0, *) {
-			let hex2 = test.hexEncodedStringFastPath()
-			XCTAssertEqual(hex2, "ffffffffffffffff")
-		}
-		
-		let hex3 = test.hexEncodedStringSlowPath()
-		XCTAssertEqual(hex3, "ffffffffffffffff")
 	}
 }
 

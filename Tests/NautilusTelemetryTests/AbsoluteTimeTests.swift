@@ -27,14 +27,4 @@ final class AbsoluteTimeTests: XCTestCase {
 		
 		// Can't really assert exact timings without making the test flakey
 	}
-	
-	func testToSeconds() {
-		
-		let time1 = mach_continuous_time()
-		let time2 = mach_continuous_time()
-		
-		let elapsed = AbsoluteTime.toSeconds(time2-time1)
-		
-		XCTAssertLessThan(elapsed, 0.1)
-	}
 }
