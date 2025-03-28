@@ -12,7 +12,7 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 	public let name: String
 	public let unit: Unit?
 	public let description: String?
-	public private(set) var startTime = AbsoluteTime()
+	public private(set) var startTime = ContinuousClock.now
 	public var aggregationTemporality: AggregationTemporality = .delta
 	public var isMonotonic: Bool { return false }
 
@@ -31,7 +31,7 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 	}
 
 	public func reset() {
-		startTime = AbsoluteTime()
+		startTime = ContinuousClock.now
 		values.reset()
 	}
 	

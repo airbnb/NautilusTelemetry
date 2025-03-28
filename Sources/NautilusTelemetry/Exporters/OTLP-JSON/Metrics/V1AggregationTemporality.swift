@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.V1AggregationTemporality")
 typealias V1AggregationTemporality = OTLP.V1AggregationTemporality

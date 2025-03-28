@@ -64,6 +64,7 @@ final class SpanTests: XCTestCase {
 		try tracer.withSpan(name: "span1") {
 			XCTAssert(tracer.currentBaggage.span.parentId != nil)
 			try span2Run()
+			tracer.currentSpan.addEvent(Span.Event(name: "event1"))
 		}
 		
 		XCTAssert(tracer.retiredSpans.count == 2)
@@ -126,7 +127,6 @@ final class SpanTests: XCTestCase {
 		XCTAssert(ranSpan)
 	}
 	
-#if compiler(>=5.6.0) && canImport(_Concurrency)
 	func span2RunAsync() async throws {
 		var ranSpan = false
 		tracer.withSpan(name: "span2async") {
@@ -141,6 +141,4 @@ final class SpanTests: XCTestCase {
 		
 		XCTAssert(ranSpan)
 	}
-#endif
-	
 }

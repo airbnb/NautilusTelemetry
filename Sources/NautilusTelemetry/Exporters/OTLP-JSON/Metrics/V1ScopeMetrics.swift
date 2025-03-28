@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.V1ScopeMetrics")
 typealias V1ScopeMetrics = OTLP.V1ScopeMetrics

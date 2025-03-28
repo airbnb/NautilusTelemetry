@@ -6,9 +6,6 @@
 //
 
 import Foundation
-#if canImport(AnyCodable)
-	import AnyCodable
-#endif
 
 @available(*, deprecated, renamed: "OTLP.V1HistogramDataPoint")
 typealias V1HistogramDataPoint = OTLP.V1HistogramDataPoint

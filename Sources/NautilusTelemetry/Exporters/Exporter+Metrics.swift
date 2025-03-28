@@ -62,7 +62,7 @@ extension Exporter {
 				intValueString = "\(intValue)"
 			}
 			
-			let timeUnixNano = convertToOTLP(time: AbsoluteTime())
+			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 			
 			let dataPoint = OTLP.V1NumberDataPoint(attributes: attributes,
 												   startTimeUnixNano: startTimeUnixNano,
@@ -110,7 +110,7 @@ extension Exporter {
 				intValueString = "\(intValue)"
 			}
 			
-			let timeUnixNano = convertToOTLP(time: AbsoluteTime())
+			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 			
 			let dataPoint = OTLP.V1NumberDataPoint(attributes: attributes,
 												   startTimeUnixNano: startTimeUnixNano,
@@ -158,7 +158,7 @@ extension Exporter {
 				intValueString = "\(intValue)"
 			}
 			
-			let timeUnixNano = convertToOTLP(time: AbsoluteTime())
+			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 			
 			let dataPoint = OTLP.V1NumberDataPoint(attributes: attributes,
 												   startTimeUnixNano: startTimeUnixNano,
@@ -206,7 +206,7 @@ extension Exporter {
 				intValueString = "\(intValue)"
 			}
 			
-			let timeUnixNano = convertToOTLP(time: AbsoluteTime())
+			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 			
 			let dataPoint = OTLP.V1NumberDataPoint(attributes: attributes,
 												   startTimeUnixNano: startTimeUnixNano,
@@ -247,7 +247,7 @@ extension Exporter {
 			let bucketCounts = convertToOTLP(bucketCounts: value.data)
 			let sum = asDouble(value.sum)
 
-			let timeUnixNano = convertToOTLP(time: AbsoluteTime())
+			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
 			let dataPoint = OTLP.V1HistogramDataPoint(attributes: attributes,
 													  startTimeUnixNano: startTimeUnixNano,
