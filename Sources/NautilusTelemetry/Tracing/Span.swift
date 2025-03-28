@@ -25,20 +25,20 @@ public final class Span: Identifiable {
 	public let traceId: TraceId
 	public let id: SpanId
 	let parentId: SpanId?
-	let startTime: AbsoluteTime
+	let startTime: ContinuousClock.Instant
 	var attributes: TelemetryAttributes?
 	var events = [Event]()
 	var status: Status = .ok
-	var endTime: AbsoluteTime?
+	var endTime: ContinuousClock.Instant?
 	var retireCallback: ((_: Span) -> Void)?
 
 	/// This can be set by the consuming code to affect the traceParentHeader value
 	public var sampled: Bool = true
 	
-	var elapsed: AbsoluteTimeInterval? {
+	var elapsed: Duration? {
 		get {
 			guard let endTime = endTime else { return nil }
-			return AbsoluteTimeInterval(startTime, endTime)
+			return endTime-startTime
 		}
 	}
 	
@@ -59,8 +59,8 @@ public final class Span: Identifiable {
 	internal init(name: String,
 				  kind: SpanKind = .internal,
 				  attributes: TelemetryAttributes? = nil,
-				  startTime: AbsoluteTime = AbsoluteTime(),
-				  endTime: AbsoluteTime? = nil,
+				  startTime: ContinuousClock.Instant = ContinuousClock.now,
+				  endTime: ContinuousClock.Instant? = nil,
 				  traceId: TraceId,
 				  id: SpanId = Identifiers.generateSpanId(),
 				  parentId: SpanId?,
@@ -81,7 +81,7 @@ public final class Span: Identifiable {
 	
 	public func end() {
 		assert(endTime == nil)
-		endTime = AbsoluteTime()
+		endTime = ContinuousClock.now
 		
 		if let retireCallback = retireCallback {
 			retireCallback(self)
@@ -146,7 +146,7 @@ public final class Span: Identifiable {
 	}
 	
 	public struct Event: ExpressibleByStringLiteral {
-		let time: AbsoluteTime
+		let time: ContinuousClock.Instant
 		let name: String
 		
 		let attributes: TelemetryAttributes?
@@ -156,7 +156,7 @@ public final class Span: Identifiable {
 		}
 		
 		public init(name: String, attributes: TelemetryAttributes? = nil) {
-			self.time = AbsoluteTime()
+			self.time = ContinuousClock.now
 			self.name = name
 			self.attributes = attributes
 		}

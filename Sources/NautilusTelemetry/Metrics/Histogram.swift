@@ -12,7 +12,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	public let name: String
 	public let unit: Unit?
 	public let description: String?
-	public private(set) var startTime = AbsoluteTime()
+	public private(set) var startTime = ContinuousClock.now
 	public var aggregationTemporality: AggregationTemporality = .delta
 
 	var values: HistogramValues<T>
@@ -36,7 +36,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	}
 
 	public func reset() {
-		startTime = AbsoluteTime()
+		startTime = ContinuousClock.now
 		values.reset()
 	}
 

@@ -34,7 +34,6 @@ public extension Span {
 				self.addAttribute("server.address", url.host)
 				self.addAttribute("server.port", url.port)
 				self.addAttribute("url.full", url.absoluteString)
-
 			}
 
 			addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
@@ -60,7 +59,7 @@ public extension Span {
 		addAttribute("http.response.status_code", response.statusCode)
 
 		if error == nil, recordAsStatusCodeFailure {
-			status = .error(message: message(statusCode: response.statusCode))
+			status = .error(message: Self.message(statusCode: response.statusCode))
 		}
 
 		if let headers = response.allHeaderFields as? [String: String] {
@@ -119,15 +118,15 @@ public extension Span {
 			addAttribute("tls.protocol.version", tlsVersionString)
 		}
 
-		addAttribute("tls.cipher", cipherSuiteName(metric.negotiatedTLSCipherSuite))
+		addAttribute("tls.cipher", Self.cipherSuiteName(metric.negotiatedTLSCipherSuite))
 
 		// We can't provide more detail without groveling into NWPath and
 		// CTTelephonyNetworkInfo.serviceCurrentRadioAccessTechnology
 		addAttribute("network.connection.type", metric.isCellular ? "cell" : "wifi")
-		addAttribute("network.protocol.version", networkProtocolVersion(metric.networkProtocolName))
+		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
 	}
 
-	private func addHeaders(prefix: String, headers: [String: String]?, headerCaptureList: Set<String>? = nil) {
+	internal func addHeaders(prefix: String, headers: [String: String]?, headerCaptureList: Set<String>? = nil) {
 		//	[1] http.request.header: Instrumentations SHOULD require an explicit configuration of which headers are to be captured. Including all request headers can be a security risk - explicit configuration helps avoid leaking sensitive information. The User-Agent header is already captured in the user_agent.original attribute. Users MAY explicitly configure instrumentations to capture them even though it is not recommended. The attribute value MUST consist of either multiple header values as an array of strings or a single-item array containing a possibly comma-concatenated string, depending on the way the HTTP library provides access to headers.
 		if let headerCaptureList = headerCaptureList,
 		   let headers = headers {
@@ -141,12 +140,12 @@ public extension Span {
 		}
 	}
 
-	private func message(statusCode: Int) -> String {
+	internal static func message(statusCode: Int) -> String {
 		Span.statusCodeMap[statusCode] ?? "Unassigned"
 	}
 
 	// Derived from https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
-	private func networkProtocolVersion(_ networkProtocolName: String?) -> String? {
+	internal static func networkProtocolVersion(_ networkProtocolName: String?) -> String? {
 		switch networkProtocolName {
 			case "http/1.0": "1.0"
 			case "http/1.1": "1.1"
@@ -223,7 +222,7 @@ public extension Span {
 	]
 
 	// Derived from Security/SecProtocolTypes.h
-	private func cipherSuiteName(_ cipherSuite: tls_ciphersuite_t?) -> String? {
+	internal static func cipherSuiteName(_ cipherSuite: tls_ciphersuite_t?) -> String? {
 		switch cipherSuite {
 		case .AES_128_GCM_SHA256: "TLS_AES_128_GCM_SHA256"
 		case .AES_256_GCM_SHA384: "TLS_AES_256_GCM_SHA384"

@@ -18,7 +18,7 @@ public protocol Instrument: AnyObject {
 	var description: String? { get }
 
 	/// A timestamp (start_time_unix_nano) which best represents the first possible moment a measurement could be recorded. This is commonly set to the timestamp when a metric collection system started.
-	var startTime: AbsoluteTime { get }
+	var startTime: ContinuousClock.Instant { get }
 
 	var aggregationTemporality: AggregationTemporality { get }
 	

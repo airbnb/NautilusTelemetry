@@ -27,9 +27,6 @@ final class TraceExporterTests: XCTestCase {
 	/// See detailed instructions in OpenTelemetryCollector directory
 	let testWithLocalCollector = TraceExporterTests.testEnabled("testWithLocalCollector")
 	let testWithRemoteCollector = TraceExporterTests.testEnabled("testWithRemoteCollector")
-	let testTraces = TraceExporterTests.testEnabled("testTraces")
-	let testMetrics = TraceExporterTests.testEnabled("testMetrics")
-	let testLogs = TraceExporterTests.testEnabled("testLogs")
 
 	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 	let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
@@ -61,7 +58,6 @@ final class TraceExporterTests: XCTestCase {
 	}
 	
 	func testOTLPExporterTraces() throws {
-		guard testTraces else { throw XCTSkip("Skipped, disabled") }
 
 		let timeReference = TimeReference(serverOffset: 0.0)
 		
@@ -132,7 +128,6 @@ final class TraceExporterTests: XCTestCase {
 	}
 	
 	func testOTLPExporterLogs() throws {
-		guard testLogs else { throw XCTSkip("Skipped, disabled") }
 
 		let timeReference = TimeReference(serverOffset: 0.0)
 		let exporter = Exporter(timeReference: timeReference)
@@ -214,7 +209,6 @@ final class TraceExporterTests: XCTestCase {
 	}
 	
 	func testOTLPExporterMetrics() throws {
-		guard testMetrics else { throw XCTSkip("Skipped, disabled") }
 
 		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 		
@@ -230,7 +224,7 @@ final class TraceExporterTests: XCTestCase {
 		
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 		
-		let now = AbsoluteTime()
+		let now = ContinuousClock.now
 		let time = timeReference.nanosecondsSinceEpoch(from: now)
 		let timeString = "\(time)"
 		

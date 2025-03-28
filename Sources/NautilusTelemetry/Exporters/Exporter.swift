@@ -38,10 +38,10 @@ public struct Exporter {
 		return json
 	}
 
-	/// Convert `AbsoluteTime` to OTLP nanoseconds since epoch format
-	/// - Parameter time: `AbsoluteTime` object
+	/// Convert `ContinuousClock.Instant` to OTLP nanoseconds since epoch format
+	/// - Parameter time: `ContinuousClock.Instant` object
 	/// - Returns: String describing nanoseconds since epoch (avoids JSON numeric precision issue)
-	func convertToOTLP(time: AbsoluteTime?) -> String? {
+	func convertToOTLP(time: ContinuousClock.Instant?) -> String? {
 		guard let time = time else {
 			return nil
 		}

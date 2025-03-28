@@ -14,6 +14,7 @@ public typealias MetricNumeric = Numeric & Comparable
 /// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 public typealias TelemetryAttributes = [String: AnyHashable]
 
+// These could be converted to UInt128 / UInt64, once UInt128 is widely available
 public typealias SpanId = Data
 public typealias TraceId = Data
 
