@@ -25,8 +25,8 @@ public extension Span {
 	/// - Parameters:
 	///   - _:  the URLSession instance
 	///   - task: the task
-	///   - requestHeaderCaptureList: a set of request headers to capture, or nil to capture none
-	func urlSession(_: URLSession, didCreateTask task: URLSessionTask, requestHeaderCaptureList: Set<String>? = nil) {
+	///   - requestHeadersToCapture: a set of request headers to capture, or nil to capture none
+	func urlSession(_: URLSession, didCreateTask task: URLSessionTask, requestHeadersToCapture: Set<String>? = nil) {
 		if let request = task.currentRequest {
 			self.addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
 
@@ -37,7 +37,7 @@ public extension Span {
 			}
 
 			addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
-			addHeaders(prefix: "http.request.header", headers: request.allHTTPHeaderFields, headerCaptureList: requestHeaderCaptureList)
+			addHeaders(prefix: "http.request.header", headers: request.allHTTPHeaderFields, headersToCapture: requestHeadersToCapture)
 		}
 	}
 
@@ -47,8 +47,8 @@ public extension Span {
 	///   - task: the task
 	///   - error: an optional error
 	///   - recordAsStatusCodeFailure: whether to record as a failure due to status code when error == nil
-	///   - responseHeaderCaptureList: a set of response headers to capture, or nil to capture none
-	func urlSession(_: URLSession, task: URLSessionTask, didCompleteWithError error: Error?, recordAsStatusCodeFailure: Bool = false, responseHeaderCaptureList: Set<String>? = nil) {
+	///   - responseHeadersToCapture: a set of response headers to capture, or nil to capture none
+	func urlSession(_: URLSession, task: URLSessionTask, didCompleteWithError error: Error?, recordAsStatusCodeFailure: Bool = false, responseHeadersToCapture: Set<String>? = nil) {
 
 		if let error = error {
 			self.recordError(error)
@@ -63,7 +63,7 @@ public extension Span {
 		}
 
 		if let headers = response.allHeaderFields as? [String: String] {
-			addHeaders(prefix: "http.response.header", headers: headers, headerCaptureList: responseHeaderCaptureList)
+			addHeaders(prefix: "http.response.header", headers: headers, headersToCapture: responseHeadersToCapture)
 		}
 	}
 
@@ -126,14 +126,23 @@ public extension Span {
 		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
 	}
 
-	internal func addHeaders(prefix: String, headers: [String: String]?, headerCaptureList: Set<String>? = nil) {
+	internal func addHeaders(prefix: String, headers: [String: String]?, headersToCapture: Set<String>? = nil) {
 		//	[1] http.request.header: Instrumentations SHOULD require an explicit configuration of which headers are to be captured. Including all request headers can be a security risk - explicit configuration helps avoid leaking sensitive information. The User-Agent header is already captured in the user_agent.original attribute. Users MAY explicitly configure instrumentations to capture them even though it is not recommended. The attribute value MUST consist of either multiple header values as an array of strings or a single-item array containing a possibly comma-concatenated string, depending on the way the HTTP library provides access to headers.
-		if let headerCaptureList = headerCaptureList,
+
+		#if DEBUG
+		if let headersToCapture = headersToCapture {
+			for header in headersToCapture {
+				assert(header.lowercased() == header, "expected all header names to be lowercased")
+			}
+		}
+		#endif
+
+		if let headersToCapture = headersToCapture,
 		   let headers = headers {
 
 			for (key, value) in headers {
 				let normalizedKey = key.lowercased()
-				if headerCaptureList.contains(normalizedKey) {
+				if headersToCapture.contains(normalizedKey) {
 					self.addAttribute("\(prefix).\(normalizedKey)", value)
 				}
 			}
