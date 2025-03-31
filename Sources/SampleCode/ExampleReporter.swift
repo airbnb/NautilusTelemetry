@@ -44,7 +44,7 @@ public class ExampleReporter: NautilusTelemetryReporter {
 	public func subscribeToLifecycleEvents() {
 #if canImport(UIKit) && os(iOS)
 		let backgroundNotificationName = UIApplication.shared.supportsMultipleScenes ? UIScene.didEnterBackgroundNotification : UIApplication.didEnterBackgroundNotification
-		NotificationCenter.default.addObserver(forName: backgroundNotificationName, object: nil, queue: OperationQueue.main) { _ in self.didEnterBackground() }
+		NotificationCenter.default.addObserver(forName: backgroundNotificationName, object: nil, queue: OperationQueue.main) { [weak self] _ in self?.didEnterBackground() }
 #endif
 	}
 	
