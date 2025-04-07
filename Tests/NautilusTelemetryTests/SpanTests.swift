@@ -141,4 +141,21 @@ final class SpanTests: XCTestCase {
 		
 		XCTAssert(ranSpan)
 	}
+
+	func testForMemoryLeaks() throws {
+		let span1 = tracer.startSpan(name: "span1")
+		trackForMemoryLeak(instance: span1)
+
+		tracer.withSpan(name: "span2") {
+			let span2 = tracer.currentBaggage.span
+			span2.addEvent("event1")
+			Thread.sleep(forTimeInterval: 0.1)
+			span2.addEvent("event2")
+			span2.status = .ok
+
+			trackForMemoryLeak(instance: span2)
+		}
+
+		tracer.flushRetiredSpans() // make sure retired spans don't show up as leaks
+	}
 }
