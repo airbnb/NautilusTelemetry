@@ -1,6 +1,6 @@
 //
 //  Exporter+Trace.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 3/1/22.
 //
@@ -9,7 +9,9 @@ import Foundation
 
 /// Exporter utilities for Trace models
 extension Exporter {
-	
+
+	// MARK: Public
+
 	/// Exports an array of `Span` objects to OTLP format
 	/// - Parameters:
 	///   - spans: array of spans
@@ -23,13 +25,14 @@ extension Exporter {
 		let attributes = convertToOTLP(attributes: resourceAttributes.keyValues)
 		let resource = OTLP.V1Resource(attributes: attributes, droppedAttributesCount: nil)
 		let scopeSpans = OTLP.V1ScopeSpans(scope: instrumentationScope, spans: otlpSpans, schemaUrl: schemaUrl)
-		
+
 		let resourceSpans = OTLP.V1ResourceSpans(resource: resource, scopeSpans: [scopeSpans], schemaUrl: schemaUrl)
 		let traceServiceRequest = OTLP.V1ExportTraceServiceRequest(resourceSpans: [resourceSpans])
-		
-		let json = try encodeJSON(traceServiceRequest)
-		return json
+
+		return try encodeJSON(traceServiceRequest)
 	}
+
+	// MARK: Internal
 
 	/// Converts Span to OTLPv1 format Span
 	/// - Parameter span: Span
@@ -41,67 +44,72 @@ extension Exporter {
 		let attributes = convertToOTLP(attributes: span.attributes)
 		let events = convertToOTLP(events: span.events)
 		let status = convertToOTLP(status: span.status)
-		
+
+		let kind = mapKind(span.kind)
+		let links = buildLinks(span)
+
+		return OTLP.V1Span(
+			traceId: span.traceId,
+			spanId: span.id,
+			traceState: nil,
+			parentSpanId: span.parentId,
+			name: span.name,
+			kind: kind,
+			startTimeUnixNano: startTime,
+			endTimeUnixNano: endTime,
+			attributes: attributes,
+			droppedAttributesCount: nil,
+			events: events,
+			droppedEventsCount: nil,
+			links: links,
+			droppedLinksCount: nil,
+			status: status)
+	}
+
+	func mapKind(_ spanKind: SpanKind) -> OTLP.SpanSpanKind {
 		// Map the enumerate
-		let kind: OTLP.SpanSpanKind = {
-			switch span.kind {
-			case .unspecified:
-				return ._internal // we didn't figure it out, we'll assume internal
-			case .internal:
-				return ._internal
-			case .client:
-				return .client
-			}
-		}()
-		
-		return OTLP.V1Span(traceId: span.traceId,
-						   spanId: span.id,
-						   traceState: nil,
-						   parentSpanId: span.parentId,
-						   name: span.name,
-						   kind: kind,
-						   startTimeUnixNano: startTime,
-						   endTimeUnixNano: endTime,
-						   attributes: attributes,
-						   droppedAttributesCount: nil,
-						   events: events,
-						   droppedEventsCount: nil,
-						   links: nil,
-						   droppedLinksCount: nil,
-						   status: status)
+		switch spanKind {
+		case .unspecified:
+				._internal // we didn't figure it out, we'll assume internal
+		case .internal:
+				._internal
+		case .client:
+				.client
+		}
 	}
 	
-	
+	func buildLinks(_ span: Span) -> [OTLP.SpanLink]? {
+		guard let linkedParent = span.linkedParent else { return nil }
+		return [OTLP.SpanLink(traceId: linkedParent.traceId, spanId: linkedParent.id)]
+	}
+
 	/// Converts Span.Status to OTLP.V1Status
 	/// - Parameter status: Span status
 	/// - Returns: OTLP span status
 	func convertToOTLP(status: Span.Status) -> OTLP.Tracev1Status {
 		switch status {
 		case .unset:
-			return OTLP.Tracev1Status(message: nil, code: .unset)
+			OTLP.Tracev1Status(message: nil, code: .unset)
 		case .ok:
-			return OTLP.Tracev1Status(message: nil, code: .ok)
+			OTLP.Tracev1Status(message: nil, code: .ok)
 		case .error(let message):
-			return OTLP.Tracev1Status(message: message, code: .error)
+			OTLP.Tracev1Status(message: message, code: .error)
 		}
 	}
 
-	
 	/// Converts `Event` to OTLP format
 	/// - Parameter events: An array of `Event` objects
 	/// - Returns: events converted to OTLP format.
 	func convertToOTLP(events: [Span.Event]?) -> [OTLP.SpanEvent]? {
-		guard let events = events else {
+		guard let events else {
 			return nil
 		}
-		
-		let otlpEvents: [OTLP.SpanEvent] = events.map { event in
+
+		return events.map { event in
 			let time = String(timeReference.nanosecondsSinceEpoch(from: event.time))
 			let attributes = convertToOTLP(attributes: event.attributes)
-			
+
 			return OTLP.SpanEvent(timeUnixNano: time, name: event.name, attributes: attributes, droppedAttributesCount: nil)
 		}
-		
-		return otlpEvents
 	}
 }

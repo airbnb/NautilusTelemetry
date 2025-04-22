@@ -32,6 +32,7 @@ final class TraceExporterTests: XCTestCase {
 	let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
 
 	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
+	let timeReference = TimeReference(serverOffset: 0.0)
 
 	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.4/getting-started/
 	/*
@@ -56,11 +57,10 @@ final class TraceExporterTests: XCTestCase {
 		}
 		return false
 	}
-	
+
 	func testOTLPExporterTraces() throws {
 
-		let timeReference = TimeReference(serverOffset: 0.0)
-		
+
 		let tracer = Tracer()
 		tracer.withSpan(name: "span1", attributes: [:]) {
 			let span1 = tracer.currentBaggage.span
@@ -126,7 +126,7 @@ final class TraceExporterTests: XCTestCase {
 		
 		tracer.flushTrace()
 	}
-	
+
 	func testOTLPExporterLogs() throws {
 
 		let timeReference = TimeReference(serverOffset: 0.0)
@@ -207,7 +207,23 @@ final class TraceExporterTests: XCTestCase {
 			try postJSON(url: "\(localEndpointBase)/v1/logs", json: json)
 		}
 	}
-	
+
+	func testSpanLink() throws {
+		let traceId1 = Identifiers.generateTraceId()
+		let traceId2 = Identifiers.generateTraceId()
+
+		let span1 = Span(name: "root", traceId: traceId1, parentId: nil)
+		let span2 = Span(name: "hello", traceId: traceId2, parentId: nil, linkedParent: span1)
+
+		let exporter = Exporter(timeReference: timeReference)
+		let json = try exporter.exportOTLPToJSON(spans: [span1, span2], additionalAttributes: nil)
+
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: ["startTimeUnixNano", "spanId", "traceId", "resource"]))
+		let expectedOutput = #"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[],"kind":1,"name":"root","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[],"kind":1,"links":[{"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"}]}]}]}"#
+
+		XCTAssertEqual(normalizedJsonString, expectedOutput)
+	}
+
 	func testOTLPExporterMetrics() throws {
 
 		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md

@@ -12,10 +12,16 @@ public final class Baggage: @unchecked Sendable {
 
   // TaskLocal works even for conventional threads: https://developer.apple.com/documentation/swift/tasklocal
 	@TaskLocal static var currentBaggageTaskLocal: Baggage?
-	
-	public init(span: Span) {
+
+	/// Creates a baggage object
+	/// - Parameters:
+	///   - span:a parent span
+	///   - subTraceId: an optional TraceId, overriding the parent span's, allowing for the creation of subtraces
+	public init(span: Span, subTraceId: TraceId? = nil) {
 		self.span = span
+		self.subTraceId = subTraceId
 	}
 	
 	let span: Span
+	let subTraceId: TraceId?
 }
