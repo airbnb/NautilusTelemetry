@@ -25,6 +25,7 @@ public final class Span: Identifiable {
 	public let traceId: TraceId
 	public let id: SpanId
 	let parentId: SpanId?
+	let linkedParent: Span?
 	let startTime: ContinuousClock.Instant
 	var attributes: TelemetryAttributes?
 	var events = [Event]()
@@ -64,6 +65,7 @@ public final class Span: Identifiable {
 				  traceId: TraceId,
 				  id: SpanId = Identifiers.generateSpanId(),
 				  parentId: SpanId?,
+				  linkedParent: Span? = nil,
 				  retireCallback: ((_: Span) -> Void)? = nil) {
 
 		self.name = name
@@ -72,10 +74,11 @@ public final class Span: Identifiable {
 		self.traceId = traceId
 		self.id = id
 		self.parentId = parentId
+		self.linkedParent = linkedParent
 		self.startTime = startTime
 		self.endTime = endTime
 		self.retireCallback = retireCallback
-
+		
 		addDefaultAttributes()
 	}
 	

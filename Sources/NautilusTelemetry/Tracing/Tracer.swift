@@ -82,22 +82,45 @@ public final class Tracer {
 			}
 		}
 	}
-	
+
+
+	/// Creates a new subtrace span, with a link to a parent span
+	/// - Parameters:
+	///   - name: The name of the new span
+	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls
+	///   - attributes: optional attributes
+	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
+	/// - Returns: A new span with a detached trace
+	public func startSubtraceSpan(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil) -> Span {
+		let resolvedBaggage = baggage ?? currentBaggage
+		let subTraceBaggage = Baggage(span: resolvedBaggage.span, subTraceId: Identifiers.generateTraceId())
+		return startSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage)
+	}
+
 	/// Create a manually managed span
 	/// - Parameters:
 	///   - name: the name of the operation
-	///   - kind: the kind of the span - may be safely left unspecified in most cases
+	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls
 	///   - attributes: optional attributes
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: A newly created span
 	public func startSpan(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
-		let span = Span(name: name, kind: finalKind, attributes: attributes, traceId: resolvedBaggage.span.traceId, parentId: resolvedBaggage.span.id, retireCallback: retire)
 
-		return span
+		if let subTraceId = resolvedBaggage.subTraceId {
+			// Create a new detached trace with a link to the parent trace
+			return Span(name: name, kind: finalKind, attributes: attributes, traceId: subTraceId, parentId: nil, linkedParent: resolvedBaggage.span, retireCallback: retire)
+		} else {
+			return Span(name: name, kind: finalKind, attributes: attributes, traceId: resolvedBaggage.span.traceId, parentId: resolvedBaggage.span.id, retireCallback: retire)
+		}
 	}
 
+	/// Propagate a parent span into the enclosed block via TaskLocal
+	/// - Parameters:
+	///   - span: The parent span
+	///   - block: The code to execute
+	/// - Returns: The return value of the closure
 	public func propagateParent<T>(_ span: Span, block: () throws -> T) rethrows -> T {
 		let baggage = Baggage(span: span)
 		return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
