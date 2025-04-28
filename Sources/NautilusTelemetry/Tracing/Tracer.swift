@@ -97,6 +97,19 @@ public final class Tracer {
 		return startSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage)
 	}
 
+	/// Create a new subtrace span that measures a specific block of code, with a link to a parent span
+	/// - Parameters:
+	///   - name: The name of the new span
+	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls
+	///   - attributes: optional attributes
+	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
+	/// - Returns: A new span with a detached trace
+	public func withSubtraceSpan<T>(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil, block: () throws -> T) rethrows -> T {
+		let resolvedBaggage = baggage ?? currentBaggage
+		let subTraceBaggage = Baggage(span: resolvedBaggage.span, subTraceId: Identifiers.generateTraceId())
+		return try withSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage, block:block)
+	}
+
 	/// Create a manually managed span
 	/// - Parameters:
 	///   - name: the name of the operation
