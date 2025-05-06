@@ -30,7 +30,7 @@ public struct InstrumentationSystem {
 				flushInterval = 1
 			}
 			
-			// Convey the flush interval
+			// Convey the flush interval.
 			tracer.flushInterval = flushInterval
 		}
 		

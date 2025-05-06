@@ -56,7 +56,7 @@ public final class MetricKitInstrument: NSObject, MXMetricManagerSubscriber {
 		logger.debug("MetricKitInstrument: \(payloads)")
 		
 		for payload in payloads {
-			let json = payload.jsonRepresentation() // could pull this apart, but JSON representation may be most useful
+			let json = payload.jsonRepresentation() // could pull this apart, but JSON representation may be most useful.
 			if let jsonString = String(data: json, encoding: .utf8) {
 				logger.debug("\(jsonString)")
 			}

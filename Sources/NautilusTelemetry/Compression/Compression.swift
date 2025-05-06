@@ -9,9 +9,9 @@ import Foundation
 import Compression
 import zlib
 
-/// Implements simple one-shot compressors for telemetry payloads
-/// Maybe worth using a more complete implementation such as: https://github.com/mw99/DataCompression
-/// Unfortunately, Apple doesn't let you control compression level
+/// Implements simple one-shot compressors for telemetry payloads.
+/// It may be worth using a more complete implementation such as: https://github.com/mw99/DataCompression
+/// unfortunately, Apple doesn't let you control compression level.
 public struct Compression {
 	
 	enum CompressionError: Error {

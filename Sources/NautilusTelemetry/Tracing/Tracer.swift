@@ -30,7 +30,7 @@ public final class Tracer {
 		root.retireCallback = retire // initialization order
 	}
 	
-	/// Fetch the current span, using task local or thread local values, falling back to the root span
+	/// Fetch the current span, using task local or thread local values, falling back to the root span.
 	public var currentSpan: Span { currentBaggage.span }
 	
 	func retire(span: Span) {
@@ -53,19 +53,19 @@ public final class Tracer {
 	
 	func flushRetiredSpans() {
 		let spansToReport: [Span] = Tracer.lock.withLock {
-			// copy and empty the array
+			// copy and empty the array.
 			let spans = retiredSpans
 			retiredSpans.removeAll()
 			return spans
 		}
 		
-		// If we have no reporter, we'll drop them on the floor to avoid unbounded growth
+		// If we have no reporter, we'll drop them on the floor to avoid unbounded growth.
 		if spansToReport.count > 0, let reporter = InstrumentationSystem.reporter {
 			reporter.reportSpans(spansToReport)
 		}
 	}
 	
-	/// Sets the flush interval for reporting back to the configured ``Reporter``
+	/// Sets the flush interval for reporting back to the configured ``Reporter``.
 	var flushInterval: TimeInterval {
 		didSet {
 			if let flushTimer = flushTimer {
@@ -84,48 +84,48 @@ public final class Tracer {
 	}
 
 
-	/// Creates a new subtrace span, with a link to a parent span
+	/// Creates a new subtrace span, with a link to a parent span.
 	/// - Parameters:
-	///   - name: The name of the new span
-	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls
-	///   - attributes: optional attributes
+	///   - name: The name of the new span.
+	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls.
+	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
-	/// - Returns: A new span with a detached trace
+	/// - Returns: A new span with a detached trace.
 	public func startSubtraceSpan(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let subTraceBaggage = Baggage(span: resolvedBaggage.span, subTraceId: Identifiers.generateTraceId())
 		return startSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage)
 	}
 
-	/// Create a new subtrace span that measures a specific block of code, with a link to a parent span
+	/// Create a new subtrace span that measures a specific block of code, with a link to a parent span.
 	/// - Parameters:
-	///   - name: The name of the new span
-	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls
-	///   - attributes: optional attributes
+	///   - name: The name of the new span.
+	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls.
+	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
-	/// - Returns: A new span with a detached trace
+	/// - Returns: A new span with a detached trace.
 	public func withSubtraceSpan<T>(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil, block: () throws -> T) rethrows -> T {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let subTraceBaggage = Baggage(span: resolvedBaggage.span, subTraceId: Identifiers.generateTraceId())
 		return try withSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage, block: block)
 	}
 
-	/// Create a manually managed span
+	/// Create a manually managed span.
 	/// - Parameters:
-	///   - name: the name of the operation
-	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls
-	///   - attributes: optional attributes
+	///   - name: the name of the operation.
+	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls.
+	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
-	/// - Returns: A newly created span
+	/// - Returns: A newly created span.
 	public func startSpan(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil) -> Span {
 		return buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 	}
 
-	/// Propagate a parent span into the enclosed block via TaskLocal
+	/// Propagate a parent span into the enclosed block via TaskLocal.
 	/// - Parameters:
-	///   - span: The parent span
-	///   - block: The code to execute
-	/// - Returns: The return value of the closure
+	///   - span: The parent span.
+	///   - block: The code to execute.
+	/// - Returns: The return value of the closure.
 	public func propagateParent<T>(_ span: Span, block: () throws -> T) rethrows -> T {
 		let baggage = Baggage(span: span)
 		return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
@@ -138,13 +138,13 @@ public final class Tracer {
 		}
 	}
 
-	/// Create a span that measures a specific block of code
+	/// Create a span that measures a specific block of code.
 	/// - Parameters:
-	///   - name: the name of the operation
-	///   - kind: the kind of the span - may be safely left unspecified in most cases
-	///   - attributes: optional attributes
+	///   - name: the name of the operation.
+	///   - kind: the kind of the span - may be safely left unspecified in most cases.
+	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
-	/// - Returns: the result of the wrapped code
+	/// - Returns: the result of the wrapped code.
 	public func withSpan<T>(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil, block: () throws -> T) rethrows -> T {
 		let span = buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 
@@ -162,13 +162,13 @@ public final class Tracer {
 		}
 	}
 	
-	/// Create a span that measures a specific async block
+	/// Create a span that measures a specific async block.
 	/// - Parameters:
-	///   - name: the name of the span
-	///   - kind: the kind of the span - may be safely left unspecified in most cases
-	///   - attributes: optional attributes
+	///   - name: the name of the span.
+	///   - kind: the kind of the span - may be safely left unspecified in most cases.
+	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
-	/// - Returns: the result of the wrapped code
+	/// - Returns: the result of the wrapped code.
 	public func withSpan<T>(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil, block: () async throws -> T) async rethrows -> T {
 		let span = buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 
@@ -187,13 +187,13 @@ public final class Tracer {
 	}
 
 
-	/// Internal function to build spans with correct parent association
+	/// Internal function to build spans with correct parent association.
 	/// - Parameters:
-	///   - name: the name of the span
-	///   - kind: the kind of the span - may be safely left unspecified in most cases
-	///   - attributes: optional attributes
+	///   - name: the name of the span.
+	///   - kind: the kind of the span - may be safely left unspecified in most cases.
+	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
-	/// - Returns: An initialized span
+	/// - Returns: An initialized span.
 	func buildSpan(name: String, kind: SpanKind = .unspecified, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
