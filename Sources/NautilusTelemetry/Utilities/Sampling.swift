@@ -13,16 +13,16 @@ public protocol Sampler {
 	var shouldSample: Bool { get }
 }
 
-/// A sampler that is stable for a given GUID
-/// Intended to be used for session-based sampling or similar use cases
+/// A sampler that is stable for a given GUID.
+/// Intended to be used for session-based sampling or similar use cases.
 public final class StableGuidSampler: Sampler {
 	
 	private let lock = OSAllocatedUnfairLock()
 
-	/// Initialize a sampler that uses
+	/// Initialize a sampler that uses.
 	/// - Parameters:
-	///   - sampleRate: Rate of sampling, as a percentage [0...100]
-	///   - guid: A GUID to sample (current session, device id, user id or similar identifier)
+	///   - sampleRate: Rate of sampling, as a percentage [0...100].
+	///   - guid: A GUID to sample (current session, device id, user id or similar identifier).
 	///   - seed: A seed. All samplers sharing the same seed will produce the same results. May be empty.
 	public init(sampleRate: Double, seed: Data, guid: Data) {
 		self.sampleRate = sampleRate
@@ -32,7 +32,7 @@ public final class StableGuidSampler: Sampler {
 		computeShouldSample()
 	}
 	
-	/// A rate of sampling, expressed as a percentage [0...100]
+	/// A rate of sampling, expressed as a percentage [0...100].
 	public var sampleRate: Double {
 		didSet {
 			assert(sampleRate >= 0 && sampleRate <= 100, "expected to be in 0-100 range")
@@ -42,7 +42,7 @@ public final class StableGuidSampler: Sampler {
 		}
 	}
 	
-	/// A seed to allow multiple orthogonal samples to be taken from the same GUID
+	/// A seed to allow multiple orthogonal samples to be taken from the same GUID.
 	let seed: Data
 	
 	private var _guid: Data

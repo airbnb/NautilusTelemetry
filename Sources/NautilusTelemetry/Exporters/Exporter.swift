@@ -12,21 +12,21 @@ public struct Exporter {
 	
 	let schemaUrl: String? = nil
 
-	/// Provides a mapping between absolute locale time and remote clock time, including server offset
+	/// Provides a mapping between absolute locale time and remote clock time, including server offset.
 	let timeReference: TimeReference
 	
-	/// Should the JSON output be pretty printed? Defaults to false
+	/// Should the JSON output be pretty printed? Defaults to false.
 	let prettyPrint: Bool
 	
-	/// Initialize the exporter with a time reference
-	/// - Parameter timeReference: describes the computed offset to server time
+	/// Initialize the exporter with a time reference.
+	/// - Parameter timeReference: describes the computed offset to server time.
 	public init(timeReference: TimeReference, prettyPrint: Bool = false) {
 		self.timeReference = timeReference
 		self.prettyPrint = prettyPrint
 	}
 
-	/// Encodes JSON, with Data objects encoded as hex
-	/// - Returns: JSON data
+	/// Encodes JSON, with Data objects encoded as hex.
+	/// - Returns: JSON data.
 	func encodeJSON<T>(_ value: T) throws -> Data where T : Encodable {
 		let encoder = JSONEncoder()
 		OTLP.configure(encoder: encoder) // setup hex
@@ -38,9 +38,9 @@ public struct Exporter {
 		return json
 	}
 
-	/// Convert `ContinuousClock.Instant` to OTLP nanoseconds since epoch format
-	/// - Parameter time: `ContinuousClock.Instant` object
-	/// - Returns: String describing nanoseconds since epoch (avoids JSON numeric precision issue)
+	/// Convert `ContinuousClock.Instant` to OTLP nanoseconds since epoch format.
+	/// - Parameter time: `ContinuousClock.Instant` object.
+	/// - Returns: String describing nanoseconds since epoch (avoids JSON numeric precision issue).
 	func convertToOTLP(time: ContinuousClock.Instant?) -> String? {
 		guard let time = time else {
 			return nil
@@ -49,9 +49,9 @@ public struct Exporter {
 		return String(timeReference.nanosecondsSinceEpoch(from: time))
 	}
 
-	/// Converts common value types to OTLP format
-	/// - Parameter value: Any value type
-	/// - Returns: OTLP wrapped type, or nil if it could not be converted
+	/// Converts common value types to OTLP format.
+	/// - Parameter value: Any value type.
+	/// - Returns: OTLP wrapped type, or nil if it could not be converted.
 	func convertToOTLP(value: Any) -> OTLP.V1AnyValue? {
 		var v1AnyValue: OTLP.V1AnyValue? = nil
 		
@@ -93,8 +93,8 @@ public struct Exporter {
 		return v1AnyValue
 	}
 	
-	/// Converts `TelemetryAttributes` to OTLP format
-	/// - Parameter attributes: TelemetryAttributes 
+	/// Converts `TelemetryAttributes` to OTLP format.
+	/// - Parameter attributes: TelemetryAttributes.
 	/// - Returns: attributes converted to OTLP format. Values that cannot be converted are omitted.
 	func convertToOTLP(attributes: TelemetryAttributes?) -> [OTLP.V1KeyValue]? {
 		guard let attributes = attributes else {

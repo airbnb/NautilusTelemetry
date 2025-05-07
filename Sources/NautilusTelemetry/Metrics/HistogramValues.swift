@@ -31,7 +31,7 @@ struct HistogramBuckets<T: MetricNumeric> {
 			}
 		}
 		
-		// In the range of (lastBound...infinity)
+		// In the range of (lastBound...infinity).
 		data[count] += 1
 	}
 }
@@ -41,9 +41,9 @@ struct HistogramValues<T: MetricNumeric> {
 
 	let explicitBounds: [T]
 	
-	/// Initialize with bounds
-	/// - Parameter explicitBounds: See `V1HistogramDataPoint.swift` for defintion
-	///  Limitation: all recorded histograms share the same `explicitBounds` in this implementation
+	/// Initialize with bounds.
+	/// - Parameter explicitBounds: See `V1HistogramDataPoint.swift` for defintion.
+	///  Limitation: all recorded histograms share the same `explicitBounds` in this implementation.
 	init(explicitBounds: [T]) {
 		self.explicitBounds = explicitBounds
 	}

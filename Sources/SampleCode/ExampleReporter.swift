@@ -17,7 +17,7 @@ import NautilusTelemetry
 @available(iOS 13.0, *)
 public class ExampleReporter: NautilusTelemetryReporter {
 
-	/// If collector supports brotli in the future
+	/// If collector supports brotli in the future.
 	let brotliAllowed = false
 
 	enum ReporterError: Error {
@@ -133,7 +133,7 @@ public class ExampleReporter: NautilusTelemetryReporter {
 			throw ReporterError.failure
 		}
 		
-		let traceIdString = InstrumentationSystem.tracer.currentSpan.traceId.hex
+		let traceIdString = Identifiers.hexEncodedString(data: InstrumentationSystem.tracer.currentSpan.traceId)
 		var urlRequest = URLRequest(url: url)
 		urlRequest.httpBody = compressedPayload
 		urlRequest.httpMethod = "POST"
@@ -147,7 +147,7 @@ public class ExampleReporter: NautilusTelemetryReporter {
 			}
 		}
 		
-		// priority is only significant for HTTP/2+ when sharing an URLSession object with other concurrent requests
+		// Priority is only significant for HTTP/2+ when sharing an URLSession object with other concurrent requests.
 		task.priority = 0.25
 		task.resume()
 	}
@@ -158,12 +158,6 @@ public class ExampleReporter: NautilusTelemetryReporter {
 		} else {
 			return false
 		}
-	}
-}
-
-fileprivate extension Data {
-	var hex: String {
-		return self.reduce("") {$0 + String(format: "%02x", $1)} // slow but one line to get hex
 	}
 }
 

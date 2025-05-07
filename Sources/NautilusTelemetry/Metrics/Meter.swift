@@ -14,7 +14,7 @@ import os
 /// The meter is responsible for creating Instruments.
 public final class Meter {
 	
-	// Used for protecting *Values structures
+	// Used for protecting *Values structures.
 	static let valueLock = OSAllocatedUnfairLock()
 
 	public init() {

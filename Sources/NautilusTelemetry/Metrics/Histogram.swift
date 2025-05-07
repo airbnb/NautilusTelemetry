@@ -17,12 +17,12 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	var values: HistogramValues<T>
 	
-	/// Initialize a histogram
+	/// Initialize a histogram.
 	/// - Parameters:
-	///   - name: the name of the histogram
-	///   - unit: the unit of measure
-	///   - description: a descriptive string
-	///   - explicitBounds: See definition in `V1HistogramDataPoint.swift`
+	///   - name: the name of the histogram.
+	///   - unit: the unit of measure.
+	///   - description: a descriptive string.
+	///   - explicitBounds: See definition in `V1HistogramDataPoint.swift`.
 	internal init(name: String, unit: Unit?, description: String?, explicitBounds: [T]) {
 		self.name = name
 		self.unit = unit

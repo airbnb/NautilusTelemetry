@@ -10,7 +10,7 @@ import Foundation
 /// Provides information about the running process
 public struct ProcessDetails {
 	
-	/// Provide the time since the process started. I can't find a way to get this in absolute time, so we'll just provide wall clock time
+	/// Provide the time since the process started. I can't find a way to get this in absolute time, so we'll just provide wall clock time.
 	public static var timeSinceStart: TimeInterval  {
 		
 		var result: TimeInterval = 0.0

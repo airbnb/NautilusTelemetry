@@ -12,11 +12,11 @@ extension Exporter {
 
 	// MARK: Public
 
-	/// Exports an array of `Span` objects to OTLP format
+	/// Exports an array of `Span` objects to OTLP format.
 	/// - Parameters:
-	///   - spans: array of spans
-	///   - additionalAttributes: Additional attributes to be added to resource attributes
-	/// - Returns: JSON data
+	///   - spans: array of spans.
+	///   - additionalAttributes: Additional attributes to be added to resource attributes.
+	/// - Returns: JSON data.
 	public func exportOTLPToJSON(spans: [Span], additionalAttributes: TelemetryAttributes?) throws -> Data {
 		let otlpSpans = spans.map { exportOTLP(span: $0) }
 

@@ -8,9 +8,9 @@ import Foundation
 /// Extensions to be called by the application's URLSession delegate
 public extension Span {
 
-	/// Provides a span name
-	/// - Parameter request: the request to construct from
-	/// - Returns: a span name
+	/// Provides a span name.
+	/// - Parameter request: the request to construct from.
+	/// - Returns: a span name.
 	static func name(forRequest request: URLRequest) -> String {
 		// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#name
 		// HTTP spans MUST follow the overall guidelines for span names.
@@ -21,11 +21,11 @@ public extension Span {
 		return request.httpMethod ?? "HTTP"
 	}
 
-	/// Annotates the span with attributes from the task's URLRequest
+	/// Annotates the span with attributes from the task's URLRequest.
 	/// - Parameters:
-	///   - _:  the URLSession instance
-	///   - task: the task
-	///   - requestHeadersToCapture: a set of request headers to capture, or nil to capture none
+	///   - _:  the URLSession instance.
+	///   - task: the task.
+	///   - requestHeadersToCapture: a set of request headers to capture, or nil to capture none.
 	func urlSession(_: URLSession, didCreateTask task: URLSessionTask, requestHeadersToCapture: Set<String>? = nil) {
 		if let request = task.currentRequest {
 			self.addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
@@ -41,13 +41,13 @@ public extension Span {
 		}
 	}
 
-	/// Annotates the span with attributes from the task's response
+	/// Annotates the span with attributes from the task's response.
 	/// - Parameters:
-	///   - _:  the URLSession instance
-	///   - task: the task
-	///   - error: an optional error
-	///   - recordAsStatusCodeFailure: whether to record as a failure due to status code when error == nil
-	///   - responseHeadersToCapture: a set of response headers to capture, or nil to capture none
+	///   - _:  the URLSession instance.
+	///   - task: the task.
+	///   - error: an optional error.
+	///   - recordAsStatusCodeFailure: whether to record as a failure due to status code when error == nil.
+	///   - responseHeadersToCapture: a set of response headers to capture, or nil to capture none.
 	func urlSession(_: URLSession, task: URLSessionTask, didCompleteWithError error: Error?, recordAsStatusCodeFailure: Bool = false, responseHeadersToCapture: Set<String>? = nil) {
 
 		if let error = error {
@@ -67,11 +67,11 @@ public extension Span {
 		}
 	}
 
-	/// Annotates the span with attributes from URLSessionTaskMetrics
+	/// Annotates the span with attributes from URLSessionTaskMetrics.
 	/// - Parameters:
-	///   - _:  the URLSession instance
-	///   - task: the task
-	///   - metrics: collected metrics
+	///   - _:  the URLSession instance.
+	///   - task: the task.
+	///   - metrics: collected metrics.
 	func urlSession(_: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
 
 		if metrics.redirectCount > 0 {
@@ -121,7 +121,7 @@ public extension Span {
 		addAttribute("tls.cipher", Self.cipherSuiteName(metric.negotiatedTLSCipherSuite))
 
 		// We can't provide more detail without groveling into NWPath and
-		// CTTelephonyNetworkInfo.serviceCurrentRadioAccessTechnology
+		// CTTelephonyNetworkInfo.serviceCurrentRadioAccessTechnology.
 		addAttribute("network.connection.type", metric.isCellular ? "cell" : "wifi")
 		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
 	}

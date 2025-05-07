@@ -7,9 +7,8 @@
 
 import Foundation
 
-/// Namespace
-/// The models in `OLTP-JSON` are codegenned from protobuf -> openapi -> swift
-/// Experimental -- trying to avoid bringing in protobuf!
+/// enum provides the `OTLP` namespace.
+/// The models in `OLTP-JSON` are codegenned from protobuf -> openapi -> swift.
 enum OTLP {
 	static func configure(encoder: JSONEncoder) {
 		encoder.dataEncodingStrategy = .custom(hexDataEncoder)

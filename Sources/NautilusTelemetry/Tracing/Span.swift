@@ -8,7 +8,7 @@
 import Foundation
 
 
-/// Subset of types available in OTLP.SpanSpanKind
+/// Subset of types available in OTLP.SpanSpanKind.
 public enum SpanKind {
 	/// Unspecified. The implementation will infer the kind from the parent span.
 	case unspecified
@@ -33,7 +33,7 @@ public final class Span: Identifiable {
 	var endTime: ContinuousClock.Instant?
 	var retireCallback: ((_: Span) -> Void)?
 
-	/// This can be set by the consuming code to affect the traceParentHeader value
+	/// This can be set by the consuming code to affect the traceParentHeader value.
 	public var sampled: Bool = true
 	
 	var elapsed: Duration? {
@@ -43,7 +43,7 @@ public final class Span: Identifiable {
 		}
 	}
 	
-	/// returns a value that can be used as a "traceparent" header
+	/// returns a value that can be used as a "traceparent" header.
 	public var traceParentHeader: String {
 		get {
 			// https://www.w3.org/TR/trace-context/#traceparent-header-field-values
@@ -96,10 +96,10 @@ public final class Span: Identifiable {
 		return endTime != nil
 	}
 	
-	/// Adds an attribute to the span
+	/// Adds an attribute to the span.
 	/// - Parameters:
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
-	///   - value: a value
+	///   - value: a value.
 	public func addAttribute(_ name: String, _ value: AnyHashable?) {
 		if attributes == nil {
 			attributes = TelemetryAttributes()

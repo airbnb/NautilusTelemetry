@@ -24,9 +24,9 @@ public struct ResourceAttributes {
 		}
 	}
 	
-	/// Create a default set of resource attributes
+	/// Create a default set of resource attributes.
 	/// - Parameter additionalAttributes: Additional attributes. Must conform to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/attribute-naming.md
-	/// - Returns: Built attributes
+	/// - Returns: Built attributes.
 	public static func makeWithDefaults(additionalAttributes: TelemetryAttributes?) -> ResourceAttributes {
 		let placeholder = "unknown"
 
@@ -95,7 +95,7 @@ public struct ResourceAttributes {
 		attributes["os.version"] = osVersion
 
 		if let additionalAttributes = additionalAttributes {
-			// Don't overwrite any existing keys
+			// Don't overwrite any existing keys.
 			attributes.merge(additionalAttributes) { (current, _) in current }
 		}
 
