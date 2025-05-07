@@ -14,7 +14,7 @@ public struct TimeReference {
 	let wallTimeReference = clock_gettime_nsec_np(CLOCK_REALTIME)
 	let absoluteTimeReference = ContinuousClock.now
 
-    /// Initialize a time reference with the offset to the server
+        /// Initialize a time reference with the offset to the server
 	///  This is the TimeInterval amount that must be added to correct local time to server time.
 	///  I.e., if the server clock is exactly one hour ahead, this value should be `3600.0`.
 	/// - Parameter serverOffset: time offset to server.
