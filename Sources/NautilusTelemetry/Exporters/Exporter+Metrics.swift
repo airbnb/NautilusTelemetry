@@ -11,11 +11,11 @@ import Foundation
 /// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 extension Exporter {
 	
-	/// Exports an array of `Instrument` objects to OTLP format
+	/// Exports an array of `Instrument` objects to OTLP format.
 	/// - Parameters:
-	///   - instruments: array of instruments
-	///   - additionalAttributes: Additional attributes to be added to resource attributes
-	/// - Returns: JSON data
+	///   - instruments: array of instruments.
+	///   - additionalAttributes: Additional attributes to be added to resource attributes.
+	/// - Returns: JSON data.
 	public func exportOTLPToJSON(instruments: [Instrument], additionalAttributes: TelemetryAttributes?) throws -> Data {
 
 		let metrics = exportOTLP(instruments: instruments)

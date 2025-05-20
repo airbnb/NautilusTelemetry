@@ -22,30 +22,30 @@ public struct Identifiers {
 	// MARK: utilities
 	private static var random = SystemRandomNumberGenerator()
 
-	/// Hex encodes an identifier
-	/// - Parameter data: a data object
-	/// - Returns: a lowercase hex encoded string, representing the data
+	/// Hex encodes an identifier.
+	/// - Parameter data: a data object.
+	/// - Returns: a lowercase hex encoded string, representing the data.
 	public static func hexEncodedString(data: Data) -> String {
 		return data.hexEncodedString
 	}
 
-	/// Generates a 128 bit session GUID
-	/// - Returns: 128 bit identifier as Data
+	/// Generates a 128 bit session GUID.
+	/// - Returns: 128 bit identifier as Data.
     public static func generateSessionGUID() -> TraceId {
 		let bytes = [random.next(), random.next()]
 		return bytes.withUnsafeBufferPointer { Data(buffer: $0) }
 	}
 
-	/// Generates a 128 bit trace id
-	/// - Returns: 128 bit identifier as Data
+	/// Generates a 128 bit trace id.
+	/// - Returns: 128 bit identifier as Data.
 	static func generateTraceId() -> TraceId {
 		let bytes = [random.next(), random.next()]
 		return bytes.withUnsafeBufferPointer { Data(buffer: $0) }
 	}
 
-	/// Generates a 64 bit span id
+	/// Generates a 64 bit span id.
 	/// Sequential identifiers might be better for collision avoidance: https://en.wikipedia.org/wiki/Birthday_attack#Mathematics
-	/// - Returns: 64 bit identifier as Data
+	/// - Returns: 64 bit identifier as Data.
 	static func generateSpanId() -> SpanId {
 		let bytes = [random.next()]
 		return bytes.withUnsafeBufferPointer { Data(buffer: $0) }

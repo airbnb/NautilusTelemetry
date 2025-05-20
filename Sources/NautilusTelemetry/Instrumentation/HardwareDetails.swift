@@ -10,8 +10,8 @@ import Foundation
 public struct HardwareDetails {
 	
 	public static var platformCachedValue: String? = {
-		// This doesn't change after launch, so evaluate once
-		
+		// This doesn't change after launch, so evaluate once.
+
 		// The meanings are swapped between iOS and Mac OS:
 		// https://www.cocoawithlove.com/blog/2016/03/08/swift-wrapper-for-sysctl.html#looking-for-the-source
 		// In `isiOSAppOnMac` mode, the device pretends to be an iPad Pro -- we don't want this, so switch to `hw.model`
@@ -21,7 +21,7 @@ public struct HardwareDetails {
 	}()
 	
 	private static var isOnMac: Bool = {
-		// This doesn't change after launch, so evaluate once
+		// This doesn't change after launch, so evaluate once.
 		var isOnMac = false
 		
 #if targetEnvironment(simulator)

@@ -9,13 +9,13 @@ import Foundation
 
 public protocol NautilusTelemetryReporter {
 
-	/// Desired flush interval
+	/// Desired flush interval.
 	var flushInterval: TimeInterval { get }
 	
 	func reportSpans(_ spans: [Span])
 
 	func reportInstruments(_ instruments: [Instrument])
 
-	/// Add listeners for application lifecycle events -- typically called during didFinishLaunching
+	/// Add listeners for application lifecycle events -- typically called during didFinishLaunching.
 	func subscribeToLifecycleEvents()
 }
