@@ -124,25 +124,34 @@ public final class Span: Identifiable {
 	public func addEvent(_ event: Event) {
 		events.append(event)
 	}
-	
-	public func recordError(_ error: Error) {
+
+
+	/// Record an error into this span
+	/// - Parameters:
+	///   - error: any error -- the `localizedDescription` will be used to describe the error
+	///   - includeBacktrace: whether to include a backtrace. This defaults to false, and is costly at runtime.
+	public func recordError(_ error: Error, includeBacktrace: Bool = false) {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/exceptions.md
 		
 		let message = error.localizedDescription
-		
-		// TBD: figure out Swift symbol demangling?
-		// This doesn't seem to exist yet: https://forums.swift.org/t/demangle-function/25416
-		// This looks OK, but is ≈9K lines: https://github.com/oozoofrog/SwiftDemangle
-		let callStackLimit = 20
-		let callstackSymbols = Thread.callStackSymbols.prefix(callStackLimit)
-		let callstack = callstackSymbols.joined(separator: "\n")
-		
-		let attributes = [
+
+		var attributes = [
 			"exception.type": String(describing: type(of: error)),
 			"exception.message": message,
-			"exception.stacktrace": callstack
 		]
-		
+
+		if includeBacktrace {
+			// TBD: figure out proper backtracing and Swift symbol demangling?
+			// This doesn't seem to exist yet: https://forums.swift.org/t/demangle-function/25416
+			// This looks OK, but is ≈9K lines: https://github.com/oozoofrog/SwiftDemangle
+			// Will try this, once it lands as public API:
+			// https://github.com/swiftlang/swift-evolution/blob/main/proposals/0419-backtrace-api.md
+			let callStackLimit = 20
+			let callstackSymbols = Thread.callStackSymbols.prefix(callStackLimit)
+			let callstack = callstackSymbols.joined(separator: "\n")
+			attributes["exception.stacktrace"] = callstack
+		}
+
 		let exceptionEvent = Event(name: "exception", attributes: attributes)
 		addEvent(exceptionEvent)
 		status = .error(message: message) // this duplicates exception.message above, but makes the reporting work better

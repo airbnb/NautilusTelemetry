@@ -76,7 +76,37 @@ final class SpanTests: XCTestCase {
 		let traceParentHeader = span2.traceParentHeader
 		XCTAssertEqual(traceParentHeader.count, 55)
 	}
-	
+
+	func testTraceWithError() throws {
+
+		// we expect this test to run on main queue
+		dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
+
+		try tracer.withSpan(name: "span1") {
+			XCTAssert(tracer.currentBaggage.span.parentId != nil)
+			try span2Run()
+			tracer.currentSpan.recordError(TestError.failure, includeBacktrace: true)
+			tracer.currentSpan.addEvent(Span.Event(name: "event1"))
+		}
+
+		XCTAssert(tracer.retiredSpans.count == 2)
+
+		let span2 = tracer.retiredSpans[0]
+		XCTAssert(span2.events.count == 2)
+		XCTAssert(span2.status == .ok)
+
+		let span1 = tracer.retiredSpans[1]
+		XCTAssertEqual(span1.status, .error(message: "The operation couldn’t be completed. (NautilusTelemetryTests.SpanTests.TestError error 0.)"))
+
+		let event = span1.events[0]
+		let backtrace = try XCTUnwrap(event.attributes?["exception.stacktrace"] as? String)
+
+		XCTAssert(backtrace.contains("testTraceWithError"))
+
+		let traceParentHeader = span2.traceParentHeader
+		XCTAssertEqual(traceParentHeader.count, 55)
+	}
+
 	func testThrowing() throws {
 		
 		// we expect this test to run on main queue
