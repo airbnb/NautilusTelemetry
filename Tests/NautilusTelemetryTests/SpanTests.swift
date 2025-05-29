@@ -92,14 +92,14 @@ final class SpanTests: XCTestCase {
 		XCTAssert(tracer.retiredSpans.count == 2)
 
 		let span2 = tracer.retiredSpans[0]
-		XCTAssert(span2.events.count == 2)
+		XCTAssert(span2.events?.count == 2)
 		XCTAssert(span2.status == .ok)
 
 		let span1 = tracer.retiredSpans[1]
 		XCTAssertEqual(span1.status, .error(message: "The operation couldn’t be completed. (NautilusTelemetryTests.SpanTests.TestError error 0.)"))
 
-		let event = span1.events[0]
-		let backtrace = try XCTUnwrap(event.attributes?["exception.stacktrace"] as? String)
+		let event = span1.events?[0]
+		let backtrace = try XCTUnwrap(event?.attributes?["exception.stacktrace"] as? String)
 
 		XCTAssert(backtrace.contains("testTraceWithError"))
 

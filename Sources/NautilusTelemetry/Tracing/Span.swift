@@ -129,6 +129,11 @@ public final class Span: Identifiable {
 		events?.append(event)
 	}
 
+	/// "Ok represents when a developer explicitly marks a span as successful"
+	/// https://opentelemetry.io/docs/concepts/signals/traces/#span-status
+	public func recordSuccess() {
+		status = .ok
+	}
 
 	/// Record an error into this span
 	/// - Parameters:
