@@ -12,7 +12,7 @@ typealias V1ScopeLogs = OTLP.V1ScopeLogs
 
 extension OTLP {
 	/** A collection of Logs produced by a Scope. */
-	struct V1ScopeLogs: Codable, Hashable {
+	struct V1ScopeLogs: Encodable {
 		var scope: V1InstrumentationScope?
 		/** A list of log records. */
 		var logRecords: [V1LogRecord]?

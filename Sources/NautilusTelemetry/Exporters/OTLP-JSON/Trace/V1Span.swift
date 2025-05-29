@@ -12,7 +12,7 @@ typealias V1Span = OTLP.V1Span
 
 extension OTLP {
 	/** A Span represents a single operation performed by a single component of the system.  The next available field id is 17. */
-	struct V1Span: Codable, Hashable {
+	struct V1Span: Encodable {
 		/** A unique identifier for a trace. All spans from the same trace share the same `trace_id`. The ID is a 16-byte array. An ID with all zeroes OR of length other than 16 bytes is considered invalid (empty string in OTLP/JSON is zero-length and thus is also invalid).  This field is required. */
 		var traceId: Data?
 		/** A unique identifier for a span within a trace, assigned when the span is created. The ID is an 8-byte array. An ID with all zeroes OR of length other than 8 bytes is considered invalid (empty string in OTLP/JSON is zero-length and thus is also invalid).  This field is required. */

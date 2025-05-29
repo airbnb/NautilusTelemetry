@@ -12,7 +12,7 @@ typealias V1ExponentialHistogram = OTLP.V1ExponentialHistogram
 
 extension OTLP {
 	/** ExponentialHistogram represents the type of a metric that is calculated by aggregating as a ExponentialHistogram of all reported double measurements over a time interval. */
-	struct V1ExponentialHistogram: Codable, Hashable {
+	struct V1ExponentialHistogram: Encodable {
 		var dataPoints: [V1ExponentialHistogramDataPoint]?
 		var aggregationTemporality: V1AggregationTemporality?
 

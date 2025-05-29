@@ -12,7 +12,7 @@ typealias V1Resource = OTLP.V1Resource
 
 extension OTLP {
 	/** Resource information. */
-	struct V1Resource: Codable, Hashable {
+	struct V1Resource: Encodable {
 		/** Set of attributes that describe the resource. Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
 		var attributes: [V1KeyValue]?
 		/** dropped_attributes_count is the number of dropped attributes. If the value is 0, then no attributes were dropped. */

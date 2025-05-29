@@ -12,7 +12,7 @@ typealias V1ArrayValue = OTLP.V1ArrayValue
 
 extension OTLP {
 	/** ArrayValue is a list of AnyValue messages. We need ArrayValue as a message since oneof in AnyValue does not allow repeated fields. */
-	struct V1ArrayValue: Codable, Hashable {
+	struct V1ArrayValue: Encodable {
 		/** Array of values. The array may be empty (contain 0 elements). */
 		var values: [V1AnyValue]?
 

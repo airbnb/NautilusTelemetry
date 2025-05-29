@@ -11,7 +11,7 @@ import Foundation
 typealias V1ExportMetricsPartialSuccess = OTLP.V1ExportMetricsPartialSuccess
 
 extension OTLP {
-	struct V1ExportMetricsPartialSuccess: Codable, Hashable {
+	struct V1ExportMetricsPartialSuccess: Encodable {
 		/** The number of rejected data points.  A `rejected_<signal>` field holding a `0` value indicates that the request was fully accepted. */
 		var rejectedDataPoints: String?
 		/** A developer-facing human-readable message in English. It should be used either to explain why the server rejected parts of the data during a partial success or to convey warnings/suggestions during a full success. The message should offer guidance on how users can address such issues.  error_message is an optional field. An error_message with an empty value is equivalent to it not being set. */

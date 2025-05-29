@@ -12,7 +12,7 @@ typealias SpanEvent = OTLP.SpanEvent
 
 extension OTLP {
 	/** Event is a time-stamped annotation of the span, consisting of user-supplied text description and key-value pairs. */
-	struct SpanEvent: Codable, Hashable {
+	struct SpanEvent: Encodable {
 		/** time_unix_nano is the time the event occurred. */
 		var timeUnixNano: String?
 		/** name of the event. This field is semantically required to be set to non-empty string. */

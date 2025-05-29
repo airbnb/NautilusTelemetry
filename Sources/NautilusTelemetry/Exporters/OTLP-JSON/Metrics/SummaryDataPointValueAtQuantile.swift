@@ -12,7 +12,7 @@ typealias SummaryDataPointValueAtQuantile = OTLP.SummaryDataPointValueAtQuantile
 
 extension OTLP {
 	/** Represents the value at a given quantile of a distribution.  To record Min and Max values following conventions are used: - The 1.0 quantile is equivalent to the maximum value observed. - The 0.0 quantile is equivalent to the minimum value observed.  See the following issue for more context: https://github.com/open-telemetry/opentelemetry-proto/issues/125 */
-	struct SummaryDataPointValueAtQuantile: Codable, Hashable {
+	struct SummaryDataPointValueAtQuantile: Encodable {
 		/** The quantile of a distribution. Must be in the interval [0.0, 1.0]. */
 		var quantile: Double?
 		/** The value at the given quantile of a distribution.  Quantile values must NOT be negative. */
