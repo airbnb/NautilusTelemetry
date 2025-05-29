@@ -70,7 +70,7 @@ final class SpanTests: XCTestCase {
 		XCTAssert(tracer.retiredSpans.count == 2)
 		
 		let span2 = tracer.retiredSpans[0]
-		XCTAssert(span2.events.count == 2)
+		XCTAssert(span2.events?.count == 2)
 		XCTAssert(span2.status == .ok)
 		
 		let traceParentHeader = span2.traceParentHeader
@@ -137,7 +137,7 @@ final class SpanTests: XCTestCase {
 		XCTAssert(tracer.retiredSpans.count == 2)
 		
 		let span2 = tracer.retiredSpans[0]
-		XCTAssert(span2.events.count == 2)
+		XCTAssert(span2.events?.count == 2)
 		XCTAssert(span2.status == .ok)
 	}
 #endif

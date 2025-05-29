@@ -60,12 +60,8 @@ final class TraceExporterTests: XCTestCase {
 
 	func testOTLPExporterTraces() throws {
 
-
 		let tracer = Tracer()
-		tracer.withSpan(name: "span1", attributes: [:]) {
-			let span1 = tracer.currentBaggage.span
-			span1.status = .ok
-			
+		tracer.withSpan(name: "span1", attributes: ["small integer": 42, "large integer": 2 << 54]) {
 			tracer.withSpan(name: "span2") {
 				let span2 = tracer.currentBaggage.span
 				span2.addEvent("event1")
@@ -84,7 +80,7 @@ final class TraceExporterTests: XCTestCase {
 				Thread.sleep(forTimeInterval: 0.05)
 				
 				span2.addEvent("event2")
-				span2.status = .ok
+				span2.recordSuccess()
 			}
 		}
 		
@@ -219,8 +215,30 @@ final class TraceExporterTests: XCTestCase {
 		let json = try exporter.exportOTLPToJSON(spans: [span1, span2], additionalAttributes: nil)
 
 		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: ["startTimeUnixNano", "spanId", "traceId", "resource"]))
-		let expectedOutput = #"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[],"kind":1,"name":"root","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[],"kind":1,"links":[{"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"}]}]}]}"#
+		let expectedOutput = #"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"name":"root","spanId":"***","startTimeUnixNano":"***","traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"links":[{"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","traceId":"***"}]}]}]}"#
 
+		XCTAssertEqual(normalizedJsonString, expectedOutput)
+	}
+
+	func testSpanLinkVariant1() throws {
+		let traceId1 = Identifiers.generateTraceId()
+		let traceId2 = Identifiers.generateTraceId()
+
+		// Test ok status
+		let span1 = Span(name: "root", traceId: traceId1, parentId: nil)
+		span1.recordSuccess()
+		// Test client kind + events
+		let span2 = Span(name: "hello", kind: .client, traceId: traceId2, parentId: nil, linkedParent: span1)
+		span2.addEvent("OMG")
+
+		let exporter = Exporter(timeReference: timeReference)
+		let json = try exporter.exportOTLPToJSON(spans: [span1, span2], additionalAttributes: nil)
+
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: ["startTimeUnixNano", "spanId", "traceId", "resource", "timeUnixNano"]))
+
+		let expectedOutput = #"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"name":"root","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[{"name":"OMG","timeUnixNano":"***"}],"kind":3,"links":[{"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","traceId":"***"}]}]}]}"#
+
+		print(normalizedJsonString)
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
 

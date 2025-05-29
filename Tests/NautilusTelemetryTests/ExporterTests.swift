@@ -50,27 +50,73 @@ final class ExporterTests: XCTestCase {
 
 		let uint64 = UInt64.max
 		let intValue1 = try XCTUnwrap(exporter.convertToOTLP(value: uint64))
-		XCTAssertEqual(intValue1.intValue, "\(uint64)")
+		XCTAssertEqual(try XCTUnwrap(intValue1.intValue as? UInt64), uint64)
 
 		let int64 = Int64.max
 		let intValue2 = try XCTUnwrap(exporter.convertToOTLP(value: int64))
-		XCTAssertEqual(intValue2.intValue, "\(int64)")
+		XCTAssertEqual(try XCTUnwrap(intValue2.intValue as? Int64), int64)
 
 		let uint32 = UInt32.max
 		let intValue3 = try XCTUnwrap(exporter.convertToOTLP(value: uint32))
-		XCTAssertEqual(intValue3.intValue, "\(uint32)")
+		XCTAssertEqual(try XCTUnwrap(intValue3.intValue as? UInt32), uint32)
 
 		// make sure we don't cast to Bool accidentally
 		let uint: UInt = 0
 		let intValue4 = try XCTUnwrap(exporter.convertToOTLP(value: uint))
-		XCTAssertEqual(intValue4.intValue, "\(uint)")
+		XCTAssertEqual(try XCTUnwrap(intValue4.intValue as? UInt), uint)
 		XCTAssertNil(intValue4.boolValue)
 
 		let int32 = Int32.max
 		let intValue5 = try XCTUnwrap(exporter.convertToOTLP(value: int32))
-		XCTAssertEqual(intValue5.intValue, "\(int32)")
+		XCTAssertEqual(try XCTUnwrap(intValue5.intValue as? Int32), int32)
 	}
-	
+
+	func testJSONEncoding() throws {
+		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
+
+		// Check a normal case
+		do {
+			let normalAnyValue = try XCTUnwrap(exporter.convertToOTLP(value: 0))
+			let encoded = try JSONEncoder().encode(normalAnyValue)
+			let encodedString = String(data: encoded, encoding: .utf8)
+			XCTAssertEqual(encodedString, #"{"intValue":0}"#)
+		}
+
+		// Check that ints in the bound are expressed as JSON numbers
+		do {
+			let lowerIntBound = -(2 << 53)
+			let lowerIntBoundAnyValue = try XCTUnwrap(exporter.convertToOTLP(value: lowerIntBound))
+			let encoded = try JSONEncoder().encode(lowerIntBoundAnyValue)
+			let encodedString = String(data: encoded, encoding: .utf8)
+			XCTAssertEqual(encodedString, #"{"intValue":-18014398509481984}"#)
+		}
+
+		do {
+			let upperIntBound = (2 << 53)
+			let upperIntBoundAnyIntValue = try XCTUnwrap(exporter.convertToOTLP(value: upperIntBound))
+			let encoded = try JSONEncoder().encode(upperIntBoundAnyIntValue)
+			let encodedString = String(data: encoded, encoding: .utf8)
+			XCTAssertEqual(encodedString, #"{"intValue":18014398509481984}"#)
+		}
+
+		// Check that ints outside the bound are expressed as JSON strings
+		do {
+			let lowerIntBound = -(2 << 53)-1
+			let lowerIntBoundAnyValue = try XCTUnwrap(exporter.convertToOTLP(value: lowerIntBound))
+			let encoded = try JSONEncoder().encode(lowerIntBoundAnyValue)
+			let encodedString = String(data: encoded, encoding: .utf8)
+			XCTAssertEqual(encodedString, #"{"intValue":"-18014398509481985"}"#)
+		}
+
+		do {
+			let upperIntBound = (2 << 53)+1
+			let upperIntBoundAnyIntValue = try XCTUnwrap(exporter.convertToOTLP(value: upperIntBound))
+			let encoded = try JSONEncoder().encode(upperIntBoundAnyIntValue)
+			let encodedString = String(data: encoded, encoding: .utf8)
+			XCTAssertEqual(encodedString, #"{"intValue":"18014398509481985"}"#)
+		}
+	}
+
 	func testConvertToOTLPComplexTypes() throws {
 		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
 		let data = try XCTUnwrap("📀".data(using: .utf8))
@@ -85,13 +131,13 @@ final class ExporterTests: XCTestCase {
 		let value0 = values[0]
 		XCTAssertEqual("foo", value0.stringValue)
 		let value1 = values[1]
-		XCTAssertEqual("1", value1.intValue)
+		XCTAssertEqual(1, value1.intValue as? Int)
 
 		let dictionary = ["foo": 1]
 		let dictionaryValue = try XCTUnwrap(exporter.convertToOTLP(value: dictionary))
 		let kvValue = try XCTUnwrap(dictionaryValue.kvlistValue?.values?[0])
 		XCTAssertEqual(kvValue.key, "foo")
-		XCTAssertEqual(kvValue.value?.intValue, "1")
+		XCTAssertEqual(kvValue.value?.intValue as? Int, 1)
 
 		let notConvertible = self
 		let notConvertibleValue = exporter.convertToOTLP(value: notConvertible)
