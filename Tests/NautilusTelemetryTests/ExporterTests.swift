@@ -84,36 +84,47 @@ final class ExporterTests: XCTestCase {
 
 		// Check that ints in the bound are expressed as JSON numbers
 		do {
-			let lowerIntBound = -(2 << 53)
+			let lowerIntBound = -(1 << 53)
 			let lowerIntBoundAnyValue = try XCTUnwrap(exporter.convertToOTLP(value: lowerIntBound))
 			let encoded = try JSONEncoder().encode(lowerIntBoundAnyValue)
 			let encodedString = String(data: encoded, encoding: .utf8)
-			XCTAssertEqual(encodedString, #"{"intValue":-18014398509481984}"#)
+			XCTAssertEqual(encodedString, #"{"intValue":-9007199254740992}"#)
 		}
 
 		do {
-			let upperIntBound = (2 << 53)
+			let upperIntBound = (1 << 53)
 			let upperIntBoundAnyIntValue = try XCTUnwrap(exporter.convertToOTLP(value: upperIntBound))
 			let encoded = try JSONEncoder().encode(upperIntBoundAnyIntValue)
 			let encodedString = String(data: encoded, encoding: .utf8)
-			XCTAssertEqual(encodedString, #"{"intValue":18014398509481984}"#)
+			XCTAssertEqual(encodedString, #"{"intValue":9007199254740992}"#)
 		}
 
 		// Check that ints outside the bound are expressed as JSON strings
 		do {
-			let lowerIntBound = -(2 << 53)-1
+			let lowerIntBound = -(1 << 53)-1
 			let lowerIntBoundAnyValue = try XCTUnwrap(exporter.convertToOTLP(value: lowerIntBound))
 			let encoded = try JSONEncoder().encode(lowerIntBoundAnyValue)
 			let encodedString = String(data: encoded, encoding: .utf8)
-			XCTAssertEqual(encodedString, #"{"intValue":"-18014398509481985"}"#)
+			XCTAssertEqual(encodedString, #"{"intValue":"-9007199254740993"}"#)
 		}
 
 		do {
-			let upperIntBound = (2 << 53)+1
+			let upperIntBound = (1 << 53)+1
 			let upperIntBoundAnyIntValue = try XCTUnwrap(exporter.convertToOTLP(value: upperIntBound))
 			let encoded = try JSONEncoder().encode(upperIntBoundAnyIntValue)
 			let encodedString = String(data: encoded, encoding: .utf8)
-			XCTAssertEqual(encodedString, #"{"intValue":"18014398509481985"}"#)
+			XCTAssertEqual(encodedString, #"{"intValue":"9007199254740993"}"#)
+		}
+
+		// Check Int128 support
+		do {
+			if #available(iOS 18.0, macOS 15.0, *) {
+				let upperIntBound = Int128.max
+				let upperIntBoundAnyIntValue = try XCTUnwrap(exporter.convertToOTLP(value: upperIntBound))
+				let encoded = try JSONEncoder().encode(upperIntBoundAnyIntValue)
+				let encodedString = String(data: encoded, encoding: .utf8)
+				XCTAssertEqual(encodedString, #"{"intValue":"170141183460469231731687303715884105727"}"#)
+			}
 		}
 	}
 

@@ -43,7 +43,7 @@ extension OTLP {
 		}
 
 		// Encodable protocol methods
-		static let preciseIntegerRangeInJSONNumbers = -(2 << 53)...(2 << 53)
+		static let preciseIntegerRangeInJSONNumbers = -(1 << 53)...(1 << 53)
 
 		func encode(to encoder: Encoder) throws {
 			var container = encoder.container(keyedBy: CodingKeys.self)
@@ -54,15 +54,13 @@ extension OTLP {
 			// in the range (-2^53,2^53), so optimize this encoding
 			// https://protobuf.dev/programming-guides/json/
 
-			// Int is 64 bit in all environments we care about. We could also
-			// handle Int128, but this is iOS 18+ API.
-			if let intValue = intValue as? Int {
-				if Self.preciseIntegerRangeInJSONNumbers.contains(intValue) {
-					try container.encodeIfPresent(intValue, forKey: .intValue)
-				} else {
-					let intAsString = "\(intValue)"
-					try container.encodeIfPresent(intAsString, forKey: .intValue)
-				}
+			// Int is 64 bit in all environments we care about
+			if let intValue = intValue as? Int, Self.preciseIntegerRangeInJSONNumbers.contains(intValue) {
+				try container.encodeIfPresent(intValue, forKey: .intValue)
+			} else if let intValue = intValue {
+				// Int128 and other weird types handled by the string fallback
+				let intAsString = "\(intValue)"
+				try container.encodeIfPresent(intAsString, forKey: .intValue)
 			}
 
 			try container.encodeIfPresent(doubleValue, forKey: .doubleValue)
