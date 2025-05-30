@@ -12,7 +12,7 @@ typealias Tracev1Status = OTLP.Tracev1Status
 
 extension OTLP {
 	/** The Status type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. */
-	struct Tracev1Status: Codable, Hashable {
+	struct Tracev1Status: Encodable {
 		/** A developer-facing human readable error message. */
 		var message: String?
 		var code: StatusStatusCode?

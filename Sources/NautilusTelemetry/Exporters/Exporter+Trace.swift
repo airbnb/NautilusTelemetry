@@ -43,7 +43,7 @@ extension Exporter {
 
 		let attributes = convertToOTLP(attributes: span.attributes)
 		let events = convertToOTLP(events: span.events)
-		let status = convertToOTLP(status: span.status)
+		let status = mapStatus(span.status)
 
 		let kind = mapKind(span.kind)
 		let links = buildLinks(span)
@@ -66,9 +66,9 @@ extension Exporter {
 			status: status)
 	}
 
-	func mapKind(_ spanKind: SpanKind) -> OTLP.SpanSpanKind {
+	func mapKind(_ spanKind: SpanKind) -> OTLP.SpanSpanKind? {
 		// Map the enumerate
-		switch spanKind {
+		let otlpKind: OTLP.SpanSpanKind = switch spanKind {
 		case .unspecified:
 				._internal // we didn't figure it out, we'll assume internal
 		case .internal:
@@ -76,8 +76,18 @@ extension Exporter {
 		case .client:
 				.client
 		}
+
+		return otlpKind == ._internal ? nil : otlpKind // optimization: we can omit kind if it's internal, the default value
 	}
-	
+
+	func mapStatus(_ spanStatus: Span.Status) -> OTLP.Tracev1Status? {
+		if spanStatus == .unset {
+			nil // optimization: we can omit status if it's unset, the default value
+		} else {
+			convertToOTLP(status: spanStatus)
+		}
+	}
+
 	func buildLinks(_ span: Span) -> [OTLP.SpanLink]? {
 		guard let linkedParent = span.linkedParent else { return nil }
 		return [OTLP.SpanLink(traceId: linkedParent.traceId, spanId: linkedParent.id)]

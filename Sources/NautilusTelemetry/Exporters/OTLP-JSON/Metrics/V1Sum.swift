@@ -12,7 +12,7 @@ typealias V1Sum = OTLP.V1Sum
 
 extension OTLP {
 	/** Sum represents the type of a scalar metric that is calculated as a sum of all reported measurements over a time interval. */
-	struct V1Sum: Codable, Hashable {
+	struct V1Sum: Encodable {
 		var dataPoints: [V1NumberDataPoint]?
 		var aggregationTemporality: V1AggregationTemporality?
 		/** If \"true\" means that the sum is monotonic. */

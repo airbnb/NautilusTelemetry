@@ -12,7 +12,7 @@ typealias V1KeyValueList = OTLP.V1KeyValueList
 
 extension OTLP {
 	/** KeyValueList is a list of KeyValue messages. We need KeyValueList as a message since &#x60;oneof&#x60; in AnyValue does not allow repeated fields. Everywhere else where we need a list of KeyValue messages (e.g. in Span) we use &#x60;repeated KeyValue&#x60; directly to avoid unnecessary extra wrapping (which slows down the protocol). The 2 approaches are semantically equivalent. */
-	struct V1KeyValueList: Codable, Hashable {
+	struct V1KeyValueList: Encodable {
 		/** A collection of key/value pairs of key-value pairs. The list may be empty (may contain 0 elements). The keys MUST be unique (it is not allowed to have more than one value with the same key). */
 		var values: [V1KeyValue]?
 

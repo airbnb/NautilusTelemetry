@@ -12,7 +12,7 @@ typealias V1Histogram = OTLP.V1Histogram
 
 extension OTLP {
 	/** Histogram represents the type of a metric that is calculated by aggregating as a Histogram of all reported measurements over a time interval. */
-	struct V1Histogram: Codable, Hashable {
+	struct V1Histogram: Encodable {
 		var dataPoints: [V1HistogramDataPoint]?
 		var aggregationTemporality: V1AggregationTemporality?
 

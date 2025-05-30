@@ -12,16 +12,17 @@ typealias V1AnyValue = OTLP.V1AnyValue
 
 extension OTLP {
 	/** AnyValue is used to represent any type of attribute value. AnyValue may contain a primitive value such as a string or integer or it may contain an arbitrary nested object containing arrays, key-value lists and primitives. */
-	struct V1AnyValue: Codable, Hashable {
+	struct V1AnyValue: Encodable {
+
 		var stringValue: String?
 		var boolValue: Bool?
-		var intValue: String?
+		var intValue: (any FixedWidthInteger)?
 		var doubleValue: Double?
 		var arrayValue: V1ArrayValue?
 		var kvlistValue: V1KeyValueList?
 		var bytesValue: Data?
 
-		init(stringValue: String? = nil, boolValue: Bool? = nil, intValue: String? = nil, doubleValue: Double? = nil, arrayValue: V1ArrayValue? = nil, kvlistValue: V1KeyValueList? = nil, bytesValue: Data? = nil) {
+		init(stringValue: String? = nil, boolValue: Bool? = nil, intValue: (any FixedWidthInteger)? = nil, doubleValue: Double? = nil, arrayValue: V1ArrayValue? = nil, kvlistValue: V1KeyValueList? = nil, bytesValue: Data? = nil) {
 			self.stringValue = stringValue
 			self.boolValue = boolValue
 			self.intValue = intValue
@@ -42,12 +43,26 @@ extension OTLP {
 		}
 
 		// Encodable protocol methods
+		static let preciseIntegerRangeInJSONNumbers = -(1 << 53)...(1 << 53)
 
 		func encode(to encoder: Encoder) throws {
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encodeIfPresent(stringValue, forKey: .stringValue)
 			try container.encodeIfPresent(boolValue, forKey: .boolValue)
-			try container.encodeIfPresent(intValue, forKey: .intValue)
+			// ProtoJSON allows either JSON string or JSON number for integer values
+			// We know that IEEE Double Floats can accurately represent integers
+			// in the range (-2^53,2^53), so optimize this encoding
+			// https://protobuf.dev/programming-guides/json/
+
+			// Int is 64 bit in all environments we care about
+			if let intValue = intValue as? Int, Self.preciseIntegerRangeInJSONNumbers.contains(intValue) {
+				try container.encodeIfPresent(intValue, forKey: .intValue)
+			} else if let intValue = intValue {
+				// Int128 and other weird types handled by the string fallback
+				let intAsString = "\(intValue)"
+				try container.encodeIfPresent(intAsString, forKey: .intValue)
+			}
+
 			try container.encodeIfPresent(doubleValue, forKey: .doubleValue)
 			try container.encodeIfPresent(arrayValue, forKey: .arrayValue)
 			try container.encodeIfPresent(kvlistValue, forKey: .kvlistValue)

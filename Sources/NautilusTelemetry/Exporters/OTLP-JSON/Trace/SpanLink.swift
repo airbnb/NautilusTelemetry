@@ -12,7 +12,7 @@ typealias SpanLink = OTLP.SpanLink
 
 extension OTLP {
 	/** A pointer from the current span to another span in the same trace or in a different trace. For example, this can be used in batching operations, where a single batch handler processes multiple requests from different traces or when the handler receives a request from a different project. */
-	struct SpanLink: Codable, Hashable {
+	struct SpanLink: Encodable {
 		/** A unique identifier of a trace that this linked span is part of. The ID is a 16-byte array. */
 		var traceId: Data?
 		/** A unique identifier for the linked span. The ID is an 8-byte array. */

@@ -12,7 +12,7 @@ typealias V1InstrumentationScope = OTLP.V1InstrumentationScope
 
 extension OTLP {
 	/** InstrumentationScope is a message representing the instrumentation scope information such as the fully qualified name and version. */
-	struct V1InstrumentationScope: Codable, Hashable {
+	struct V1InstrumentationScope: Encodable {
 		/** An empty instrumentation scope name means the name is unknown. */
 		var name: String?
 		var version: String?

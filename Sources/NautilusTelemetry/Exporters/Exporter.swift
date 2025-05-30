@@ -58,20 +58,8 @@ public struct Exporter {
 		switch value {
 		case let value as String:
 			v1AnyValue = OTLP.V1AnyValue(stringValue: value)
-		// Look for common int types -- they're expressed as String in OTLP JSON
-		// I tried a few options for genericizing the Int types, but couldn't get the [Any] array mapping to work
-		case let value as UInt64:
-			v1AnyValue = OTLP.V1AnyValue(intValue: "\(value)")
-		case let value as Int64:
-			v1AnyValue = OTLP.V1AnyValue(intValue: "\(value)")
-		case let value as UInt32:
-			v1AnyValue = OTLP.V1AnyValue(intValue: "\(value)")
-		case let value as Int32:
-			v1AnyValue = OTLP.V1AnyValue(intValue: "\(value)")
-		case let value as UInt:
-			v1AnyValue = OTLP.V1AnyValue(intValue: "\(value)")
-		case let value as Int:
-			v1AnyValue = OTLP.V1AnyValue(intValue: "\(value)")
+		case let value as any FixedWidthInteger:
+			v1AnyValue = OTLP.V1AnyValue(intValue: value)
 		case let value as Bool:
 			v1AnyValue = OTLP.V1AnyValue(boolValue: value)
 		case let value as Float:

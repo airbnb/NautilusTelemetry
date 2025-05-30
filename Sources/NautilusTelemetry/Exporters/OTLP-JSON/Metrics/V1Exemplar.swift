@@ -12,7 +12,7 @@ typealias V1Exemplar = OTLP.V1Exemplar
 
 extension OTLP {
 	/** A representation of an exemplar, which is a sample input measurement. Exemplars also hold information about the environment when the measurement was recorded, for example the span and trace ID of the active span when the exemplar was recorded. */
-	struct V1Exemplar: Codable, Hashable {
+	struct V1Exemplar: Encodable {
 		var filteredAttributes: [V1KeyValue]?
 		/** Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
 		var timeUnixNano: String?

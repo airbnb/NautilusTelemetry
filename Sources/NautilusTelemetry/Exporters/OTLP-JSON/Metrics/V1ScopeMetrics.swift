@@ -12,7 +12,7 @@ typealias V1ScopeMetrics = OTLP.V1ScopeMetrics
 
 extension OTLP {
 	/** A collection of Metrics produced by an Scope. */
-	struct V1ScopeMetrics: Codable, Hashable {
+	struct V1ScopeMetrics: Encodable {
 		var scope: V1InstrumentationScope?
 		/** A list of metrics that originate from an instrumentation library. */
 		var metrics: [V1Metric]?

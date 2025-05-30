@@ -12,7 +12,7 @@ typealias V1ScopeSpans = OTLP.V1ScopeSpans
 
 extension OTLP {
 	/** A collection of Spans produced by an InstrumentationScope. */
-	struct V1ScopeSpans: Codable, Hashable {
+	struct V1ScopeSpans: Encodable {
 		var scope: V1InstrumentationScope?
 		/** A list of Spans that originate from an instrumentation scope. */
 		var spans: [V1Span]?

@@ -11,7 +11,7 @@ import Foundation
 typealias V1ExportLogsServiceResponse = OTLP.V1ExportLogsServiceResponse
 
 extension OTLP {
-	struct V1ExportLogsServiceResponse: Codable, Hashable {
+	struct V1ExportLogsServiceResponse: Encodable {
 		var partialSuccess: V1ExportLogsPartialSuccess?
 
 		init(partialSuccess: V1ExportLogsPartialSuccess? = nil) {

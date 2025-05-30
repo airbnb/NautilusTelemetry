@@ -12,7 +12,7 @@ typealias ExponentialHistogramDataPointBuckets = OTLP.ExponentialHistogramDataPo
 
 extension OTLP {
 	/** Buckets are a set of bucket counts, encoded in a contiguous array of counts. */
-	struct ExponentialHistogramDataPointBuckets: Codable, Hashable {
+	struct ExponentialHistogramDataPointBuckets: Encodable {
 		/** Offset is the bucket index of the first entry in the bucket_counts array.  Note: This uses a varint encoding as a simple form of compression. */
 		var offset: Int?
 		/** bucket_counts is an array of count values, where bucket_counts[i] carries the count of the bucket at index (offset+i). bucket_counts[i] is the count of values greater than base^(offset+i) and less than or equal to base^(offset+i+1).  Note: By contrast, the explicit HistogramDataPoint uses fixed64.  This field is expected to have many buckets, especially zeros, so uint64 has been selected to ensure varint encoding. */

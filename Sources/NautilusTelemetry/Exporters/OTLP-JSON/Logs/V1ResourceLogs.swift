@@ -12,7 +12,7 @@ typealias V1ResourceLogs = OTLP.V1ResourceLogs
 
 extension OTLP {
 	/** A collection of ScopeLogs from a Resource. */
-	struct V1ResourceLogs: Codable, Hashable {
+	struct V1ResourceLogs: Encodable {
 		var resource: V1Resource?
 		/** A list of ScopeLogs that originate from a resource. */
 		var scopeLogs: [V1ScopeLogs]?

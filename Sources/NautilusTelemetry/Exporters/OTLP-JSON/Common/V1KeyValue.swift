@@ -12,7 +12,7 @@ typealias V1KeyValue = OTLP.V1KeyValue
 
 extension OTLP {
 	/** KeyValue is a key-value pair that is used to store Span attributes, Link attributes, etc. */
-	struct V1KeyValue: Codable, Hashable {
+	struct V1KeyValue: Encodable {
 		var key: String?
 		var value: V1AnyValue?
 

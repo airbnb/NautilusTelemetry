@@ -18,7 +18,8 @@ public enum SpanKind {
 	case client
 }
 
-/// Pared down version of the spec
+/// Implements a pared down version of the spec
+/// Not thread safe -- it's assumed that Span will only be modified from a single thread.
 public final class Span: Identifiable {
 	let name: String
 	let kind: SpanKind
@@ -28,8 +29,8 @@ public final class Span: Identifiable {
 	let linkedParent: Span?
 	let startTime: ContinuousClock.Instant
 	var attributes: TelemetryAttributes?
-	var events = [Event]()
-	var status: Status = .ok
+	var events: [Event]? = nil // optimization -- don't generate if no events added
+	var status: Status = .unset // optimization -- we will omit status fields when unset: https://opentelemetry.io/docs/concepts/signals/traces/#span-status
 	var endTime: ContinuousClock.Instant?
 	var retireCallback: ((_: Span) -> Void)?
 
@@ -122,9 +123,17 @@ public final class Span: Identifiable {
 	}
 	
 	public func addEvent(_ event: Event) {
-		events.append(event)
+		if events == nil {
+			events = [Event]()
+		}
+		events?.append(event)
 	}
 
+	/// "Ok represents when a developer explicitly marks a span as successful"
+	/// https://opentelemetry.io/docs/concepts/signals/traces/#span-status
+	public func recordSuccess() {
+		status = .ok
+	}
 
 	/// Record an error into this span
 	/// - Parameters:

@@ -12,7 +12,7 @@ typealias V1NumberDataPoint = OTLP.V1NumberDataPoint
 
 extension OTLP {
 	/** NumberDataPoint is a single data point in a timeseries that describes the time-varying scalar value of a metric. */
-	struct V1NumberDataPoint: Codable, Hashable {
+	struct V1NumberDataPoint: Encodable {
 		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
 		var attributes: [V1KeyValue]?
 		/** StartTimeUnixNano is optional but strongly encouraged, see the the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */

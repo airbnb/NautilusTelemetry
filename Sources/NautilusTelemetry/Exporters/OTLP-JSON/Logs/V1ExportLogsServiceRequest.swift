@@ -11,7 +11,7 @@ import Foundation
 typealias V1ExportLogsServiceRequest = OTLP.V1ExportLogsServiceRequest
 
 extension OTLP {
-	struct V1ExportLogsServiceRequest: Codable, Hashable {
+	struct V1ExportLogsServiceRequest: Encodable {
 		/** An array of ResourceLogs. For data coming from a single resource this array will typically contain one element. Intermediary nodes (such as OpenTelemetry Collector) that receive data from multiple origins typically batch the data before forwarding further and in that case this array will contain multiple elements. */
 		var resourceLogs: [V1ResourceLogs]?
 

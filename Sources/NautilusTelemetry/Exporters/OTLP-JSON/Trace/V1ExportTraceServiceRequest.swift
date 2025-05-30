@@ -11,7 +11,7 @@ import Foundation
 typealias V1ExportTraceServiceRequest = OTLP.V1ExportTraceServiceRequest
 
 extension OTLP {
-	struct V1ExportTraceServiceRequest: Codable, Hashable {
+	struct V1ExportTraceServiceRequest: Encodable {
 		/** An array of ResourceSpans. For data coming from a single resource this array will typically contain one element. Intermediary nodes (such as OpenTelemetry Collector) that receive data from multiple origins typically batch the data before forwarding further and in that case this array will contain multiple elements. */
 		var resourceSpans: [V1ResourceSpans]?
 

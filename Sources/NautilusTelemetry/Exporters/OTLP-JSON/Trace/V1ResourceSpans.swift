@@ -12,7 +12,7 @@ typealias V1ResourceSpans = OTLP.V1ResourceSpans
 
 extension OTLP {
 	/** A collection of ScopeSpans from a Resource. */
-	struct V1ResourceSpans: Codable, Hashable {
+	struct V1ResourceSpans: Encodable {
 		var resource: V1Resource?
 		/** A list of ScopeSpans that originate from a resource. */
 		var scopeSpans: [V1ScopeSpans]?
