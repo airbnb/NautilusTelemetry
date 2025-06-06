@@ -26,7 +26,7 @@ public extension Span {
 	/// - Parameter urlRequest: urlRequest to modify
 	func addTraceHeadersIfSampling(_ urlRequest: inout URLRequest, isSampling: Bool = InstrumentationSystem.tracer.isSampling) {
 		if isSampling {
-			let value = traceParentValue(sampled: true)
+			let value = traceParentHeaderValue(sampled: true)
 			urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
 		}
 	}
@@ -35,7 +35,7 @@ public extension Span {
 	/// Sampled flag determined from InstrumentationSystem.tracer.isSampling
 	/// - Parameter urlRequest: urlRequest to modify
 	func addTraceHeadersUnconditionally(_ urlRequest: inout URLRequest, isSampling: Bool = InstrumentationSystem.tracer.isSampling) {
-		let value = traceParentValue(sampled: isSampling)
+		let value = traceParentHeaderValue(sampled: isSampling)
 		urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
 	}
 
@@ -185,7 +185,7 @@ public extension Span {
 	/// Returns the name / value pair for the traceparent header
 	/// - Parameter sampled: Whether we are sampling
 	/// - Returns: a traceparent header
-	internal func traceParentValue(sampled: Bool) -> (String, String) {
+	internal func traceParentHeaderValue(sampled: Bool) -> (String, String) {
 		// https://www.w3.org/TR/trace-context/#traceparent-header-field-values
 		var flags: UInt8 = 0x00
 		flags |= sampled ? 1 : 0

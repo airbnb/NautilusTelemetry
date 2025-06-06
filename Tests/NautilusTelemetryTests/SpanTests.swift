@@ -76,7 +76,7 @@ final class SpanTests: XCTestCase {
 		XCTAssert(span2.events?.count == 2)
 		XCTAssert(span2.status == .ok)
 		
-		let traceParentHeader = span2.traceParentValue(sampled: true)
+		let traceParentHeader = span2.traceParentHeaderValue(sampled: true)
 		XCTAssertEqual(traceParentHeader.0, "traceparent")
 
 		XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: traceParentHeader.1) != nil)
@@ -108,7 +108,7 @@ final class SpanTests: XCTestCase {
 
 		XCTAssert(backtrace.contains("testTraceWithError"))
 
-		let traceParentHeader = span2.traceParentValue(sampled: false)
+		let traceParentHeader = span2.traceParentHeaderValue(sampled: false)
 		XCTAssertEqual(traceParentHeader.0, "traceparent")
 		XCTAssert(try traceParentValueRegex_NotSampling.wholeMatch(in: traceParentHeader.1) != nil)
 	}

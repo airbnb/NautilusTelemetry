@@ -11,7 +11,7 @@ import XCTest
 final class SpanURLSessionTests: XCTestCase {
 	let tracer = Tracer()
 
-	let url = URL(string: "http://www.airbnb.com")!
+	let url = URL(string: "http://www.example.com")!
 	let urlSession = URLSession.shared
 
 	func testName() {
