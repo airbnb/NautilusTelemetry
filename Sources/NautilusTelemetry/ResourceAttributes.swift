@@ -25,7 +25,7 @@ public struct ResourceAttributes {
 	}
 	
 	/// Create a default set of resource attributes.
-	/// - Parameter additionalAttributes: Additional attributes. Must conform to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/attribute-naming.md
+	/// - Parameter additionalAttributes: Additional attributes, that may override existing attributes. Must conform to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/attribute-naming.md
 	/// - Returns: Built attributes.
 	public static func makeWithDefaults(additionalAttributes: TelemetryAttributes?) -> ResourceAttributes {
 		let placeholder = "unknown"
@@ -77,8 +77,9 @@ public struct ResourceAttributes {
 		
 		var attributes = TelemetryAttributes()
 		
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/README.md
-		attributes["service.name"] = bundleIdentifier
+		// https://opentelemetry.io/docs/specs/semconv/registry/attributes/service/
+		attributes["service.name"] = "ios.app"
+		attributes["service.namespace"] = bundleIdentifier
 		attributes["service.version"] = applicationVersion
 		attributes["telemetry.sdk.name"] = "NautilusTelemetry"
 		attributes["telemetry.sdk.language"] = "swift"
@@ -95,8 +96,8 @@ public struct ResourceAttributes {
 		attributes["os.version"] = osVersion
 
 		if let additionalAttributes = additionalAttributes {
-			// Don't overwrite any existing keys.
-			attributes.merge(additionalAttributes) { (current, _) in current }
+			// Overwrite any existing keys.
+			attributes.merge(additionalAttributes) { (_, new) in new }
 		}
 
 		return attributes
