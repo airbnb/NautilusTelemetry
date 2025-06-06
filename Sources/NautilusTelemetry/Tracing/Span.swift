@@ -34,30 +34,13 @@ public final class Span: Identifiable {
 	var endTime: ContinuousClock.Instant?
 	var retireCallback: ((_: Span) -> Void)?
 
-	/// This can be set by the consuming code to affect the traceParentHeader value.
-	public var sampled: Bool = true
-	
 	var elapsed: Duration? {
 		get {
 			guard let endTime = endTime else { return nil }
 			return endTime-startTime
 		}
 	}
-	
-	/// returns a value that can be used as a "traceparent" header.
-	public var traceParentHeader: String {
-		get {
-			// https://www.w3.org/TR/trace-context/#traceparent-header-field-values
-			
-			var flags: UInt8 = 0x00
-			flags |= sampled ? 1 : 0
-			
-			let hexFlags = Data([flags]).hexEncodedString
-			/// version, trace-id, parent-id, trace-flags
-			return "00-\(traceId.hexEncodedString)-\(id.hexEncodedString)-\(hexFlags)"
-		}
-	}
-	
+
 	internal init(name: String,
 				  kind: SpanKind = .internal,
 				  attributes: TelemetryAttributes? = nil,

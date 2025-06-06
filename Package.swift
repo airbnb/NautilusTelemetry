@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.8
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 // Copyright © 2021 eBay. All rights reserved.
 
@@ -35,7 +35,11 @@ let package = Package(
 			]),
 		.testTarget(
 			name: "NautilusTelemetryTests",
-			dependencies: ["NautilusTelemetry"]),
+			dependencies: ["NautilusTelemetry"],
+			swiftSettings: [
+				.enableUpcomingFeature("BareSlashRegexLiterals")
+			],
+		),
 		.target(
 			name: "SampleCode",
 			dependencies: ["NautilusTelemetry"]),

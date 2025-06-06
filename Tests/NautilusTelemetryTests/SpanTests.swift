@@ -55,7 +55,10 @@ final class SpanTests: XCTestCase {
 		
 		XCTAssert(set.count == iterations) // check for duplicates
 	}
-	
+
+	let traceParentValueRegex_Sampling = /00-[a-f0-9]{32}-[a-f0-9]{16}-01/
+	let traceParentValueRegex_NotSampling = /00-[a-f0-9]{32}-[a-f0-9]{16}-00/
+
 	func testTrace() throws {
 		
 		// we expect this test to run on main queue
@@ -73,8 +76,10 @@ final class SpanTests: XCTestCase {
 		XCTAssert(span2.events?.count == 2)
 		XCTAssert(span2.status == .ok)
 		
-		let traceParentHeader = span2.traceParentHeader
-		XCTAssertEqual(traceParentHeader.count, 55)
+		let traceParentHeader = span2.traceParentValue(sampled: true)
+		XCTAssertEqual(traceParentHeader.0, "traceparent")
+
+		XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: traceParentHeader.1) != nil)
 	}
 
 	func testTraceWithError() throws {
@@ -103,8 +108,42 @@ final class SpanTests: XCTestCase {
 
 		XCTAssert(backtrace.contains("testTraceWithError"))
 
-		let traceParentHeader = span2.traceParentHeader
-		XCTAssertEqual(traceParentHeader.count, 55)
+		let traceParentHeader = span2.traceParentValue(sampled: false)
+		XCTAssertEqual(traceParentHeader.0, "traceparent")
+		XCTAssert(try traceParentValueRegex_NotSampling.wholeMatch(in: traceParentHeader.1) != nil)
+	}
+
+	func testTraceparentHeader() throws {
+		let url = try XCTUnwrap(URL(string: "https://api.example.com"))
+		let span = tracer.startSpan(name: "test")
+
+		do {
+			var urlRequest = URLRequest(url: url)
+			span.addTraceHeadersIfSampling(&urlRequest, isSampling: true)
+			let header = try XCTUnwrap(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: header) != nil)
+		}
+
+		do {
+			var urlRequest = URLRequest(url: url)
+			let span = tracer.startSpan(name: "test")
+			span.addTraceHeadersIfSampling(&urlRequest, isSampling: false)
+			XCTAssertNil(urlRequest.value(forHTTPHeaderField: "traceparent"))
+		}
+
+		do {
+			var urlRequest = URLRequest(url: url)
+			span.addTraceHeadersUnconditionally(&urlRequest, isSampling: true)
+			let header = try XCTUnwrap(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: header) != nil)
+		}
+
+		do {
+			var urlRequest = URLRequest(url: url)
+			span.addTraceHeadersUnconditionally(&urlRequest, isSampling: false)
+			let header = try XCTUnwrap(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			XCTAssert(try traceParentValueRegex_NotSampling.wholeMatch(in: header) != nil)
+		}
 	}
 
 	func testThrowing() throws {
