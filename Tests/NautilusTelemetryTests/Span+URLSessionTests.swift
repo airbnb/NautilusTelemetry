@@ -20,6 +20,12 @@ final class SpanURLSessionTests: XCTestCase {
 		XCTAssertEqual(Span.name(forRequest: urlRequest), "GET")
 	}
 
+	func testNameWithTarget() {
+		var urlRequest = URLRequest(url: url)
+		urlRequest.httpMethod = "GET"
+		XCTAssertEqual(Span.name(forRequest: urlRequest, target: "/users/:id"), "GET /users/:id")
+	}
+
 	func testUrlSessionDidCreateTask() throws {
 		let span = tracer.startSpan(name: #function)
 		var urlRequest = URLRequest(url: url)

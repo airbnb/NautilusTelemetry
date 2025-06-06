@@ -9,16 +9,18 @@ import Foundation
 public extension Span {
 
 	/// Provides a span name.
-	/// - Parameter request: the request to construct from.
+	/// - Parameters:
+	/// 	- request: the request to construct from.
+	/// 	- target: an optional (low-cardinality) target (e.g. a `url.template` value for HTTP client spans)
 	/// - Returns: a span name.
-	static func name(forRequest request: URLRequest) -> String {
+	static func name(forRequest request: URLRequest, target: String? = nil) -> String {
 		// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#name
 		// HTTP spans MUST follow the overall guidelines for span names.
 		// HTTP span names SHOULD be {method} {target} if there is a (low-cardinality) target available. If there is no (low-cardinality) {target} available, HTTP span names SHOULD be {method}.
 		//	The {method} MUST be {http.request.method} if the method represents the original method known to the instrumentation. In other cases (when {http.request.method} is set to _OTHER), {method} MUST be HTTP.
-
-		// Note: we don't have a way to determine a low cardinality template-based target
-		return request.httpMethod ?? "HTTP"
+		let method = request.httpMethod ?? "HTTP"
+		guard let target else { return method }
+		return "\(method) \(target)"
 	}
 
 	/// Add `traceparent` header to a URLRequest if we're sampling
