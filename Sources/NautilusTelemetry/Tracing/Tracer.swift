@@ -18,7 +18,11 @@ public final class Tracer {
 			return Baggage(span: root)
 		}
 	}
-	
+
+	/// Convenience to track the expected state of sampling
+	/// Traceparent headers use this by default
+	public var isSampling: Bool = false
+
 	var traceId = Identifiers.generateTraceId()
 	var root: Span
 	var retiredSpans = [Span]()
@@ -85,6 +89,8 @@ public final class Tracer {
 
 
 	/// Creates a new subtrace span, with a link to a parent span.
+	/// Subtraces allow creating a tree of traces, making visualization easier.
+	/// Each subtrace should ideally represent a logical sub-area, or user activity.
 	/// - Parameters:
 	///   - name: The name of the new span.
 	///   - kind: the kind of the span - may be left unspecified, but should be set to `.client` for network calls.

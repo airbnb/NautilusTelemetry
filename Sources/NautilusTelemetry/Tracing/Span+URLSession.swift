@@ -21,6 +21,24 @@ public extension Span {
 		return request.httpMethod ?? "HTTP"
 	}
 
+	/// Add `traceparent` header to a URLRequest if we're sampling
+	/// - Parameter isSampling: whether we are sampling, defaults to InstrumentationSystem.tracer.isSampling
+	/// - Parameter urlRequest: urlRequest to modify
+	func addTraceHeadersIfSampling(_ urlRequest: inout URLRequest, isSampling: Bool = InstrumentationSystem.tracer.isSampling) {
+		if isSampling {
+			let value = traceParentValue(sampled: true)
+			urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
+		}
+	}
+
+	/// Add `traceparent` header to a URLRequest regardless of sampling state
+	/// Sampled flag determined from InstrumentationSystem.tracer.isSampling
+	/// - Parameter urlRequest: urlRequest to modify
+	func addTraceHeadersUnconditionally(_ urlRequest: inout URLRequest, isSampling: Bool = InstrumentationSystem.tracer.isSampling) {
+		let value = traceParentValue(sampled: isSampling)
+		urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
+	}
+
 	/// Annotates the span with attributes from the task's URLRequest.
 	/// - Parameters:
 	///   - _:  the URLSession instance.
@@ -162,6 +180,19 @@ public extension Span {
 			case "h3": "3"
 			default: nil
 		}
+	}
+
+	/// Returns the name / value pair for the traceparent header
+	/// - Parameter sampled: Whether we are sampling
+	/// - Returns: a traceparent header
+	internal func traceParentValue(sampled: Bool) -> (String, String) {
+		// https://www.w3.org/TR/trace-context/#traceparent-header-field-values
+		var flags: UInt8 = 0x00
+		flags |= sampled ? 1 : 0
+
+		let hexFlags = Data([flags]).hexEncodedString
+		/// version, trace-id, parent-id, trace-flags
+		return ("traceparent", "00-\(traceId.hexEncodedString)-\(id.hexEncodedString)-\(hexFlags)")
 	}
 
 	// Derived from https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status
