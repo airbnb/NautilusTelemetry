@@ -38,10 +38,10 @@ let package = Package(
 			dependencies: ["NautilusTelemetry"],
 			swiftSettings: [
 				.enableUpcomingFeature("BareSlashRegexLiterals")
-			],
+			]
 		),
 		.target(
 			name: "SampleCode",
-			dependencies: ["NautilusTelemetry"]),
+			dependencies: ["NautilusTelemetry"])
 	]
 )
