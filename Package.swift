@@ -16,7 +16,7 @@ let package = Package(
 		.library(
 			name: "SampleCode",
 			type: .static,
-			targets: ["SampleCode"])
+			targets: ["SampleCode"]),
 	],
 	dependencies: [
 	],
