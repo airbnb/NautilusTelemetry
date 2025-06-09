@@ -9,11 +9,11 @@ on:
 jobs:
   build-and-test:
 
-    runs-on: macos-latest
+    runs-on: macos-15
 
     strategy:
       matrix:
-        xcodebuild-destination: ['platform=iOS Simulator,name=iPhone 13', 'platform=macOS']
+        xcodebuild-destination: ['platform=iOS Simulator,name=iPhone 16', 'platform=macOS']
         xcodebuild-command: ['build', 'test']
 
     steps:
