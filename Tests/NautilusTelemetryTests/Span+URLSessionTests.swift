@@ -2,8 +2,6 @@
 // Copyright © 2025 Airbnb Inc. All rights reserved.
 
 import Foundation
-
-import Foundation
 import XCTest
 
 @testable import NautilusTelemetry
