@@ -41,6 +41,61 @@ public extension Span {
 		urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
 	}
 
+	/// Annotates the span with attributes from URLSessionTaskMetrics.
+	/// - Parameter metrics: collected task metrics.
+	func addMetrics(_ metrics: URLSessionTaskMetrics) {
+		if metrics.redirectCount > 0 {
+			addAttribute("http.request.resend_count", metrics.redirectCount)
+		}
+
+		guard let metric = metrics.transactionMetrics.first else { return }
+
+		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/http/
+		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
+		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/server/
+		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/tls/
+
+		addAttribute("http.request.size", metric.countOfRequestHeaderBytesSent+metric.countOfRequestBodyBytesSent)
+		addAttribute("http.request.body.size", metric.countOfRequestBodyBytesSent)
+
+		addAttribute("http.response.size", metric.countOfResponseHeaderBytesReceived+metric.countOfResponseBodyBytesReceived)
+		addAttribute("http.response.body.size", metric.countOfResponseBodyBytesReceived)
+
+		if let remoteAddress = metric.remoteAddress {
+			addAttribute("server.address", remoteAddress)
+
+			let isV6 = remoteAddress.contains(":")
+			addAttribute("network.type", isV6 ? "ipv6" : "ipv4")
+		}
+
+		if let remoteAddress = metric.remoteAddress {
+			addAttribute("network.peer.address", remoteAddress)
+
+			if let remotePort = metric.remotePort {
+				addAttribute("network.peer.port", remotePort)
+			}
+		}
+
+		if let negotiatedTLSProtocolVersion = metric.negotiatedTLSProtocolVersion {
+			let tlsVersionString: String? = switch negotiatedTLSProtocolVersion {
+			case .TLSv10: "1.0"
+			case .TLSv11: "1.1"
+			case .TLSv12: "1.2"
+			case .TLSv13: "1.3"
+			default: nil
+			}
+
+			addAttribute("tls.protocol.version", tlsVersionString)
+		}
+
+		addAttribute("tls.cipher", Self.cipherSuiteName(metric.negotiatedTLSCipherSuite))
+
+		// We can't provide more detail without groveling into NWPath and
+		// CTTelephonyNetworkInfo.serviceCurrentRadioAccessTechnology.
+		addAttribute("network.connection.type", metric.isCellular ? "cell" : "wifi")
+		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
+	}
+
 	/// Annotates the span with attributes from the task's URLRequest.
 	/// - Parameters:
 	///   - _:  the URLSession instance.
@@ -93,57 +148,7 @@ public extension Span {
 	///   - task: the task.
 	///   - metrics: collected metrics.
 	func urlSession(_: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
-
-		if metrics.redirectCount > 0 {
-			addAttribute("http.request.resend_count", metrics.redirectCount)
-		}
-
-		guard let metric = metrics.transactionMetrics.first else { return }
-
-		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/http/
-		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
-		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/server/
-		// https://opentelemetry.io/docs/specs/semconv/attributes-registry/tls/
-
-		addAttribute("http.request.size", metric.countOfRequestHeaderBytesSent+metric.countOfRequestBodyBytesSent)
-		addAttribute("http.request.body.size", metric.countOfRequestBodyBytesSent)
-
-		addAttribute("http.response.size", metric.countOfResponseHeaderBytesReceived+metric.countOfResponseBodyBytesReceived)
-		addAttribute("http.response.body.size", metric.countOfResponseBodyBytesReceived)
-
-		if let remoteAddress = metric.remoteAddress {
-			addAttribute("server.address", remoteAddress)
-
-			let isV6 = remoteAddress.contains(":")
-			addAttribute("network.type", isV6 ? "ipv6" : "ipv4")
-		}
-
-		if let remoteAddress = metric.remoteAddress {
-			addAttribute("network.peer.address", remoteAddress)
-
-			if let remotePort = metric.remotePort {
-				addAttribute("network.peer.port", remotePort)
-			}
-		}
-
-		if let negotiatedTLSProtocolVersion = metric.negotiatedTLSProtocolVersion {
-			let tlsVersionString: String? = switch negotiatedTLSProtocolVersion {
-			case .TLSv10: "1.0"
-			case .TLSv11: "1.1"
-			case .TLSv12: "1.2"
-			case .TLSv13: "1.3"
-			default: nil
-			}
-
-			addAttribute("tls.protocol.version", tlsVersionString)
-		}
-
-		addAttribute("tls.cipher", Self.cipherSuiteName(metric.negotiatedTLSCipherSuite))
-
-		// We can't provide more detail without groveling into NWPath and
-		// CTTelephonyNetworkInfo.serviceCurrentRadioAccessTechnology.
-		addAttribute("network.connection.type", metric.isCellular ? "cell" : "wifi")
-		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
+		addMetrics(metrics)
 	}
 
 	internal func addHeaders(prefix: String, headers: [String: String]?, headersToCapture: Set<String>? = nil) {
