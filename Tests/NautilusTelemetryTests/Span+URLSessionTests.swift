@@ -29,7 +29,7 @@ final class SpanURLSessionTests: XCTestCase {
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 		let task = urlSession.dataTask(with: urlRequest)
-		span.urlSession(urlSession, didCreateTask: task, requestHeadersToCapture: Set(["content-type"]))
+		span.urlSession(urlSession, didCreateTask: task, captureHeaders: Set(["content-type"]))
 
 		let attributes = try XCTUnwrap(span.attributes as? [String: String])
 		XCTAssertEqual(attributes["url.full"], url.absoluteString)
