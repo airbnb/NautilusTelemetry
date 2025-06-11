@@ -14,7 +14,11 @@ final class TracerURLRequestTests: XCTestCase {
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-		let span = tracer.startSpan(for: &urlRequest, template: "/users/:id", headersToCapture: Set(["content-type"]))
+		let span = tracer.startSpan(
+			request: &urlRequest,
+			template: "/users/:id",
+			captureHeaders: Set(["content-type"])
+		)
 		XCTAssertEqual(span.name, "GET /users/:id")
 
 		let attributes = try XCTUnwrap(span.attributes as? [String: String])
@@ -22,5 +26,15 @@ final class TracerURLRequestTests: XCTestCase {
 		XCTAssertEqual(attributes["http.request.method"], urlRequest.httpMethod)
 		XCTAssertEqual(attributes["http.request.header.content-type"], "application/json")
 		XCTAssertEqual(attributes["url.template"], "/users/:id")
+	}
+
+	func testStartSpanWithRequestTraceParent() throws {
+		tracer.isSampling = true
+
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSpan(request: &urlRequest)
+
+		let (headerName, headerValue) = span.traceParentHeaderValue(sampled: true)
+		XCTAssertEqual(urlRequest.value(forHTTPHeaderField: headerName), headerValue)
 	}
 }
