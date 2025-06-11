@@ -35,7 +35,7 @@ public extension Tracer {
 			headers: request.allHTTPHeaderFields,
 			headersToCapture: captureHeaders
 		)
-		span.addTraceHeadersIfSampling(&request)
+		span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
 
 		return span
 	}
