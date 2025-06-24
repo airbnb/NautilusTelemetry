@@ -28,17 +28,23 @@ import Foundation
 ///
 /// ## Examples
 ///
+/// Initialize a matcher with a list of templates. This should be done once
+/// and then reused.
 /// ```swift
 /// let matcher = try URLTemplateMatcher(templates: [
 ///     "/users/{id}",
 ///     "/posts/{postId}/comments/{commentId}",
 ///     "/search?q={}&status=active"
 /// ])
+///```
 ///
+/// Attempt to match a URL with one of our templates:
+/// ```swift
 /// let url = URL(string: "https://api.example.com/users/123")!
 /// let matchedTemplate = matcher.match(url: url) // Returns "/users/{id}"
 /// ```
 ///
+/// Attempt to match a URL template when starting a Span:
 /// ```swift
 /// let span = tracer.startSpan(
 ///     request: request,
