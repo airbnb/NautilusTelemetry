@@ -52,9 +52,12 @@ public struct URLTemplateMatcher {
 	/// Creates a matcher with the given URL templates.
 	/// - Parameter templates: Array of URL template strings
 	/// - Throws: If any template contains invalid syntax
-	public init(templates: [String]) throws {
-		self.templates = try templates.map { template in
-			try URLTemplate(template: template)
+	public init(templates: [StaticString]) throws {
+		self.templates = try templates.map {
+			let template = $0.withUTF8Buffer {
+				String(decoding: $0, as: UTF8.self)
+			}
+			return try URLTemplate(template: template)
 		}
 	}
 
@@ -64,7 +67,7 @@ public struct URLTemplateMatcher {
 	/// returns `nil`.
 	///
 	/// - Parameter templates: Array of URL template strings
-	public init?(_ templates: [String]) {
+	public init?(_ templates: [StaticString]) {
 		try? self.init(templates: templates)
 	}
 
