@@ -112,7 +112,7 @@ public extension Span {
 			}
 
 			addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
-			addHeaders(prefix: "http.request.header", headers: request.allHTTPHeaderFields, captureHeaders: captureHeaders)
+			addHeaders(request: request, captureHeaders: captureHeaders)
 		}
 	}
 
@@ -137,9 +137,7 @@ public extension Span {
 			status = .error(message: Self.message(statusCode: response.statusCode))
 		}
 
-		if let headers = response.allHeaderFields as? [String: String] {
-			addHeaders(prefix: "http.response.header", headers: headers, captureHeaders: captureHeaders)
-		}
+		addHeaders(response: response, captureHeaders: captureHeaders)
 	}
 
 	/// Annotates the span with attributes from URLSessionTaskMetrics.
@@ -151,27 +149,44 @@ public extension Span {
 		addMetrics(metrics)
 	}
 
-	internal func addHeaders(prefix: String, headers: [String: String]?, captureHeaders: Set<String>? = nil) {
-		//	[1] http.request.header: Instrumentations SHOULD require an explicit configuration of which headers are to be captured. Including all request headers can be a security risk - explicit configuration helps avoid leaking sensitive information. The User-Agent header is already captured in the user_agent.original attribute. Users MAY explicitly configure instrumentations to capture them even though it is not recommended. The attribute value MUST consist of either multiple header values as an array of strings or a single-item array containing a possibly comma-concatenated string, depending on the way the HTTP library provides access to headers.
+	/// Adds specified headers from a URLRequest to this span
+	/// - Parameters:
+	///   - request: URLRequest containing headers
+	///   - captureHeaders: Headers to capture. Must be lowercase strings.
+	internal func addHeaders(request: URLRequest, captureHeaders: Set<String>? = nil) {
+		//  [1] http.request.header: Instrumentations SHOULD require an explicit configuration of which headers are to be captured. Including all request headers can be a security risk - explicit configuration helps avoid leaking sensitive information. The User-Agent header is already captured in the user_agent.original attribute. Users MAY explicitly configure instrumentations to capture them even though it is not recommended. The attribute value MUST consist of either multiple header values as an array of strings or a single-item array containing a possibly comma-concatenated string, depending on the way the HTTP library provides access to headers.
 
-		#if DEBUG
-		if let captureHeaders {
-			for header in captureHeaders {
-				assert(header.lowercased() == header, "expected all header names to be lowercased")
+		guard let captureHeaders = captureHeaders else { return }
+		validate(captureHeaders: captureHeaders)
+
+		for key in captureHeaders {
+			if let value = request.value(forHTTPHeaderField: key) {
+				self.addAttribute("http.request.header.\(key)", value)
 			}
 		}
-		#endif
+	}
 
-		if let captureHeaders = captureHeaders,
-		   let headers = headers {
+	/// Adds specified headers from a HTTPURLResponse to this span
+	/// - Parameters:
+	///   - request: HTTPURLResponse containing headers
+	///   - captureHeaders: Headers to capture. Must be lowercase strings.
+	internal func addHeaders(response: HTTPURLResponse, captureHeaders: Set<String>? = nil) {
+		guard let captureHeaders = captureHeaders else { return }
+		validate(captureHeaders: captureHeaders)
 
-			for (key, value) in headers {
-				let normalizedKey = key.lowercased()
-				if captureHeaders.contains(normalizedKey) {
-					self.addAttribute("\(prefix).\(normalizedKey)", value)
-				}
+		for key in captureHeaders {
+			if let value = response.value(forHTTPHeaderField: key) {
+				self.addAttribute("http.response.header.\(key)", value)
 			}
 		}
+	}
+
+	internal func validate(captureHeaders: Set<String>) {
+#if DEBUG
+		for header in captureHeaders {
+			assert(header.lowercased() == header, "expected all header names to be lowercased")
+		}
+#endif
 	}
 
 	internal static func message(statusCode: Int) -> String {
@@ -181,11 +196,11 @@ public extension Span {
 	// Derived from https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
 	internal static func networkProtocolVersion(_ networkProtocolName: String?) -> String? {
 		switch networkProtocolName {
-			case "http/1.0": "1.0"
-			case "http/1.1": "1.1"
-			case "h2": "2"
-			case "h3": "3"
-			default: nil
+		case "http/1.0": "1.0"
+		case "http/1.1": "1.1"
+		case "h2": "2"
+		case "h3": "3"
+		default: nil
 		}
 	}
 
