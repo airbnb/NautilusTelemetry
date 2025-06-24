@@ -6,7 +6,7 @@ import Foundation
 /// Extensions to be called by the application's URLSession delegate
 
 public extension Tracer {
-	
+
 	/// Create a manually managed span to represent an URLRequest that is about to be dispatched.
 	/// - Parameters:
 	///   - request: the URLRequest. The `traceparent` header will be added if needed.
@@ -30,12 +30,8 @@ public extension Tracer {
 			span.addAttribute("url.template", template)
 		}
 
-		span.addHeaders(
-			prefix: "http.request.header",
-			headers: request.allHTTPHeaderFields,
-			captureHeaders: captureHeaders
-		)
 		span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
+		span.addHeaders(request: request, captureHeaders: captureHeaders)
 
 		return span
 	}

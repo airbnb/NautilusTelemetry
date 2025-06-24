@@ -75,4 +75,26 @@ final class SpanURLSessionTests: XCTestCase {
 			}
 		}
 	}
+
+	func testRequestAddHeaders() throws {
+		let span = tracer.startSpan(name: #function)
+		var urlRequest = URLRequest(url: url)
+		urlRequest.addValue("Hello", forHTTPHeaderField: "Greeting")
+		urlRequest.addValue("content-encoding", forHTTPHeaderField: "br")
+		span.addHeaders(request: urlRequest, captureHeaders: Set(["greeting"]))
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertEqual(attributes["http.request.header.greeting"], "Hello")
+		XCTAssertNil(attributes["http.request.header.content-encoding"])
+	}
+
+	func testResponseAddHeaders() throws {
+		let span = tracer.startSpan(name: #function)
+		let headers = ["Fruit": "Banana", "Content-Encoding": "gzip"]
+		let urlResponse = try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "2", headerFields: headers))
+		span.addHeaders(response: urlResponse, captureHeaders: Set(["fruit"]))
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertEqual(attributes["http.response.header.fruit"], "Banana")
+		XCTAssertNil(attributes["http.response.header.content-encoding"])
+	}
+
 }
