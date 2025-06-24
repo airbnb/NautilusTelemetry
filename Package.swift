@@ -34,6 +34,9 @@ let package = Package(
 				"Exporters/OTLP-JSON/Trace/trace_service.yaml",
 				"Exporters/OTLP-JSON/Logs/logs_service.yaml",
 				"Instrumentation/MetricKit-sample.json",
+			],
+			swiftSettings: [
+				.enableUpcomingFeature("BareSlashRegexLiterals"),
 			]
 		),
 		.testTarget(
