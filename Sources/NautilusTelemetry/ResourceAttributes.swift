@@ -1,6 +1,6 @@
 //
 //  ResourceAttributes.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 11/4/21.
 //
@@ -8,22 +8,38 @@
 import Foundation
 
 #if canImport(UIKit)
-	import UIKit
+import UIKit
 #endif
 
-// Defines top-level 
+// MARK: - ResourceAttributes
+
+/// Defines top-level
 public struct ResourceAttributes {
-	
-	static var osVersion: String {
-		let osv = ProcessInfo.processInfo.operatingSystemVersion
-		if osv.patchVersion > 0 {
-			return "\(osv.majorVersion).\(osv.minorVersion).\(osv.patchVersion)"
-		}
-		else {
-			return "\(osv.majorVersion).\(osv.minorVersion)"
-		}
+
+	// MARK: Lifecycle
+
+	public init(
+		bundleIdentifier: String,
+		applicationVersion: String,
+		vendorIdentifier: String,
+		deviceModelIdentifier: String,
+		osType: String = "darwin",
+		osName: String = "iOS",
+		osVersion: String,
+		additionalAttributes: TelemetryAttributes?
+	) {
+		self.bundleIdentifier = bundleIdentifier
+		self.applicationVersion = applicationVersion
+		self.vendorIdentifier = vendorIdentifier
+		self.deviceModelIdentifier = deviceModelIdentifier
+		self.osType = osType
+		self.osName = osName
+		self.osVersion = osVersion
+		self.additionalAttributes = additionalAttributes
 	}
-	
+
+	// MARK: Public
+
 	/// Create a default set of resource attributes.
 	/// - Parameter additionalAttributes: Additional attributes, that may override existing attributes. Must conform to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/attribute-naming.md
 	/// - Returns: Built attributes.
@@ -39,34 +55,36 @@ public struct ResourceAttributes {
 		#else
 		let vendorIdentifier = placeholder
 		#endif
-		
+
 		let model = HardwareDetails.platformCachedValue ?? placeholder
-		
-		return ResourceAttributes(bundleIdentifier: bundleIdentifier,
-										   applicationVersion: applicationVersion,
-										   vendorIdentifier: vendorIdentifier,
-										   deviceModelIdentifier: model,
-										   osVersion: osVersion,
-											additionalAttributes: additionalAttributes)
+
+		return ResourceAttributes(
+			bundleIdentifier: bundleIdentifier,
+			applicationVersion: applicationVersion,
+			vendorIdentifier: vendorIdentifier,
+			deviceModelIdentifier: model,
+			osVersion: osVersion,
+			additionalAttributes: additionalAttributes
+		)
 	}
-	
-	public init(bundleIdentifier: String, applicationVersion: String, vendorIdentifier: String, deviceModelIdentifier: String, osType: String = "darwin", osName: String = "iOS", osVersion: String, additionalAttributes: TelemetryAttributes?) {
-		self.bundleIdentifier = bundleIdentifier
-		self.applicationVersion = applicationVersion
-		self.vendorIdentifier = vendorIdentifier
-		self.deviceModelIdentifier = deviceModelIdentifier
-		self.osType = osType
-		self.osName = osName
-		self.osVersion = osVersion
-		self.additionalAttributes = additionalAttributes
+
+	// MARK: Internal
+
+	static var osVersion: String {
+		let osv = ProcessInfo.processInfo.operatingSystemVersion
+		if osv.patchVersion > 0 {
+			return "\(osv.majorVersion).\(osv.minorVersion).\(osv.patchVersion)"
+		} else {
+			return "\(osv.majorVersion).\(osv.minorVersion)"
+		}
 	}
-	
+
 	let bundleIdentifier: String
 	let applicationVersion: String
 
 	let vendorIdentifier: String
 	let deviceModelIdentifier: String
-	
+
 	let osType: String
 	let osName: String
 	let osVersion: String
@@ -74,9 +92,9 @@ public struct ResourceAttributes {
 
 	var keyValues: TelemetryAttributes {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md
-		
+
 		var attributes = TelemetryAttributes()
-		
+
 		// https://opentelemetry.io/docs/specs/semconv/registry/attributes/service/
 		attributes["service.name"] = "ios.app"
 		attributes["service.namespace"] = bundleIdentifier
@@ -85,19 +103,19 @@ public struct ResourceAttributes {
 		attributes["telemetry.sdk.language"] = "swift"
 		attributes["device.id"] = vendorIdentifier
 		// Can we set "deployment.environment" here?
-    
+
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/device.md
 		attributes["device.manufacturer"] = "Apple"
 		attributes["device.model"] = deviceModelIdentifier
-		
+
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/os.md
 		attributes["os.type"] = osType
 		attributes["os.name"] = osName
 		attributes["os.version"] = osVersion
 
-		if let additionalAttributes = additionalAttributes {
+		if let additionalAttributes {
 			// Overwrite any existing keys.
-			attributes.merge(additionalAttributes) { (_, new) in new }
+			attributes.merge(additionalAttributes) { _, new in new }
 		}
 
 		return attributes

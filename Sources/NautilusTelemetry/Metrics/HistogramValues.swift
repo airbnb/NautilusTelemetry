@@ -1,23 +1,30 @@
 //
 //  HistogramValues.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 12/20/21.
 //
 
 import Foundation
 
+// MARK: - HistogramBuckets
+
 struct HistogramBuckets<T: MetricNumeric> {
+
+	// MARK: Lifecycle
+
+	init(explicitBounds: [T]) {
+		self.explicitBounds = explicitBounds
+		data = .init(repeating: 0, count: explicitBounds.count + 1)
+	}
+
+	// MARK: Internal
+
 	var count: UInt64 = 0
 	var sum: T = 0
 	var data: [UInt64]
 	let explicitBounds: [T]
-	
-	init(explicitBounds: [T]) {
-		self.explicitBounds = explicitBounds
-		data = .init(repeating: 0, count: explicitBounds.count+1)
-	}
-	
+
 	mutating func record(_ number: T) {
 		sum += number
 		count += 1
@@ -30,17 +37,19 @@ struct HistogramBuckets<T: MetricNumeric> {
 				return
 			}
 		}
-		
+
 		// In the range of (lastBound...infinity).
 		data[count] += 1
 	}
 }
 
+// MARK: - HistogramValues
+
 /// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md#histograms
 struct HistogramValues<T: MetricNumeric> {
 
-	let explicitBounds: [T]
-	
+	// MARK: Lifecycle
+
 	/// Initialize with bounds.
 	/// - Parameter explicitBounds: See `V1HistogramDataPoint.swift` for defintion.
 	///  Limitation: all recorded histograms share the same `explicitBounds` in this implementation.
@@ -48,7 +57,12 @@ struct HistogramValues<T: MetricNumeric> {
 		self.explicitBounds = explicitBounds
 	}
 
+	// MARK: Internal
+
+	let explicitBounds: [T]
+
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
+
 	var allValues: [TelemetryAttributes: HistogramBuckets<T>] { Meter.valueLock.withLockUnchecked { values } }
 
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
@@ -57,7 +71,7 @@ struct HistogramValues<T: MetricNumeric> {
 			if value == nil {
 				value = HistogramBuckets<T>(explicitBounds: explicitBounds)
 			}
-			if var value = value {
+			if var value {
 				value.record(number)
 				values[attributes] = value
 			} else {
@@ -65,7 +79,7 @@ struct HistogramValues<T: MetricNumeric> {
 			}
 		}
 	}
-	
+
 	mutating func reset() {
 		Meter.valueLock.withLockUnchecked {
 			values.removeAll()

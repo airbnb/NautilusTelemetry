@@ -1,6 +1,6 @@
 //
 //  ProcessDetailsTests.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 9/23/21.
 //
@@ -10,7 +10,7 @@ import XCTest
 @testable import NautilusTelemetry
 
 final class ProcessDetailsTests: XCTestCase {
-	
+
 	func testTimeSinceProcessStart() {
 		let time = ProcessDetails.timeSinceStart
 		XCTAssertGreaterThan(time, 0)

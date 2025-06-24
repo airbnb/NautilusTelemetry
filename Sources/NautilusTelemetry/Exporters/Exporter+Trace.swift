@@ -63,19 +63,21 @@ extension Exporter {
 			droppedEventsCount: nil,
 			links: links,
 			droppedLinksCount: nil,
-			status: status)
+			status: status
+		)
 	}
 
 	func mapKind(_ spanKind: SpanKind) -> OTLP.SpanSpanKind? {
 		// Map the enumerate
-		let otlpKind: OTLP.SpanSpanKind = switch spanKind {
-		case .unspecified:
+		let otlpKind: OTLP.SpanSpanKind =
+			switch spanKind {
+			case .unspecified:
 				._internal // we didn't figure it out, we'll assume internal
-		case .internal:
+			case .internal:
 				._internal
-		case .client:
+			case .client:
 				.client
-		}
+			}
 
 		return otlpKind == ._internal ? nil : otlpKind // optimization: we can omit kind if it's internal, the default value
 	}

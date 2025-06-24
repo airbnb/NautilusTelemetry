@@ -1,6 +1,6 @@
 //
 //  ReporterTests.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 3/22/22.
 //
@@ -11,16 +11,15 @@ import XCTest
 @testable import NautilusTelemetry
 
 final class ReporterTests: XCTestCase {
-	
+
 	func testNoOpReporter() {
 		let reporter = NoOpReporter()
 		InstrumentationSystem.bootstrap(reporter: reporter)
 		XCTAssert((InstrumentationSystem.reporter as? NoOpReporter) === reporter)
-		
+
 		XCTAssertEqual(reporter.flushInterval, 1)
 		reporter.reportSpans([])
 		reporter.reportInstruments([])
 		reporter.subscribeToLifecycleEvents()
 	}
 }
-

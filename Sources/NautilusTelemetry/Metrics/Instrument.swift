@@ -1,19 +1,21 @@
 //
 //  Instrument.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 12/20/21.
 //
 
 import Foundation
 
+// MARK: - Instrument
+
 public protocol Instrument: AnyObject {
 	/// The name of the instrument.
 	var name: String { get }
-	
+
 	/// Optional unit of measurement.
 	var unit: Unit? { get }
-	
+
 	/// Optional description.
 	var description: String? { get }
 
@@ -21,13 +23,17 @@ public protocol Instrument: AnyObject {
 	var startTime: ContinuousClock.Instant { get }
 
 	var aggregationTemporality: AggregationTemporality { get }
-	
+
 	func reset()
 }
 
-internal protocol ExportableInstrument {
+// MARK: - ExportableInstrument
+
+protocol ExportableInstrument {
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric
 }
+
+// MARK: - AggregationTemporality
 
 public enum AggregationTemporality {
 	/// The gauge has no aggregation

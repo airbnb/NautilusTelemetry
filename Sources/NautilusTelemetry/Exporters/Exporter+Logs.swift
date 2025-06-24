@@ -1,6 +1,6 @@
 //
 //  Exporter+Logs.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 3/1/22.
 //
@@ -10,10 +10,10 @@ import OSLog
 
 /// Exporter utilities for Logs models
 extension Exporter {
-	@available(iOS 15.0, tvOS 15.0, *)
 	/// Converts OSLog levels to OTLP severity.
 	/// - Parameter level: OSLogEntryLog.Level
 	/// - Returns: level converted to OTLP format.
+	@available(iOS 15.0, tvOS 15.0, *)
 	func severityFrom(level: OSLogEntryLog.Level) -> OTLP.V1SeverityNumber? {
 		switch level {
 		case .debug:

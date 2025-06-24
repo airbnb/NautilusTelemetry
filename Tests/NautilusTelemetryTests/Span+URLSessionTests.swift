@@ -54,7 +54,7 @@ final class SpanURLSessionTests: XCTestCase {
 	func testMessage() throws {
 		XCTAssertEqual(Span.message(statusCode: 200), "OK")
 	}
-	
+
 	func testNetworkProtocolVersion() throws {
 		XCTAssertEqual(Span.networkProtocolVersion("http/1.0"), "1.0")
 		XCTAssertEqual(Span.networkProtocolVersion("http/1.1"), "1.1")
@@ -65,12 +65,12 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testCipherSuiteName() throws {
 		XCTAssertNil(Span.cipherSuiteName(nil))
-		
+
 		// Not CaseIterable, but we can run the whole numeric range
 		for i in 0...UInt16.max {
 			let cipherSuiteName = Span.cipherSuiteName(tls_ciphersuite_t(rawValue: i))
 
-			if let cipherSuiteName = cipherSuiteName {
+			if let cipherSuiteName {
 				XCTAssert(cipherSuiteName.hasPrefix("TLS_"))
 			}
 		}

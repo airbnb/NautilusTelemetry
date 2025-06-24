@@ -5,7 +5,7 @@ import Foundation
 
 /// Extensions to be called by the application's URLSession delegate
 
-public extension Tracer {
+extension Tracer {
 
 	/// Create a manually managed span to represent an URLRequest that is about to be dispatched.
 	/// - Parameters:
@@ -15,7 +15,13 @@ public extension Tracer {
 	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: A newly created span.
-	func startSpan(request: inout URLRequest, template: String? = nil, captureHeaders: Set<String>? = nil, attributes: TelemetryAttributes? = nil, baggage: Baggage? = nil) -> Span {
+	public func startSpan(
+		request: inout URLRequest,
+		template: String? = nil,
+		captureHeaders: Set<String>? = nil,
+		attributes: TelemetryAttributes? = nil,
+		baggage: Baggage? = nil
+	) -> Span {
 		let name = Span.name(forRequest: request, target: template)
 		let span = startSpan(name: name, kind: .client, attributes: attributes, baggage: baggage)
 		span.addAttribute("http.request.method", request.httpMethod ?? "_OTHER")

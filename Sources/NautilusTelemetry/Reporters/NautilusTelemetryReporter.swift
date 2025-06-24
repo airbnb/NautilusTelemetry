@@ -1,6 +1,6 @@
 //
 //  NautilusTelemetryReporter.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 11/29/21.
 //
@@ -11,7 +11,7 @@ public protocol NautilusTelemetryReporter {
 
 	/// Desired flush interval.
 	var flushInterval: TimeInterval { get }
-	
+
 	func reportSpans(_ spans: [Span])
 
 	func reportInstruments(_ instruments: [Instrument])
