@@ -1,6 +1,6 @@
 //
 //  MetricValues.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 12/20/21.
 //
@@ -9,8 +9,8 @@ import Foundation
 
 struct MetricValues<T: MetricNumeric> {
 
-	private var values = [TelemetryAttributes: T]()
-	
+	// MARK: Internal
+
 	var allValues: [TelemetryAttributes: T] { Meter.valueLock.withLockUnchecked { values } }
 
 	mutating func add(_ number: T, attributes: TelemetryAttributes = [:]) {
@@ -32,8 +32,13 @@ struct MetricValues<T: MetricNumeric> {
 			values.removeAll()
 		}
 	}
-	
+
 	func valueFor(attributes: TelemetryAttributes) -> T? {
 		Meter.valueLock.withLockUnchecked { values[attributes] }
 	}
+
+	// MARK: Private
+
+	private var values = [TelemetryAttributes: T]()
+
 }

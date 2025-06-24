@@ -1,22 +1,20 @@
 //
 //  Compression.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 10/11/21.
 //
 
-import Foundation
 import Compression
+import Foundation
 import zlib
 
 /// Implements simple one-shot compressors for telemetry payloads.
 /// It may be worth using a more complete implementation such as: https://github.com/mw99/DataCompression
 /// unfortunately, Apple doesn't let you control compression level.
-public struct Compression {
-	
-	enum CompressionError: Error {
-		case failure
-	}
+public enum Compression {
+
+	// MARK: Public
 
 	public static func compressDeflate(data: Data) throws -> Data {
 		let compressed = try compress(source: data, algorithm: .zlib)
@@ -26,13 +24,19 @@ public struct Compression {
 		output.append(compressed)
 		var adler = adler32_zlib(data).bigEndian
 		output.append(Data(bytes: &adler, count: MemoryLayout<UInt32>.size))
-		
+
 		return output
 	}
 
 	@available(iOS 15.0, *)
 	public static func compressBrotli(data: Data) throws -> Data {
-		return try compress(source: data, algorithm: .brotli)
+		try compress(source: data, algorithm: .brotli)
+	}
+
+	// MARK: Internal
+
+	enum CompressionError: Error {
+		case failure
 	}
 
 	static func adler32_zlib(_ data: Data) -> UInt32 {
@@ -41,13 +45,15 @@ public struct Compression {
 		}
 	}
 
-	// https://developer.apple.com/documentation/Accelerate/compressing-and-decompressing-data-with-input-and-output-filters
+	// MARK: Private
+
+	/// https://developer.apple.com/documentation/Accelerate/compressing-and-decompressing-data-with-input-and-output-filters
 	private static func compress(source: Data, algorithm: Algorithm) throws -> Data {
 		var compressedData = Data()
 
 		let outputFilter = try OutputFilter(.compress, using: algorithm) {
-			(data: Data?) -> Void in
-			if let data = data {
+			(data: Data?) in
+			if let data {
 				compressedData.append(data)
 			}
 		}

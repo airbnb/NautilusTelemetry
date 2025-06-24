@@ -1,23 +1,27 @@
 //
 //  Sampler.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 1/12/22.
 //
 
-import Foundation
 import CryptoKit
+import Foundation
 import os
+
+// MARK: - Sampler
 
 public protocol Sampler {
 	var shouldSample: Bool { get }
 }
 
+// MARK: - StableGuidSampler
+
 /// A sampler that is stable for a given GUID.
 /// Intended to be used for session-based sampling or similar use cases.
 public final class StableGuidSampler: Sampler {
-	
-	private let lock = OSAllocatedUnfairLock()
+
+	// MARK: Lifecycle
 
 	/// Initialize a sampler that uses.
 	/// - Parameters:
@@ -27,11 +31,15 @@ public final class StableGuidSampler: Sampler {
 	public init(sampleRate: Double, seed: Data, guid: Data) {
 		self.sampleRate = sampleRate
 		self.seed = seed
-		self._guid = guid
-		self.shouldSample = false
+		_guid = guid
+		shouldSample = false
 		computeShouldSample()
 	}
-	
+
+	// MARK: Public
+
+	public private(set) var shouldSample: Bool
+
 	/// A rate of sampling, expressed as a percentage [0...100].
 	public var sampleRate: Double {
 		didSet {
@@ -41,19 +49,14 @@ public final class StableGuidSampler: Sampler {
 			}
 		}
 	}
-	
-	/// A seed to allow multiple orthogonal samples to be taken from the same GUID.
-	let seed: Data
-	
-	private var _guid: Data
-	
+
 	/// At least 1 byte of random guid data. This can be set when the underlying guid changes.
 	public var guid: Data {
 		// actors would be great here!
 		get {
-			lock.withLock { return _guid }
+			lock.withLock { _guid }
 		}
-		
+
 		set {
 			assert(newValue.count >= 0, "expected at least 1 byte of data")
 
@@ -64,29 +67,39 @@ public final class StableGuidSampler: Sampler {
 					didChange = true
 				}
 			}
-			
+
 			if didChange {
 				computeShouldSample()
 			}
 		}
 	}
-	
-	public private(set) var shouldSample: Bool
+
+	// MARK: Internal
+
+	/// A seed to allow multiple orthogonal samples to be taken from the same GUID.
+	let seed: Data
 
 	func computeShouldSample() {
-		var hash = SHA256.init()
+		var hash = SHA256()
 		hash.update(data: seed)
 		hash.update(data: guid)
 		let hashResult = Data(hash.finalize())
-		
+
 		let neededByteCount = MemoryLayout<UInt32>.size
 		guard hashResult.count > neededByteCount else {
 			assert(false, "expected at least \(neededByteCount) bytes")
 			return
 		}
-		
+
 		let val = hashResult.withUnsafeBytes { $0.load(as: UInt32.self) }
 		let sessionRampVal = Double(val) / Double(UInt32.max) * 100.0
 		shouldSample = sessionRampVal < sampleRate
 	}
+
+	// MARK: Private
+
+	private let lock = OSAllocatedUnfairLock()
+
+	private var _guid: Data
+
 }

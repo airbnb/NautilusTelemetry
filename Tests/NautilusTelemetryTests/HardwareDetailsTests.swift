@@ -1,6 +1,6 @@
 //
 //  HardwareDetailsTests.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 11/4/21.
 //
@@ -16,4 +16,3 @@ final class HardwareDetailsTests: XCTestCase {
 		XCTAssert(value.count > 0)
 	}
 }
-

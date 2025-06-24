@@ -1,6 +1,6 @@
 //
 //  IdentifiersTests.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 3/22/22.
 //
@@ -25,12 +25,11 @@ final class IdentifiersTests: XCTestCase {
 		let spanId = Identifiers.generateSpanId()
 		XCTAssertEqual(spanId.count, 8)
 	}
-	
+
 	func testHexEncoding() {
 		let test = Data(repeating: 0xFF, count: 8)
-		
+
 		let hex1 = test.hexEncodedString
 		XCTAssertEqual(hex1, "ffffffffffffffff")
 	}
 }
-

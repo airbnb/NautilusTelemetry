@@ -1,6 +1,6 @@
 //
 //  Baggage.swift
-//  
+//
 //
 //  Created by Van Tol, Ladd on 11/15/21.
 //
@@ -10,8 +10,7 @@ import os
 
 public final class Baggage: @unchecked Sendable {
 
-  // TaskLocal works even for conventional threads: https://developer.apple.com/documentation/swift/tasklocal
-	@TaskLocal static var currentBaggageTaskLocal: Baggage?
+	// MARK: Lifecycle
 
 	/// Creates a baggage object.
 	/// - Parameters:
@@ -21,7 +20,12 @@ public final class Baggage: @unchecked Sendable {
 		self.span = span
 		self.subTraceId = subTraceId
 	}
-	
+
+	// MARK: Internal
+
+	/// TaskLocal works even for conventional threads: https://developer.apple.com/documentation/swift/tasklocal
+	@TaskLocal static var currentBaggageTaskLocal: Baggage?
+
 	let span: Span
 	let subTraceId: TraceId?
 }

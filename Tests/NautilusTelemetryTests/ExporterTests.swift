@@ -1,6 +1,6 @@
 //
 //  ExporterTests.swift
-//  
+//
 //
 //  Created by Ladd Van Tol on 3/22/22.
 //
@@ -15,7 +15,7 @@ final class ExporterTests: XCTestCase {
 
 	func testConvertToOTLPString() throws {
 		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
-		
+
 		let string = "abc"
 		let stringVal = try XCTUnwrap(exporter.convertToOTLP(value: string))
 		XCTAssertEqual(stringVal.stringValue, "abc")
@@ -32,7 +32,7 @@ final class ExporterTests: XCTestCase {
 		let boolVal2 = try XCTUnwrap(exporter.convertToOTLP(value: bool2))
 		XCTAssertEqual(boolVal2.boolValue, false)
 	}
-	
+
 	func testConvertToOTLPFloats() throws {
 		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
 
@@ -44,7 +44,7 @@ final class ExporterTests: XCTestCase {
 		let doubleValue = try XCTUnwrap(exporter.convertToOTLP(value: double))
 		XCTAssertEqual(doubleValue.doubleValue, double)
 	}
-	
+
 	func testConvertToOTLPIntegers() throws {
 		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
 
@@ -101,7 +101,7 @@ final class ExporterTests: XCTestCase {
 
 		// Check that ints outside the bound are expressed as JSON strings
 		do {
-			let lowerIntBound = -(1 << 53)-1
+			let lowerIntBound = -(1 << 53) - 1
 			let lowerIntBoundAnyValue = try XCTUnwrap(exporter.convertToOTLP(value: lowerIntBound))
 			let encoded = try JSONEncoder().encode(lowerIntBoundAnyValue)
 			let encodedString = String(data: encoded, encoding: .utf8)
@@ -109,7 +109,7 @@ final class ExporterTests: XCTestCase {
 		}
 
 		do {
-			let upperIntBound = (1 << 53)+1
+			let upperIntBound = (1 << 53) + 1
 			let upperIntBoundAnyIntValue = try XCTUnwrap(exporter.convertToOTLP(value: upperIntBound))
 			let encoded = try JSONEncoder().encode(upperIntBoundAnyIntValue)
 			let encodedString = String(data: encoded, encoding: .utf8)
@@ -136,7 +136,7 @@ final class ExporterTests: XCTestCase {
 		XCTAssertEqual(dataValue.bytesValue, data)
 		let encodedJsonString = String(data: try exporter.encodeJSON(dataValue), encoding: .utf8)
 		XCTAssertEqual(encodedJsonString, #"{"bytesValue":"f09f9380"}"#)
-		
+
 		let array: [Any] = ["foo", 1]
 		let arrayValue = try XCTUnwrap(exporter.convertToOTLP(value: array))
 		let values = try XCTUnwrap(arrayValue.arrayValue?.values)
@@ -156,4 +156,3 @@ final class ExporterTests: XCTestCase {
 		XCTAssertNil(notConvertibleValue)
 	}
 }
-

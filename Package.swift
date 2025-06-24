@@ -12,11 +12,13 @@ let package = Package(
 		.library(
 			name: "NautilusTelemetry",
 			type: .static,
-			targets: ["NautilusTelemetry"]),
+			targets: ["NautilusTelemetry"]
+		),
 		.library(
 			name: "SampleCode",
 			type: .static,
-			targets: ["SampleCode"])
+			targets: ["SampleCode"]
+		),
 	],
 	dependencies: [
 	],
@@ -31,17 +33,19 @@ let package = Package(
 				"Exporters/OTLP-JSON/Metrics/metrics_service.yaml",
 				"Exporters/OTLP-JSON/Trace/trace_service.yaml",
 				"Exporters/OTLP-JSON/Logs/logs_service.yaml",
-				"Instrumentation/MetricKit-sample.json"
-			]),
+				"Instrumentation/MetricKit-sample.json",
+			]
+		),
 		.testTarget(
 			name: "NautilusTelemetryTests",
 			dependencies: ["NautilusTelemetry"],
 			swiftSettings: [
-				.enableUpcomingFeature("BareSlashRegexLiterals")
+				.enableUpcomingFeature("BareSlashRegexLiterals"),
 			]
 		),
 		.target(
 			name: "SampleCode",
-			dependencies: ["NautilusTelemetry"])
+			dependencies: ["NautilusTelemetry"]
+		),
 	]
 )
