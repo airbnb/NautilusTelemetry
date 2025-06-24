@@ -73,7 +73,7 @@ public final class StableGuidSampler: Sampler {
 	
 	public private(set) var shouldSample: Bool
 
-	internal func computeShouldSample() {
+	func computeShouldSample() {
 		var hash = SHA256.init()
 		hash.update(data: seed)
 		hash.update(data: guid)

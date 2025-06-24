@@ -153,7 +153,7 @@ public extension Span {
 	/// - Parameters:
 	///   - request: URLRequest containing headers
 	///   - captureHeaders: Headers to capture. Must be lowercase strings.
-	internal func addHeaders(request: URLRequest, captureHeaders: Set<String>? = nil) {
+	func addHeaders(request: URLRequest, captureHeaders: Set<String>? = nil) {
 		//  [1] http.request.header: Instrumentations SHOULD require an explicit configuration of which headers are to be captured. Including all request headers can be a security risk - explicit configuration helps avoid leaking sensitive information. The User-Agent header is already captured in the user_agent.original attribute. Users MAY explicitly configure instrumentations to capture them even though it is not recommended. The attribute value MUST consist of either multiple header values as an array of strings or a single-item array containing a possibly comma-concatenated string, depending on the way the HTTP library provides access to headers.
 
 		guard let captureHeaders = captureHeaders else { return }
@@ -170,7 +170,7 @@ public extension Span {
 	/// - Parameters:
 	///   - request: HTTPURLResponse containing headers
 	///   - captureHeaders: Headers to capture. Must be lowercase strings.
-	internal func addHeaders(response: HTTPURLResponse, captureHeaders: Set<String>? = nil) {
+	func addHeaders(response: HTTPURLResponse, captureHeaders: Set<String>? = nil) {
 		guard let captureHeaders = captureHeaders else { return }
 		validate(captureHeaders: captureHeaders)
 
@@ -181,7 +181,7 @@ public extension Span {
 		}
 	}
 
-	internal func validate(captureHeaders: Set<String>) {
+	func validate(captureHeaders: Set<String>) {
 #if DEBUG
 		for header in captureHeaders {
 			assert(header.lowercased() == header, "expected all header names to be lowercased")
@@ -207,7 +207,7 @@ public extension Span {
 	/// Returns the name / value pair for the traceparent header
 	/// - Parameter sampled: Whether we are sampling
 	/// - Returns: a traceparent header
-	internal func traceParentHeaderValue(sampled: Bool) -> (String, String) {
+	func traceParentHeaderValue(sampled: Bool) -> (String, String) {
 		// https://www.w3.org/TR/trace-context/#traceparent-header-field-values
 		var flags: UInt8 = 0x00
 		flags |= sampled ? 1 : 0
