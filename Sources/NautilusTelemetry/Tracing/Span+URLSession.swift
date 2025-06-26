@@ -70,14 +70,10 @@ extension Span {
 		addAttribute("http.response.body.size", metric.countOfResponseBodyBytesReceived)
 
 		if let remoteAddress = metric.remoteAddress {
-			addAttribute("server.address", remoteAddress)
+			addAttribute("network.peer.address", remoteAddress)
 
 			let isV6 = remoteAddress.contains(":")
 			addAttribute("network.type", isV6 ? "ipv6" : "ipv4")
-		}
-
-		if let remoteAddress = metric.remoteAddress {
-			addAttribute("network.peer.address", remoteAddress)
 
 			if let remotePort = metric.remotePort {
 				addAttribute("network.peer.port", remotePort)
@@ -334,5 +330,4 @@ extension Span {
 		510: "Not Extended",
 		511: "Network Authentication Required",
 	]
-
 }
