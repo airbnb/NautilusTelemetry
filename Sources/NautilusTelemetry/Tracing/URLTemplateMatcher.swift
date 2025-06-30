@@ -11,6 +11,9 @@ import Foundation
 /// templated parameters like {} or {id} to match dynamic portions of the
 /// path and query parameter values (e.g. "/users/{id}?status={status}").
 ///
+/// Templates are matched in the order they are given. You should therefore
+/// prioritize more-specific and more-likely-to-match template patterns.
+///
 /// ## Template Syntax
 ///
 /// - Path parameters: `/users/{userId}`
