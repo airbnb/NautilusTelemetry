@@ -122,12 +122,12 @@ public final class Span: Identifiable {
 
 	/// Record an error into this span
 	/// - Parameters:
-	///   - error: any error -- the `localizedDescription` will be used to describe the error
+	///   - error: any error -- if an instance of NSError, `domain`, `localizedDescription`, and `code` will be reported. Otherwise `localizedDescription` will be used to describe the error
 	///   - includeBacktrace: whether to include a backtrace. This defaults to false, and is costly at runtime.
 	public func recordError(_ error: Error, includeBacktrace: Bool = false) {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/exceptions.md
 
-		let message = error.localizedDescription
+		let message = Self.exceptionMessage(error)
 
 		var attributes = [
 			"exception.type": String(describing: type(of: error)),
@@ -183,4 +183,16 @@ public final class Span: Identifiable {
 		}
 	}
 
+	static func exceptionMessage(_ error: any Error) -> String {
+		// All swift errors bridge to NSError, so instead check the type explicitly
+		if type(of: error) is NSError.Type {
+			// a "real" NSError
+			let nsError = error as NSError
+			return "\(nsError.domain): \(nsError.localizedDescription) (code=\(nsError.code))"
+			// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
+		} else {
+			// A Swift error
+			return "\(String(reflecting: type(of: error))): \(String(describing: error))"
+		}
+	}
 }

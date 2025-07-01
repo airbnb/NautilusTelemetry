@@ -46,7 +46,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 		span.urlSession(urlSession, task: task, didCompleteWithError: error)
 
-		XCTAssertEqual(span.status, .error(message: "The operation couldn’t be completed. (test error 1.)"))
+		XCTAssertEqual(span.status, .error(message: "test: The operation couldn’t be completed. (test error 1.) (code=1)"))
 	}
 
 	// URLSessionTaskMetrics is annoying to mock

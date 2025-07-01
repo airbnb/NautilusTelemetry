@@ -101,7 +101,7 @@ final class SpanTests: XCTestCase {
 		let span1 = tracer.retiredSpans[1]
 		XCTAssertEqual(
 			span1.status,
-			.error(message: "The operation couldn’t be completed. (NautilusTelemetryTests.SpanTests.TestError error 0.)")
+			.error(message: "NautilusTelemetryTests.SpanTests.TestError: failure")
 		)
 
 		let event = span1.events?[0]
@@ -221,5 +221,17 @@ final class SpanTests: XCTestCase {
 		}
 
 		tracer.flushRetiredSpans() // make sure retired spans don't show up as leaks
+	}
+
+	func test_exceptionMessage_NSError() throws {
+		let error = NSError(domain: "VeryBadError", code: 42, userInfo: [NSLocalizedDescriptionKey: "Failed"])
+		let message = Span.exceptionMessage(error)
+		XCTAssertEqual(message, "VeryBadError: Failed (code=42)")
+	}
+
+	func test_exceptionMessage_Error() throws {
+		let error = TestError.failure
+		let message = Span.exceptionMessage(error)
+		XCTAssertEqual(message, "NautilusTelemetryTests.SpanTests.TestError: failure")
 	}
 }
