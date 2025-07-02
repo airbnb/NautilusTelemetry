@@ -10,7 +10,7 @@ final class TracerURLRequestTests: XCTestCase {
 	let tracer = Tracer()
 
 	func testStartSpanWithRequestAttributes() throws {
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -30,7 +30,7 @@ final class TracerURLRequestTests: XCTestCase {
 
 	func testStartSpanWithRequestTraceParent() throws {
 		tracer.isSampling = true
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		let span = tracer.startSpan(request: &urlRequest)
 

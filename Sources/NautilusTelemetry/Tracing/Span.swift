@@ -170,6 +170,19 @@ public final class Span: Identifiable {
 		return endTime - startTime
 	}
 
+	static func exceptionMessage(_ error: any Error) -> String {
+		// All swift errors bridge to NSError, so instead check the type explicitly
+		if type(of: error) is NSError.Type {
+			// a "real" NSError
+			let nsError = error as NSError
+			return "\(nsError.domain): \(nsError.localizedDescription) (code=\(nsError.code))"
+			// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
+		} else {
+			// A Swift error
+			return "\(String(reflecting: type(of: error))): \(String(describing: error))"
+		}
+	}
+
 	func addDefaultAttributes() {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/span-general.md#general-thread-attributes
 
@@ -183,16 +196,4 @@ public final class Span: Identifiable {
 		}
 	}
 
-	static func exceptionMessage(_ error: any Error) -> String {
-		// All swift errors bridge to NSError, so instead check the type explicitly
-		if type(of: error) is NSError.Type {
-			// a "real" NSError
-			let nsError = error as NSError
-			return "\(nsError.domain): \(nsError.localizedDescription) (code=\(nsError.code))"
-			// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
-		} else {
-			// A Swift error
-			return "\(String(reflecting: type(of: error))): \(String(describing: error))"
-		}
-	}
 }

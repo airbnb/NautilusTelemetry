@@ -13,14 +13,14 @@ final class SpanURLSessionTests: XCTestCase {
 	let urlSession = URLSession.shared
 
 	func testName() throws {
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.httpMethod = "GET"
 		XCTAssertEqual(Span.name(forRequest: urlRequest), "GET")
 	}
 
 	func testNameWithTarget() throws {
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.httpMethod = "GET"
 		XCTAssertEqual(Span.name(forRequest: urlRequest, target: "/users/:id"), "GET /users/:id")
@@ -28,7 +28,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testUrlSessionDidCreateTask() throws {
 		let span = tracer.startSpan(name: #function)
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 		let task = urlSession.dataTask(with: urlRequest)
@@ -41,7 +41,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testUrlSessionDidCompleteWithError() throws {
 		let span = tracer.startSpan(name: #function)
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -82,7 +82,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testRequestAddHeaders() throws {
 		let span = tracer.startSpan(name: #function)
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("Hello", forHTTPHeaderField: "Greeting")
 		urlRequest.addValue("content-encoding", forHTTPHeaderField: "br")
@@ -94,7 +94,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testResponseAddHeaders() throws {
 		let span = tracer.startSpan(name: #function)
-		let url = try strategy.parse("/")
+		let url = try makeURL("/")
 		let headers = ["Fruit": "Banana", "Content-Encoding": "gzip"]
 		let urlResponse = try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "2", headerFields: headers))
 		span.addHeaders(response: urlResponse, captureHeaders: Set(["fruit"]))

@@ -343,7 +343,7 @@ final class TraceExporterTests: XCTestCase {
 
 	/// https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/otlpreceiver/README.md
 	func postJSON(url: String, json: Data) throws {
-		let url = try strategy.parse(url)
+		let url = try makeURL(url)
 		var urlRequest = URLRequest(url: url)
 
 		urlRequest.httpMethod = "POST"

@@ -39,7 +39,7 @@ import Foundation
 ///     "/posts/{postId}/comments/{commentId}",
 ///     "/search?q={}&status=active"
 /// ])
-///```
+/// ```
 ///
 /// Attempt to match a URL with one of our templates:
 /// ```swift
