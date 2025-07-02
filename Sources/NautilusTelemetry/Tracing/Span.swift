@@ -122,7 +122,7 @@ public final class Span: Identifiable {
 
 	/// Record an error into this span
 	/// - Parameters:
-	///   - error: any error -- if an instance of NSError, `domain`, `localizedDescription`, and `code` will be reported. Otherwise `localizedDescription` will be used to describe the error
+	///   - error: any error object -- NSErrors have special handling to capture domain and code.
 	///   - includeBacktrace: whether to include a backtrace. This defaults to false, and is costly at runtime.
 	public func recordError(_ error: Error, includeBacktrace: Bool = false) {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/exceptions.md
@@ -162,6 +162,7 @@ public final class Span: Identifiable {
 			let nsError = error as NSError
 			let message = (error as NSError).localizedDescription
 			attributes = [
+				// OpenTelemetry doesn't have the concept of error codes. Pack it in exception.type.
 				"exception.type": "NSError.\(nsError.domain).\(nsError.code)",
 				"exception.message": message,
 			]
