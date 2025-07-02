@@ -127,28 +127,11 @@ public final class Span: Identifiable {
 	public func recordError(_ error: Error, includeBacktrace: Bool = false) {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/exceptions.md
 
-		let message = Self.exceptionMessage(error)
-
-		var attributes = [
-			"exception.type": String(describing: type(of: error)),
-			"exception.message": message,
-		]
-
-		if includeBacktrace {
-			// TBD: figure out proper backtracing and Swift symbol demangling?
-			// This doesn't seem to exist yet: https://forums.swift.org/t/demangle-function/25416
-			// This looks OK, but is ≈9K lines: https://github.com/oozoofrog/SwiftDemangle
-			// Will try this, once it lands as public API:
-			// https://github.com/swiftlang/swift-evolution/blob/main/proposals/0419-backtrace-api.md
-			let callStackLimit = 20
-			let callstackSymbols = Thread.callStackSymbols.prefix(callStackLimit)
-			let callstack = callstackSymbols.joined(separator: "\n")
-			attributes["exception.stacktrace"] = callstack
-		}
-
+		let attributes = Self.exceptionAttributes(error, includeBacktrace: includeBacktrace)
+		let message = attributes["exception.message"] ?? ""
 		let exceptionEvent = Event(name: "exception", attributes: attributes)
 		addEvent(exceptionEvent)
-		status = .error(message: message) // this duplicates exception.message above, but makes the reporting work better
+		status = .error(message: message) // this duplicates exception.message, but makes the reporting work better
 	}
 
 	// MARK: Internal
@@ -170,17 +153,41 @@ public final class Span: Identifiable {
 		return endTime - startTime
 	}
 
-	static func exceptionMessage(_ error: any Error) -> String {
+	static func exceptionAttributes(_ error: any Error, includeBacktrace: Bool) -> [String: String] {
+		var attributes: [String: String]
+
 		// All swift errors bridge to NSError, so instead check the type explicitly
 		if type(of: error) is NSError.Type {
 			// a "real" NSError
 			let nsError = error as NSError
-			return "\(nsError.domain): \(nsError.localizedDescription) (code=\(nsError.code))"
-			// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
+			let message = (error as NSError).localizedDescription
+			attributes = [
+				"exception.type": "NSError.\(nsError.domain).\(nsError.code)",
+				"exception.message": message,
+			]
 		} else {
-			// A Swift error
-			return "\(String(reflecting: type(of: error))): \(String(describing: error))"
+			let message = String(describing: error)
+			attributes = [
+				"exception.type": String(reflecting: type(of: error)),
+				"exception.message": message,
+			]
 		}
+
+		if includeBacktrace {
+			// TBD: figure out proper backtracing and Swift symbol demangling?
+			// This doesn't seem to exist yet: https://forums.swift.org/t/demangle-function/25416
+			// This looks OK, but is ≈9K lines: https://github.com/oozoofrog/SwiftDemangle
+			// Will try this, once it lands as public API:
+			// https://github.com/swiftlang/swift-evolution/blob/main/proposals/0419-backtrace-api.md
+			let callStackLimit = 20
+			let callstackSymbols = Thread.callStackSymbols.prefix(callStackLimit)
+			let callstack = callstackSymbols.joined(separator: "\n")
+			attributes["exception.stacktrace"] = callstack
+		}
+
+		// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
+
+		return attributes
 	}
 
 	func addDefaultAttributes() {

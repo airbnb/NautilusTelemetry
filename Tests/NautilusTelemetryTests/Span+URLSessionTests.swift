@@ -46,11 +46,17 @@ final class SpanURLSessionTests: XCTestCase {
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
 		let task = urlSession.dataTask(with: urlRequest)
-		let error = NSError(domain: "test", code: 1, userInfo: [:])
+
+		let message = "The operation couldn’t be completed."
+		let error = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
 
 		span.urlSession(urlSession, task: task, didCompleteWithError: error)
 
-		XCTAssertEqual(span.status, .error(message: "test: The operation couldn’t be completed. (test error 1.) (code=1)"))
+		XCTAssertEqual(span.status, .error(message: message))
+		let exceptionEvent = try XCTUnwrap(span.events?.first)
+		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
+		XCTAssertEqual(exceptionAttributes["exception.type"], "NSError.test.1")
+		XCTAssertEqual(exceptionAttributes["exception.message"], message)
 	}
 
 	// URLSessionTaskMetrics is annoying to mock
