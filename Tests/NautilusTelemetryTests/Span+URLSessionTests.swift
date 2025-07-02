@@ -7,18 +7,20 @@ import XCTest
 @testable import NautilusTelemetry
 
 final class SpanURLSessionTests: XCTestCase {
+
 	let tracer = Tracer()
 
-	let url = URL(string: "http://www.example.com")!
 	let urlSession = URLSession.shared
 
-	func testName() {
+	func testName() throws {
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.httpMethod = "GET"
 		XCTAssertEqual(Span.name(forRequest: urlRequest), "GET")
 	}
 
-	func testNameWithTarget() {
+	func testNameWithTarget() throws {
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.httpMethod = "GET"
 		XCTAssertEqual(Span.name(forRequest: urlRequest, target: "/users/:id"), "GET /users/:id")
@@ -26,6 +28,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testUrlSessionDidCreateTask() throws {
 		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 		let task = urlSession.dataTask(with: urlRequest)
@@ -38,15 +41,22 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testUrlSessionDidCompleteWithError() throws {
 		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
 		let task = urlSession.dataTask(with: urlRequest)
-		let error = NSError(domain: "test", code: 1, userInfo: [:])
+
+		let message = "The operation couldn’t be completed."
+		let error = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
 
 		span.urlSession(urlSession, task: task, didCompleteWithError: error)
 
-		XCTAssertEqual(span.status, .error(message: "The operation couldn’t be completed. (test error 1.)"))
+		XCTAssertEqual(span.status, .error(message: message))
+		let exceptionEvent = try XCTUnwrap(span.events?.first)
+		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
+		XCTAssertEqual(exceptionAttributes["exception.type"], "NSError.test.1")
+		XCTAssertEqual(exceptionAttributes["exception.message"], message)
 	}
 
 	// URLSessionTaskMetrics is annoying to mock
@@ -78,6 +88,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testRequestAddHeaders() throws {
 		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("Hello", forHTTPHeaderField: "Greeting")
 		urlRequest.addValue("content-encoding", forHTTPHeaderField: "br")
@@ -89,6 +100,7 @@ final class SpanURLSessionTests: XCTestCase {
 
 	func testResponseAddHeaders() throws {
 		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/")
 		let headers = ["Fruit": "Banana", "Content-Encoding": "gzip"]
 		let urlResponse = try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "2", headerFields: headers))
 		span.addHeaders(response: urlResponse, captureHeaders: Set(["fruit"]))

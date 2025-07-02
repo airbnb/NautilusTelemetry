@@ -101,8 +101,11 @@ final class SpanTests: XCTestCase {
 		let span1 = tracer.retiredSpans[1]
 		XCTAssertEqual(
 			span1.status,
-			.error(message: "The operation couldn’t be completed. (NautilusTelemetryTests.SpanTests.TestError error 0.)")
+			.error(message: "failure")
 		)
+
+		let exceptionType = try XCTUnwrap(span1.events?[0].attributes?["exception.type"])
+		XCTAssertEqual(exceptionType, "NautilusTelemetryTests.SpanTests.TestError")
 
 		let event = span1.events?[0]
 		let backtrace = try XCTUnwrap(event?.attributes?["exception.stacktrace"] as? String)
@@ -115,7 +118,7 @@ final class SpanTests: XCTestCase {
 	}
 
 	func testTraceparentHeader() throws {
-		let url = try XCTUnwrap(URL(string: "https://api.example.com"))
+		let url = try makeURL("https://api.example.com/")
 		let span = tracer.startSpan(name: "test")
 
 		do {
@@ -222,4 +225,29 @@ final class SpanTests: XCTestCase {
 
 		tracer.flushRetiredSpans() // make sure retired spans don't show up as leaks
 	}
+
+	func test_recordNSError() throws {
+		let span = tracer.startSpan(name: "errorSpan")
+		let error = NSError(domain: "VeryBadError", code: -42, userInfo: [NSLocalizedDescriptionKey: "NSFailed"])
+		span.recordError(error)
+
+		let exceptionEvent = try XCTUnwrap(span.events?.first)
+		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
+		XCTAssertEqual(span.status, .error(message: "NSFailed"))
+		XCTAssertEqual(exceptionAttributes["exception.type"], "NSError.VeryBadError.-42")
+		XCTAssertEqual(exceptionAttributes["exception.message"], "NSFailed")
+	}
+
+	func test_recordError() throws {
+		let error = TestError.failure
+		let span = tracer.startSpan(name: "errorSpan")
+		span.recordError(error)
+
+		let exceptionEvent = try XCTUnwrap(span.events?.first)
+		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
+		XCTAssertEqual(span.status, .error(message: "failure"))
+		XCTAssertEqual(exceptionAttributes["exception.type"], "NautilusTelemetryTests.SpanTests.TestError")
+		XCTAssertEqual(exceptionAttributes["exception.message"], "failure")
+	}
+
 }
