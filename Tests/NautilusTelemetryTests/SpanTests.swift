@@ -115,7 +115,7 @@ final class SpanTests: XCTestCase {
 	}
 
 	func testTraceparentHeader() throws {
-		let url = try XCTUnwrap(URL(string: "https://api.example.com"))
+		let url = try strategy.parse("https://api.example.com/")
 		let span = tracer.startSpan(name: "test")
 
 		do {
