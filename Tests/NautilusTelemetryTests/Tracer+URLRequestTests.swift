@@ -24,7 +24,7 @@ final class TracerURLRequestTests: XCTestCase {
 				request: &urlRequest,
 				template: "/users/:id",
 				captureHeaders: Set(["content-type"])
-			)
+			),
 		]
 		for span in spans {
 			XCTAssertEqual(span.name, "GET /users/:id")

@@ -7,6 +7,8 @@ import Foundation
 
 extension Tracer {
 
+	// MARK: Public
+
 	/// Create a manually managed span to represent an URLRequest that is about to be dispatched.
 	/// - Parameters:
 	///   - request: the URLRequest. The `traceparent` header will be added if needed.
@@ -45,11 +47,11 @@ extension Tracer {
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: A newly created span.
 	public func startSubtraceSpan(
-	  request: inout URLRequest,
-	  template: String? = nil,
-	  captureHeaders: Set<String>? = nil,
-	  attributes: TelemetryAttributes? = nil,
-	  baggage: Baggage? = nil
+		request: inout URLRequest,
+		template: String? = nil,
+		captureHeaders: Set<String>? = nil,
+		attributes: TelemetryAttributes? = nil,
+		baggage: Baggage? = nil
 	) -> Span {
 		let name = Span.name(forRequest: request, target: template)
 		var span = startSubtraceSpan(name: name, kind: .client, attributes: attributes, baggage: baggage)
@@ -63,26 +65,28 @@ extension Tracer {
 		return span
 	}
 
+	// MARK: Private
+
 	private static func decorateSpan(
-	  _ span: inout Span,
-	  for request: inout URLRequest,
-	  captureHeaders: Set<String>? = nil,
-	  template: String? = nil,
-	  isSampling: Bool
+		_ span: inout Span,
+		for request: inout URLRequest,
+		captureHeaders: Set<String>? = nil,
+		template: String? = nil,
+		isSampling: Bool
 	) {
-	  span.addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
-	  span.addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
+		span.addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
+		span.addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
 
-	  if let url = request.url {
-		span.addAttribute("server.address", url.host)
-		span.addAttribute("server.port", url.port)
-		span.addAttribute("url.full", url.absoluteString)
-	  }
-	  if let template {
-		span.addAttribute("url.template", template)
-	  }
+		if let url = request.url {
+			span.addAttribute("server.address", url.host)
+			span.addAttribute("server.port", url.port)
+			span.addAttribute("url.full", url.absoluteString)
+		}
+		if let template {
+			span.addAttribute("url.template", template)
+		}
 
-	  span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
-	  span.addHeaders(request: request, captureHeaders: captureHeaders)
+		span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
+		span.addHeaders(request: request, captureHeaders: captureHeaders)
 	}
 }
