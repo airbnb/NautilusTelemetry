@@ -191,6 +191,19 @@ public final class Span: Identifiable {
 		return attributes
 	}
 
+	/// Records a result. This convenience method records either a success or an error,
+	/// depending on the given result.
+	/// - Parameters:
+	///   - result: a result to record.
+	func record<T>(_ result: Result<T, some Error>) {
+		switch result {
+		case .success:
+			recordSuccess()
+		case .failure(let error):
+			recordError(error)
+		}
+	}
+
 	func addDefaultAttributes() {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/span-general.md#general-thread-attributes
 
