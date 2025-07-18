@@ -134,6 +134,19 @@ public final class Span: Identifiable {
 		status = .error(message: message) // this duplicates exception.message, but makes the reporting work better
 	}
 
+	/// Records a result. This convenience method records either a success or an error,
+	/// depending on the given result.
+	/// - Parameters:
+	///   - result: a result to record.
+	public func record<T>(_ result: Result<T, some Error>) {
+		switch result {
+		case .success:
+			recordSuccess()
+		case .failure(let error):
+			recordError(error)
+		}
+	}
+
 	// MARK: Internal
 
 	let name: String
@@ -189,19 +202,6 @@ public final class Span: Identifiable {
 		// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
 
 		return attributes
-	}
-
-	/// Records a result. This convenience method records either a success or an error,
-	/// depending on the given result.
-	/// - Parameters:
-	///   - result: a result to record.
-	func record<T>(_ result: Result<T, some Error>) {
-		switch result {
-		case .success:
-			recordSuccess()
-		case .failure(let error):
-			recordError(error)
-		}
 	}
 
 	func addDefaultAttributes() {
