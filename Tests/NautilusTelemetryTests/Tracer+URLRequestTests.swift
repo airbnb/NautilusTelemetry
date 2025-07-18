@@ -9,23 +9,47 @@ import XCTest
 final class TracerURLRequestTests: XCTestCase {
 	let tracer = Tracer()
 
-	func testStartSpanWithRequestAttributes() throws {
+	func testSpanWithRequestAttributes() throws {
 		let url = try makeURL("/")
 		var urlRequest = URLRequest(url: url)
 		urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-		let span = tracer.startSpan(
+		let spans = [
+			tracer.startSpan(
+				request: &urlRequest,
+				template: "/users/:id",
+				captureHeaders: Set(["content-type"])
+			),
+			tracer.startSubtraceSpan(
+				request: &urlRequest,
+				template: "/users/:id",
+				captureHeaders: Set(["content-type"])
+			),
+		]
+		for span in spans {
+			XCTAssertEqual(span.name, "GET /users/:id")
+
+			let attributes = try XCTUnwrap(span.attributes as? [String: String])
+			XCTAssertEqual(attributes["server.address"], url.host())
+			XCTAssertEqual(attributes["http.request.method"], urlRequest.httpMethod)
+			XCTAssertEqual(attributes["http.request.header.content-type"], "application/json")
+			XCTAssertEqual(attributes["url.template"], "/users/:id")
+		}
+	}
+
+	func testStartSubtraceSpanHasNewTraceID() throws {
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+
+		let initialTraceID = tracer.traceId
+
+		let span = tracer.startSubtraceSpan(
 			request: &urlRequest,
-			template: "/users/:id",
 			captureHeaders: Set(["content-type"])
 		)
-		XCTAssertEqual(span.name, "GET /users/:id")
 
-		let attributes = try XCTUnwrap(span.attributes as? [String: String])
-		XCTAssertEqual(attributes["server.address"], url.host())
-		XCTAssertEqual(attributes["http.request.method"], urlRequest.httpMethod)
-		XCTAssertEqual(attributes["http.request.header.content-type"], "application/json")
-		XCTAssertEqual(attributes["url.template"], "/users/:id")
+		XCTAssertNotEqual(initialTraceID, span.traceId)
+		XCTAssertEqual(initialTraceID, tracer.traceId)
 	}
 
 	func testStartSpanWithRequestTraceParent() throws {
