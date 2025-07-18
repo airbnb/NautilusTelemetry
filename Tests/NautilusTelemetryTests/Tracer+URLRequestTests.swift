@@ -37,6 +37,21 @@ final class TracerURLRequestTests: XCTestCase {
 		}
 	}
 
+	func testStartSubtraceSpanHasNewTraceID() throws {
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+
+		let initialTraceID = tracer.traceId
+
+		let span = tracer.startSubtraceSpan(
+			request: &urlRequest,
+			captureHeaders: Set(["content-type"])
+		)
+
+		XCTAssertNotEqual(initialTraceID, span.traceId)
+		XCTAssertEqual(initialTraceID, tracer.traceId)
+	}
+
 	func testStartSpanWithRequestTraceParent() throws {
 		tracer.isSampling = true
 		let url = try makeURL("/")
