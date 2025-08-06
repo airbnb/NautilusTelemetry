@@ -91,8 +91,25 @@ extension Exporter {
 	}
 
 	func buildLinks(_ span: Span) -> [OTLP.SpanLink]? {
-		guard let linkedParent = span.linkedParent else { return nil }
-		return [OTLP.SpanLink(traceId: linkedParent.traceId, spanId: linkedParent.id)]
+		guard let links = span.links else { return nil }
+
+		return links.map { mapLink($0) }
+	}
+
+	func mapLink(_ link: Link) -> OTLP.SpanLink {
+		let attributes: [OTLP.V1KeyValue]?
+		let key = "relationship"
+
+		switch link.relationship {
+		case .undefined:
+			attributes = nil
+		case .child:
+			attributes = [OTLP.V1KeyValue(key: key, value: OTLP.V1AnyValue(stringValue: "child"))]
+		case .parent:
+			attributes = [OTLP.V1KeyValue(key: key, value: OTLP.V1AnyValue(stringValue: "parent"))]
+		}
+
+		return OTLP.SpanLink(traceId: link.traceId, spanId: link.id, attributes: attributes)
 	}
 
 	/// Converts Span.Status to OTLP.V1Status

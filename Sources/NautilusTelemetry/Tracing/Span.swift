@@ -7,6 +7,21 @@
 
 import Foundation
 
+// MARK: - Link
+
+/// Minimal subset of OTLP.SpanLink with relationship concept
+public struct Link {
+	public enum Relationship {
+		case parent
+		case child
+		case undefined
+	}
+
+	let traceId: TraceId
+	let id: SpanId
+	let relationship: Relationship
+}
+
 // MARK: - SpanKind
 
 /// Subset of types available in OTLP.SpanSpanKind.
@@ -36,7 +51,7 @@ public final class Span: Identifiable {
 		traceId: TraceId,
 		id: SpanId = Identifiers.generateSpanId(),
 		parentId: SpanId?,
-		linkedParent: Span? = nil,
+		links: [Link]? = nil,
 		retireCallback: ((_: Span) -> Void)? = nil
 	) {
 		self.name = name
@@ -45,7 +60,7 @@ public final class Span: Identifiable {
 		self.traceId = traceId
 		self.id = id
 		self.parentId = parentId
-		self.linkedParent = linkedParent
+		self.links = links
 		self.startTime = startTime
 		self.endTime = endTime
 		self.retireCallback = retireCallback
@@ -78,6 +93,7 @@ public final class Span: Identifiable {
 		case error(message: String)
 	}
 
+	public let name: String
 	public let traceId: TraceId
 	public let id: SpanId
 
@@ -112,6 +128,17 @@ public final class Span: Identifiable {
 			events = [Event]()
 		}
 		events?.append(event)
+	}
+
+	/// link relationships are not well-defined in semantic conventions, other than OpenTracing compatibility:
+	/// https://opentelemetry.io/docs/specs/semconv/registry/attributes/opentracing/
+	/// In lieu of an existing standard, we'll build something reasonable
+	public func addLink(_ span: Span, relationship: Link.Relationship = .undefined) {
+		if links == nil {
+			links = [Link]()
+		}
+
+		links?.append(Link(traceId: span.traceId, id: span.id, relationship: relationship))
 	}
 
 	/// "Ok represents when a developer explicitly marks a span as successful"
@@ -149,10 +176,12 @@ public final class Span: Identifiable {
 
 	// MARK: Internal
 
-	let name: String
 	let kind: SpanKind
 	let parentId: SpanId?
-	let linkedParent: Span?
+
+	/// Span references are converted  to `Link` to avoid cyclic references.
+	/// As an optimization: not allocated if not needed
+	var links: [Link]? = nil
 	let startTime: ContinuousClock.Instant
 	var attributes: TelemetryAttributes?
 	var events: [Event]? = nil // optimization -- don't generate if no events added

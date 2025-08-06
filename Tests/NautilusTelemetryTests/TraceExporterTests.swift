@@ -38,14 +38,15 @@ final class TraceExporterTests: XCTestCase {
 	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
 	let timeReference = TimeReference(serverOffset: 0.0)
 
-	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.4/getting-started/
+	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.9/getting-started/
 	// docker run --rm --name jaeger \
 	//  -p 16686:16686 \
 	//  -p 4317:4317 \
 	//  -p 4318:4318 \
 	//  -p 5778:5778 \
 	//  -p 9411:9411 \
-	//  jaegertracing/jaeger:2.4.0
+	//  cr.jaegertracing.io/jaegertracing/jaeger:2.9.0
+
 
 	let localEndpointBase = "http://localhost:4318"
 
@@ -205,7 +206,8 @@ final class TraceExporterTests: XCTestCase {
 		let traceId2 = Identifiers.generateTraceId()
 
 		let span1 = Span(name: "root", traceId: traceId1, parentId: nil)
-		let span2 = Span(name: "hello", traceId: traceId2, parentId: nil, linkedParent: span1)
+		let span2 = Span(name: "hello", traceId: traceId2, parentId: nil)
+		span2.addLink(span1, relationship: .parent)
 
 		let exporter = Exporter(timeReference: timeReference)
 		let json = try exporter.exportOTLPToJSON(spans: [span1, span2], additionalAttributes: nil)
@@ -215,7 +217,7 @@ final class TraceExporterTests: XCTestCase {
 			keyValuesToRedact: ["startTimeUnixNano", "spanId", "traceId", "resource"]
 		))
 		let expectedOutput =
-			#"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"name":"root","spanId":"***","startTimeUnixNano":"***","traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"links":[{"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","traceId":"***"}]}]}]}"#
+			#"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"name":"root","spanId":"***","startTimeUnixNano":"***","traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"links":[{"attributes":[{"key":"relationship","value":{"stringValue":"parent"}}],"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","traceId":"***"}]}]}]}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -228,7 +230,8 @@ final class TraceExporterTests: XCTestCase {
 		let span1 = Span(name: "root", traceId: traceId1, parentId: nil)
 		span1.recordSuccess()
 		// Test client kind + events
-		let span2 = Span(name: "hello", kind: .client, traceId: traceId2, parentId: nil, linkedParent: span1)
+		let span2 = Span(name: "hello", kind: .client, traceId: traceId2, parentId: nil)
+		span2.addLink(span1, relationship: .parent)
 		span2.addEvent("OMG")
 
 		let exporter = Exporter(timeReference: timeReference)
@@ -240,7 +243,7 @@ final class TraceExporterTests: XCTestCase {
 		))
 
 		let expectedOutput =
-			#"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"name":"root","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[{"name":"OMG","timeUnixNano":"***"}],"kind":3,"links":[{"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","traceId":"***"}]}]}]}"#
+			#"{"resourceSpans":[{"resource":"***","scopeSpans":[{"scope":{"name":"NautilusTelemetry","version":"1.0"},"spans":[{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"name":"root","spanId":"***","startTimeUnixNano":"***","status":{"code":1},"traceId":"***"},{"attributes":[{"key":"thread.name","value":{"stringValue":"main"}}],"events":[{"name":"OMG","timeUnixNano":"***"}],"kind":3,"links":[{"attributes":[{"key":"relationship","value":{"stringValue":"parent"}}],"spanId":"***","traceId":"***"}],"name":"hello","spanId":"***","startTimeUnixNano":"***","traceId":"***"}]}]}]}"#
 
 		print(normalizedJsonString)
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
