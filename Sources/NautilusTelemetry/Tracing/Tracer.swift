@@ -55,7 +55,11 @@ public final class Tracer {
 		baggage: Baggage? = nil
 	) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
-		let subTraceBaggage = Baggage(span: resolvedBaggage.span, subTraceId: Identifiers.generateTraceId())
+		let subTraceBaggage = Baggage(
+			span: resolvedBaggage.span,
+			subTraceId: Identifiers.generateTraceId(),
+			subtraceLinking: resolvedBaggage.subtraceLinking
+		)
 		return startSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage)
 	}
 
@@ -74,7 +78,11 @@ public final class Tracer {
 		block: () throws -> T
 	) rethrows -> T {
 		let resolvedBaggage = baggage ?? currentBaggage
-		let subTraceBaggage = Baggage(span: resolvedBaggage.span, subTraceId: Identifiers.generateTraceId())
+		let subTraceBaggage = Baggage(
+			span: resolvedBaggage.span,
+			subTraceId: Identifiers.generateTraceId(),
+			subtraceLinking: resolvedBaggage.subtraceLinking
+		)
 		return try withSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage, block: block)
 	}
 
@@ -247,16 +255,27 @@ public final class Tracer {
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
 
 		if let subTraceId = resolvedBaggage.subTraceId {
-			// Create a new detached trace with a link to the parent trace
-			return Span(
+			// Create a new detached trace with optional linking
+
+			let result = Span(
 				name: name,
 				kind: finalKind,
 				attributes: attributes,
 				traceId: subTraceId,
 				parentId: nil,
-				linkedParent: resolvedBaggage.span,
 				retireCallback: retire
 			)
+
+			let parent = resolvedBaggage.span
+
+			if resolvedBaggage.subtraceLinking.contains(.up) {
+				result.addLink(parent, relationship: .parent)
+			}
+			if resolvedBaggage.subtraceLinking.contains(.down) {
+				parent.addLink(result, relationship: .child)
+			}
+
+			return result
 		} else {
 			return Span(
 				name: name,
