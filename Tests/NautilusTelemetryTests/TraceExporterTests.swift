@@ -47,7 +47,6 @@ final class TraceExporterTests: XCTestCase {
 	//  -p 9411:9411 \
 	//  cr.jaegertracing.io/jaegertracing/jaeger:2.9.0
 
-
 	let localEndpointBase = "http://localhost:4318"
 
 	static func testEnabled(_ name: String) -> Bool {

@@ -268,15 +268,10 @@ public final class Tracer {
 
 			let parent = resolvedBaggage.span
 
-			switch resolvedBaggage.subtraceLinking {
-			case .none:
-				break // no link needed
-			case .up:
+			if resolvedBaggage.subtraceLinking.contains(.up) {
 				result.addLink(parent, relationship: .parent)
-			case .down:
-				parent.addLink(result, relationship: .child)
-			case .bidirectional:
-				result.addLink(parent, relationship: .parent)
+			}
+			if resolvedBaggage.subtraceLinking.contains(.down) {
 				parent.addLink(result, relationship: .child)
 			}
 
