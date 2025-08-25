@@ -12,20 +12,17 @@ import NautilusTelemetry
 
 InstrumentationSystem.bootstrap(reporter: ExampleReporter())
 
-	func logResponseComplete() {
+	func example() {
 		let tracer = InstrumentationSystem.tracer
 		tracer.withSpan(name: #function) {
-			self.populateLogContext()
-			self.loggers.forEach { logger in
-				logger.logResponseComplete()
-			}
+			self.doWork()
 		}
 	}
 
 ```
 
 ## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome. Please install [swiftformat](https://github.com/nicklockwood/SwiftFormat) and run `swiftformat .` manually before submitting a PR. For major changes, please open an issue first to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
 

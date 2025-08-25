@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 // MARK: - Link
 
@@ -51,7 +52,7 @@ public final class Span: Identifiable {
 		traceId: TraceId,
 		id: SpanId = Identifiers.generateSpanId(),
 		parentId: SpanId?,
-		links: [Link]? = nil,
+		links: [Link] = [Link](),
 		retireCallback: ((_: Span) -> Void)? = nil
 	) {
 		self.name = name
@@ -116,29 +117,33 @@ public final class Span: Identifiable {
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
 	///   - value: a value.
 	public func addAttribute(_ name: String, _ value: AnyHashable?) {
-		if attributes == nil {
-			attributes = TelemetryAttributes()
-		}
+		// AnyHashable is not Sendable. For now, make this unchecked, but could consider wrapping ala:
+		// https://github.com/pointfreeco/swift-concurrency-extras/blob/main/Sources/ConcurrencyExtras/AnyHashableSendable.swift
+		lock.withLockUnchecked {
+			if attributes == nil {
+				attributes = TelemetryAttributes()
+			}
 
-		attributes?[name] = value
+			attributes?[name] = value
+		}
 	}
 
 	public func addEvent(_ event: Event) {
-		if events == nil {
-			events = [Event]()
+		lock.withLock {
+			if events == nil {
+				events = [Event]()
+			}
+			events?.append(event)
 		}
-		events?.append(event)
 	}
 
 	/// link relationships are not well-defined in semantic conventions, other than OpenTracing compatibility:
 	/// https://opentelemetry.io/docs/specs/semconv/registry/attributes/opentracing/
 	/// In lieu of an existing standard, we'll build something reasonable
 	public func addLink(_ span: Span, relationship: Link.Relationship = .undefined) {
-		if links == nil {
-			links = [Link]()
+		lock.withLock {
+			links.append(Link(traceId: span.traceId, id: span.id, relationship: relationship))
 		}
-
-		links?.append(Link(traceId: span.traceId, id: span.id, relationship: relationship))
 	}
 
 	/// "Ok represents when a developer explicitly marks a span as successful"
@@ -180,8 +185,7 @@ public final class Span: Identifiable {
 	let parentId: SpanId?
 
 	/// Span references are converted  to `Link` to avoid cyclic references.
-	/// As an optimization: not allocated if not needed
-	var links: [Link]? = nil
+	var links: [Link]
 	let startTime: ContinuousClock.Instant
 	var attributes: TelemetryAttributes?
 	var events: [Event]? = nil // optimization -- don't generate if no events added
@@ -246,4 +250,7 @@ public final class Span: Identifiable {
 		}
 	}
 
+	// MARK: Private
+
+	private let lock = OSAllocatedUnfairLock()
 }
