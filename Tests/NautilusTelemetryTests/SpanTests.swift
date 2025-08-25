@@ -250,4 +250,12 @@ final class SpanTests: XCTestCase {
 		XCTAssertEqual(exceptionAttributes["exception.message"], "failure")
 	}
 
+	func test_concurrentAddLinks() throws {
+		let span = tracer.startSpan(name: "concurrentAddLinks")
+
+		DispatchQueue.concurrentPerform(iterations: 100) { _ in
+			let child = tracer.startSpan(name: "concurrentAddLinks")
+			span.addLink(child, relationship: .child)
+		}
+	}
 }

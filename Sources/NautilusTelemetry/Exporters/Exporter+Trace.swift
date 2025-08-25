@@ -91,7 +91,9 @@ extension Exporter {
 	}
 
 	func buildLinks(_ span: Span) -> [OTLP.SpanLink]? {
-		span.links?.map { link in
+		guard span.links.count > 0 else { return nil }
+
+		return span.links.map { link in
 			let attributes: [OTLP.V1KeyValue]?
 			let key = "relationship"
 
