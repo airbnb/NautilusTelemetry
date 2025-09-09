@@ -63,7 +63,7 @@ struct HistogramValues<T: MetricNumeric> {
 
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
 
-	var allValues: [TelemetryAttributes: HistogramBuckets<T>] { Meter.valueLock.withLockUnchecked { values } }
+	var allValues: [TelemetryAttributes: Histogram-Buckets<T>] { Meter.valueLock.withLockUnchecked { values } }
 
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
 		Meter.valueLock.withLockUnchecked {
