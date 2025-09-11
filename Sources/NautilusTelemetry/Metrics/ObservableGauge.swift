@@ -29,11 +29,15 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	public let aggregationTemporality = AggregationTemporality.unspecified
 
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		values.set(number, attributes: attributes)
+		lock.withLockUnchecked {
+			values.set(number, attributes: attributes)
+		}
 	}
 
-	func snapshotAndReset() -> any ExportableInstrument {
+	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
+
+		invokeCallback()
 
 		return lock.withLock {
 			let copy = Self(name: name, unit: unit, description: description, callback: callback)

@@ -103,7 +103,10 @@ public final class Meter {
 	}
 
 	func flushActiveIntruments() {
-		let instrumentsToReport: [Instrument] = Self.lock.withLock { activeInstruments }
+		let instrumentsToReport = Self.lock.withLock {
+			// Make copies
+			activeInstruments.compactMap{ $0.snapshotAndReset () }
+		}
 
 		if instrumentsToReport.count > 0, let reporter = InstrumentationSystem.reporter {
 			reporter.reportInstruments(instrumentsToReport)

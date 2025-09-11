@@ -10,7 +10,6 @@ import os
 
 public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
-
 	// MARK: Lifecycle
 
 	required init(name: String, unit: Unit?, description: String?, callback: @escaping (ObservableCounter<T>) -> Void) {
@@ -33,10 +32,15 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 
 	/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		values.set(number, attributes: attributes)
+		lock.withLockUnchecked {
+			values.set(number, attributes: attributes)
+		}
 	}
 
-	func snapshotAndReset() -> any ExportableInstrument {
+	public func snapshotAndReset() -> Instrument {
+
+		invokeCallback()
+
 		let now = ContinuousClock.now
 
 		return lock.withLock {
@@ -68,5 +72,6 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	}
 
 	// Locking is handled at the Instrument level
+	// The implementation must take care to avoid concurrently modifying values
 	private let lock = OSAllocatedUnfairLock()
 }

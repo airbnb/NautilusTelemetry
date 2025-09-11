@@ -25,18 +25,23 @@ public protocol Instrument: AnyObject {
 	var endTime: ContinuousClock.Instant? { get }
 
 	var aggregationTemporality: AggregationTemporality { get }
+
+	/// In a thread safe manner:
+	///  - Invokes callback, if observable
+	///  - Captures a copy of the instrument at this moment in time
+	///  - Resets the original values to zero
+	///  - Returns the copy
+	/// In the copy: `endTime` is set to now
+	/// In the original: `startTime` is moved forward to now, values are reset to zero.
+	/// This model assumes delta mode metrics.
+	/// TBD: figure out aggregation model: https://opentelemetry.io/docs/specs/otel/metrics/data-model/#sums-delta-to-cumulative
+	func snapshotAndReset() -> Instrument
 }
 
 // MARK: - ExportableInstrument
 
 protocol ExportableInstrument {
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric
-
-	/// In a thread safe manner, captures a copy of the instrument at this moment in time
-	/// and resets the original to continue recording
-	/// In the copy: `endTime` is set to now
-	/// In the original: `startTime` is moved forward to now, values are reset to zero.
-	func snapshotAndReset() -> ExportableInstrument
 }
 
 // MARK: - AggregationTemporality

@@ -65,7 +65,8 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = counter.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
@@ -85,7 +86,8 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = counter.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
@@ -104,7 +106,8 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = counter.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
@@ -123,7 +126,8 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = gauge.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(gauge.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
@@ -151,7 +155,8 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = histogram.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(histogram.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)

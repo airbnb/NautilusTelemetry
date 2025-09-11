@@ -98,8 +98,6 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(counter: ObservableCounter<T>) -> OTLP.V1Metric {
-		counter.invokeCallback()
-
 		let values = counter.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
@@ -151,8 +149,6 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(counter: ObservableUpDownCounter<T>) -> OTLP.V1Metric {
-		counter.invokeCallback()
-
 		let values = counter.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
@@ -204,8 +200,6 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(gauge: ObservableGauge<T>) -> OTLP.V1Metric {
-		gauge.invokeCallback()
-
 		let values = gauge.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 

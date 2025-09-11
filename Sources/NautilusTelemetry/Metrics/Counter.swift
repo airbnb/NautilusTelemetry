@@ -36,7 +36,7 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 		}
 	}
 
-	func snapshotAndReset() -> ExportableInstrument {
+	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
 
 		return lock.withLock {
@@ -63,5 +63,6 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 	}
 
 	// Locking is handled at the Instrument level
+	// The implementation must take care to avoid concurrently modifying values
 	private let lock = OSAllocatedUnfairLock()
 }

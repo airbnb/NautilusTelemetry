@@ -36,10 +36,12 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
 		precondition(number >= 0, "counters can only be increased")
-		values.record(number, attributes: attributes)
+		lock.withLockUnchecked {
+			values.record(number, attributes: attributes)
+		}
 	}
 
-	func snapshotAndReset() -> any ExportableInstrument {
+	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
 
 		return lock.withLock {
@@ -66,5 +68,6 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	}
 
 	// Locking is handled at the Instrument level
+	// The implementation must take care to avoid concurrently modifying values
 	private let lock = OSAllocatedUnfairLock()
 }
