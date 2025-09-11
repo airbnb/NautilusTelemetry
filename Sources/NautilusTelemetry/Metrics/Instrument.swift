@@ -22,15 +22,21 @@ public protocol Instrument: AnyObject {
 	/// A timestamp (start_time_unix_nano) which best represents the first possible moment a measurement could be recorded. This is commonly set to the timestamp when a metric collection system started.
 	var startTime: ContinuousClock.Instant { get }
 
-	var aggregationTemporality: AggregationTemporality { get }
+	var endTime: ContinuousClock.Instant? { get }
 
-	func reset()
+	var aggregationTemporality: AggregationTemporality { get }
 }
 
 // MARK: - ExportableInstrument
 
 protocol ExportableInstrument {
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric
+
+	/// In a thread safe manner, captures a copy of the instrument at this moment in time
+	/// and resets the original to continue recording
+	/// In the copy: `endTime` is set to now
+	/// In the original: `startTime` is moved forward to now, values are reset to zero.
+	func snapshotAndReset() -> ExportableInstrument
 }
 
 // MARK: - AggregationTemporality

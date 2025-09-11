@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
@@ -17,7 +18,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	///   - unit: the unit of measure.
 	///   - description: a descriptive string.
 	///   - explicitBounds: See definition in `V1HistogramDataPoint.swift`.
-	init(name: String, unit: Unit?, description: String?, explicitBounds: [T]) {
+	required init(name: String, unit: Unit?, description: String?, explicitBounds: [T]) {
 		self.name = name
 		self.unit = unit
 		self.description = description
@@ -30,6 +31,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	public let unit: Unit?
 	public let description: String?
 	public private(set) var startTime = ContinuousClock.now
+	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public var aggregationTemporality = AggregationTemporality.delta
 
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
@@ -37,9 +39,22 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 		values.record(number, attributes: attributes)
 	}
 
-	public func reset() {
-		startTime = ContinuousClock.now
-		values.reset()
+	func snapshotAndReset() -> any ExportableInstrument {
+		let now = ContinuousClock.now
+
+		return lock.withLock {
+			let copy = Self(name: name, unit: unit, description: description, explicitBounds: values.explicitBounds)
+			copy.startTime = startTime
+			copy.endTime = now
+			copy.aggregationTemporality = aggregationTemporality
+			copy.values = values.snapshotAndReset()
+
+			// now reset the instrument
+			startTime = now
+			endTime = nil
+			values.reset()
+			return copy
+		}
 	}
 
 	// MARK: Internal
@@ -49,4 +64,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(histogram: self)
 	}
+
+	// Locking is handled at the Instrument level
+	private let lock = OSAllocatedUnfairLock()
 }

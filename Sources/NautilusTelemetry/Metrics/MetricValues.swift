@@ -6,39 +6,40 @@
 //
 
 import Foundation
+import os
 
 struct MetricValues<T: MetricNumeric> {
 
 	// MARK: Internal
 
-	var allValues: [TelemetryAttributes: T] { Meter.valueLock.withLockUnchecked { values } }
-
 	mutating func add(_ number: T, attributes: TelemetryAttributes = [:]) {
-		Meter.valueLock.withLockUnchecked {
 			var metricValue = values[attributes] ?? number
 			metricValue += number
 			values[attributes] = metricValue
-		}
 	}
 
 	mutating func set(_ number: T, attributes: TelemetryAttributes = [:]) {
-		Meter.valueLock.withLockUnchecked {
 			values[attributes] = number
-		}
 	}
 
 	mutating func reset() {
-		Meter.valueLock.withLockUnchecked {
 			values.removeAll()
-		}
+	}
+
+	mutating func snapshotAndReset() -> MetricValues<T> {
+		var copy = MetricValues<T>()
+			copy.values = values
+			values.removeAll()
+
+		return copy
 	}
 
 	func valueFor(attributes: TelemetryAttributes) -> T? {
-		Meter.valueLock.withLockUnchecked { values[attributes] }
+		values[attributes]
 	}
 
 	// MARK: Private
 
-	private var values = [TelemetryAttributes: T]()
+	var values = [TelemetryAttributes: T]()
 
 }

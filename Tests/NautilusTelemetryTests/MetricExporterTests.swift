@@ -55,8 +55,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testUpDownCounter() throws {
@@ -76,8 +74,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testObservableCounter() throws {
@@ -98,8 +94,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testObservableUpDownCounter() throws {
@@ -119,8 +113,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testObservableGauge() throws {
@@ -140,8 +132,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		gauge.reset()
-		XCTAssert(gauge.values.allValues.isEmpty)
 	}
 
 	func testHistogram() throws {
@@ -170,8 +160,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		histogram.reset()
-		XCTAssert(histogram.values.allValues.isEmpty)
 	}
 
 }

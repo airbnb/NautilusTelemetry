@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 // MARK: - HistogramBuckets
 
@@ -63,26 +64,28 @@ struct HistogramValues<T: MetricNumeric> {
 
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
 
-	var allValues: [TelemetryAttributes: Histogram-Buckets<T>] { Meter.valueLock.withLockUnchecked { values } }
-
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		Meter.valueLock.withLockUnchecked {
-			var value = values[attributes]
-			if value == nil {
-				value = HistogramBuckets<T>(explicitBounds: explicitBounds)
-			}
-			if var value {
-				value.record(number)
-				values[attributes] = value
-			} else {
-				assertionFailure("expected non-nil")
-			}
+		var value = values[attributes]
+		if value == nil {
+			value = HistogramBuckets<T>(explicitBounds: explicitBounds)
+		}
+		if var value {
+			value.record(number)
+			values[attributes] = value
+		} else {
+			assertionFailure("expected non-nil")
 		}
 	}
 
 	mutating func reset() {
-		Meter.valueLock.withLockUnchecked {
-			values.removeAll()
-		}
+		values.removeAll()
+	}
+
+	mutating func snapshotAndReset() -> HistogramValues<T> {
+		var copy = HistogramValues<T>(explicitBounds: explicitBounds)
+		copy.values = values
+		values.removeAll()
+
+		return copy
 	}
 }

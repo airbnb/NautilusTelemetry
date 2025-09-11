@@ -125,7 +125,4 @@ public final class Meter {
 	/// Used for protecting internal state
 	private static let lock = OSAllocatedUnfairLock()
 
-	/// Used for protecting *Values structures.
-	static let valueLock = OSAllocatedUnfairLock()
-
 }

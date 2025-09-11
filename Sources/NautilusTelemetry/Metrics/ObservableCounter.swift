@@ -6,12 +6,14 @@
 //
 
 import Foundation
+import os
 
 public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
+
 	// MARK: Lifecycle
 
-	init(name: String, unit: Unit?, description: String?, callback: @escaping (ObservableCounter<T>) -> Void) {
+	required init(name: String, unit: Unit?, description: String?, callback: @escaping (ObservableCounter<T>) -> Void) {
 		self.name = name
 		self.unit = unit
 		self.description = description
@@ -24,6 +26,7 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	public let unit: Unit?
 	public let description: String?
 	public private(set) var startTime = ContinuousClock.now
+	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public var aggregationTemporality = AggregationTemporality.delta
 
 	public var isMonotonic: Bool { true }
@@ -33,9 +36,22 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 		values.set(number, attributes: attributes)
 	}
 
-	public func reset() {
-		startTime = ContinuousClock.now
-		values.reset()
+	func snapshotAndReset() -> any ExportableInstrument {
+		let now = ContinuousClock.now
+
+		return lock.withLock {
+			let copy = Self(name: name, unit: unit, description: description, callback: callback)
+			copy.startTime = startTime
+			copy.endTime = now
+			copy.aggregationTemporality = aggregationTemporality
+			copy.values = values.snapshotAndReset()
+
+			// now reset
+			startTime = now
+			endTime = nil
+			values.reset()
+			return copy
+		}
 	}
 
 	// MARK: Internal
@@ -50,4 +66,7 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(counter: self)
 	}
+
+	// Locking is handled at the Instrument level
+	private let lock = OSAllocatedUnfairLock()
 }
