@@ -16,6 +16,7 @@ final class TraceExporterTests: XCTestCase {
 
 	enum TestError: Error {
 		case failure
+		case endpointNotSpecified
 	}
 
 	// Since OTLP is defined in protobuf, we have to use the standard JSON mapping
@@ -30,12 +31,17 @@ final class TraceExporterTests: XCTestCase {
 	/// https://docs.docker.com/desktop/mac/install/
 	/// See detailed instructions in OpenTelemetryCollector directory
 	let testWithLocalCollector = TraceExporterTests.testEnabled("testWithLocalCollector")
-	let testWithRemoteCollector = TraceExporterTests.testEnabled("testWithRemoteCollector")
+	let testTracesWithRemoteCollector = TraceExporterTests.testEnabled("testTracesWithRemoteCollector")
+	let testMetricsWithRemoteCollector = TraceExporterTests.testEnabled("testMetricsWithRemoteCollector")
+
+	// remote endpoints can be set with environment variables:
+	let remoteTraceEndpointEnv = "remoteTraceEndpoint"
+	let remoteMetricEndpointEnv = "remoteMetricEndpoint"
 
 	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 	let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
 
-	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
+
 	let timeReference = TimeReference(serverOffset: 0.0)
 
 	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.9/getting-started/
@@ -54,6 +60,14 @@ final class TraceExporterTests: XCTestCase {
 			return Bool(val) ?? false
 		}
 		return false
+	}
+
+	func endpoint(_ name: String) throws -> URL {
+		if let val = ProcessInfo.processInfo.environment[name] {
+			return try makeURL(val)
+		}
+
+		throw TestError.endpointNotSpecified
 	}
 
 	func testOTLPExporterTraces() throws {
@@ -109,12 +123,13 @@ final class TraceExporterTests: XCTestCase {
 		let jsonString = try XCTUnwrap(String(data: json, encoding: .utf8))
 		print(jsonString)
 
-		if testWithRemoteCollector {
-			try postJSON(url: remoteCollectorEndpoint, json: json)
+		if testTracesWithRemoteCollector {
+			let endpoint = try endpoint(remoteTraceEndpointEnv)
+			try postJSON(url: endpoint, json: json)
 		}
 
 		if testWithLocalCollector {
-			try postJSON(url: "\(localEndpointBase)/v1/traces", json: json)
+			try postJSON(url: try makeURL("\(localEndpointBase)/v1/traces"), json: json)
 		}
 
 		tracer.flushTrace()
@@ -196,7 +211,7 @@ final class TraceExporterTests: XCTestCase {
 		let json = try encodeJSON(exportLogsServiceRequest)
 
 		if testWithLocalCollector {
-			try postJSON(url: "\(localEndpointBase)/v1/logs", json: json)
+			try postJSON(url: try makeURL("\(localEndpointBase)/v1/logs"), json: json)
 		}
 	}
 
@@ -304,15 +319,24 @@ final class TraceExporterTests: XCTestCase {
 		metrics.append(freeMemoryMetric)
 
 		let scopeMetrics = OTLP.V1ScopeMetrics(scope: instrumentationScope, metrics: metrics, schemaUrl: schemaUrl)
-		let resource = OTLP.V1Resource(attributes: [], droppedAttributesCount: nil)
+
+		let attributes = ["service.name": "ios.app"]
+
+		let exporter = Exporter(timeReference: timeReference)
+
+		let resource = OTLP.V1Resource(attributes: exporter.convertToOTLP(attributes: attributes), droppedAttributesCount: nil)
 		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: schemaUrl)
 
 		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
 
 		let json = try encodeJSON(exportMetricsServiceRequest)
 
+		if testMetricsWithRemoteCollector {
+			try postJSON(url: endpoint(remoteMetricEndpointEnv), json: json)
+		}
+
 		if testWithLocalCollector {
-			try postJSON(url: "\(localEndpointBase)/v1/metrics", json: json)
+			try postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: json)
 		}
 	}
 
@@ -344,9 +368,12 @@ final class TraceExporterTests: XCTestCase {
 	}
 
 	/// https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/otlpreceiver/README.md
-	func postJSON(url: String, json: Data) throws {
-		let url = try makeURL(url)
+	func postJSON(url: URL, json: Data) throws {
 		var urlRequest = URLRequest(url: url)
+
+		if let jsonString = String(data: json, encoding: .utf8) {
+			print("\(jsonString)")
+		}
 
 		urlRequest.httpMethod = "POST"
 		urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
