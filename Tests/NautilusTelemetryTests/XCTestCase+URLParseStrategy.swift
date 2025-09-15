@@ -9,18 +9,8 @@ import Foundation
 import XCTest
 
 extension XCTestCase {
-	static let urlStrategy = URL.ParseStrategy(
-		scheme: .defaultValue("https"),
-		user: .optional,
-		password: .optional,
-		host: .defaultValue("example.com"),
-		port: .optional,
-		path: .required,
-		query: .optional,
-		fragment: .optional
-	)
-
+	
 	func makeURL(_ string: String) throws -> URL {
-		try Self.urlStrategy.parse(string)
+		try TestUtils.makeURL(string)
 	}
 }

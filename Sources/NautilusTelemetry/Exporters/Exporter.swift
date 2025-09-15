@@ -35,9 +35,14 @@ public struct Exporter {
 		let encoder = JSONEncoder()
 		OTLP.configure(encoder: encoder) // setup hex
 
+		var outputFormatting: JSONEncoder.OutputFormatting = [.withoutEscapingSlashes]
+
 		if prettyPrint {
-			encoder.outputFormatting = .prettyPrinted
+			outputFormatting.insert(.prettyPrinted)
 		}
+
+		encoder.outputFormatting = outputFormatting
+
 		return try encoder.encode(value)
 	}
 
