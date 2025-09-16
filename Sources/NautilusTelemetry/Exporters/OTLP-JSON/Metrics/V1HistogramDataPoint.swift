@@ -11,7 +11,7 @@ import Foundation
 typealias V1HistogramDataPoint = OTLP.V1HistogramDataPoint
 
 extension OTLP {
-	/** HistogramDataPoint is a single data point in a timeseries that describes the time-varying values of a Histogram. A Histogram contains summary statistics for a population of values, it may optionally contain the distribution of those values across a set of buckets.  If the histogram contains the distribution of values, then both \&quot;explicit_bounds\&quot; and \&quot;bucket counts\&quot; fields must be defined. If the histogram does not contain the distribution of values, then both \&quot;explicit_bounds\&quot; and \&quot;bucket_counts\&quot; must be omitted and only \&quot;count\&quot; and \&quot;sum\&quot; are known. */
+	/** HistogramDataPoint is a single data point in a timeseries that describes the time-varying values of a Histogram. A Histogram contains summary statistics for a population of values, it may optionally contain the distribution of those values across a set of buckets.  If the histogram contains the distribution of values, then both "explicit_bounds" and "bucket counts" fields must be defined. If the histogram does not contain the distribution of values, then both "explicit_bounds" and "bucket_counts" must be omitted and only "count" and "sum" are known. */
 	struct V1HistogramDataPoint: Encodable {
 		/** The set of key/value pairs that uniquely identify the timeseries from where this point belongs. The list may be empty (may contain 0 elements). Attribute keys MUST be unique (it is not allowed to have more than one attribute with the same key). */
 		var attributes: [V1KeyValue]?

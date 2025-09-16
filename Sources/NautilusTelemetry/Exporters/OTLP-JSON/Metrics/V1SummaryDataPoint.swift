@@ -21,7 +21,8 @@ extension OTLP {
 		var timeUnixNano: String?
 		/** count is the number of values in the population. Must be non-negative. */
 		var count: String?
-		/** sum of the values in the population. If count is zero then this field must be zero.  Note: Sum should only be filled out when measuring non-negative discrete events, and is assumed to be monotonic over the values of these events. Negative events *can* be recorded, but sum should not be filled out when doing so.  This is specifically to enforce compatibility w/ OpenMetrics, see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#summary */
+		/** sum of the values in the population. If count is zero then this field must be zero.  Note: Sum should only be filled out when measuring non-negative discrete events, and is assumed to be monotonic over the values of these events.
+		 Negative events *can* be recorded, but sum should not be filled out when doing so.  This is specifically to enforce compatibility w/ OpenMetrics, see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#summary */
 		var sum: Double?
 		/** (Optional) list of values at different quantiles of the distribution calculated from the current snapshot. The quantiles must be strictly increasing. */
 		var quantileValues: [SummaryDataPointValueAtQuantile]?
