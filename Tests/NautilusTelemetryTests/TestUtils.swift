@@ -33,7 +33,7 @@ enum TestUtils {
 
 	static var additionalAttributes: [String: String] {
 		get throws {
-			guard let env = ProcessInfo.processInfo.environment["additionalAttributes"] else { throw UtilError.environmentMissing }
+			guard let env = ProcessInfo.processInfo.environment["additionalAttributes"] else { return [:] }
 
 			var dictionary = [String: String]()
 
