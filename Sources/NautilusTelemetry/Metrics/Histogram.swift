@@ -67,7 +67,9 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 		exporter.exportOTLP(histogram: self)
 	}
 
-	// Locking is handled at the Instrument level
-	// The implementation must take care to avoid concurrently modifying values
+	// MARK: Private
+
+	/// Locking is handled at the Instrument level
+	/// The implementation must take care to avoid concurrently modifying values
 	private let lock = OSAllocatedUnfairLock()
 }

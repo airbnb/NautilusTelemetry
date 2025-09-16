@@ -21,7 +21,6 @@ final class MetricExporterTests: XCTestCase {
 	let redaction = ["startTimeUnixNano", "timeUnixNano"]
 	let unit = Unit(symbol: "bytes")
 
-
 	func testExportOTLPToJSON() throws {
 		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
 		counter.add(100)
@@ -187,7 +186,7 @@ final class MetricExporterTests: XCTestCase {
 		let time = timeReference.nanosecondsSinceEpoch(from: now)
 		let timeString = "\(time)"
 
-		let residentMemory = 10000 // not exposed to swift: let freeMemory = os_proc_available_memory()
+		let residentMemory = 20000 // not exposed to swift: let freeMemory = os_proc_available_memory()
 
 		let dataPoint = OTLP.V1NumberDataPoint(
 			attributes: nil,
@@ -217,7 +216,10 @@ final class MetricExporterTests: XCTestCase {
 
 		let exporter = Exporter(timeReference: timeReference)
 
-		let resource = OTLP.V1Resource(attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes), droppedAttributesCount: nil)
+		let resource = OTLP.V1Resource(
+			attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes),
+			droppedAttributesCount: nil
+		)
 		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: TestUtils.schemaUrl)
 
 		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
@@ -250,7 +252,7 @@ final class MetricExporterTests: XCTestCase {
 			attributes: nil,
 			startTimeUnixNano: "\(startTime)",
 			timeUnixNano: "\(endTime)",
-			asDouble: 200000.0,
+			asDouble: 666000,
 			asInt: nil, // int doesn't seem to work
 			exemplars: nil,
 			flags: nil
@@ -258,9 +260,9 @@ final class MetricExporterTests: XCTestCase {
 
 		dataPoints.append(dataPoint)
 
-		let sum = OTLP.V1Sum(dataPoints: dataPoints, aggregationTemporality: .cumulative, isMonotonic: true)
+		let sum = OTLP.V1Sum(dataPoints: dataPoints, aggregationTemporality: .cumulative, isMonotonic: false)
 		let testCounterMetric = OTLP.V1Metric(
-			name: "test_counter",
+			name: "apple_counter",
 			description: "Test counter",
 			unit: nil,
 			sum: sum
@@ -272,7 +274,10 @@ final class MetricExporterTests: XCTestCase {
 
 		let exporter = Exporter(timeReference: timeReference)
 
-		let resource = OTLP.V1Resource(attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes), droppedAttributesCount: nil)
+		let resource = OTLP.V1Resource(
+			attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes),
+			droppedAttributesCount: nil
+		)
 		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: TestUtils.schemaUrl)
 
 		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])

@@ -10,26 +10,26 @@ import os
 
 struct MetricValues<T: MetricNumeric> {
 
-	// MARK: Internal
+	var values = [TelemetryAttributes: T]()
 
 	mutating func add(_ number: T, attributes: TelemetryAttributes = [:]) {
-			var metricValue = values[attributes] ?? number
-			metricValue += number
-			values[attributes] = metricValue
+		var metricValue = values[attributes] ?? number
+		metricValue += number
+		values[attributes] = metricValue
 	}
 
 	mutating func set(_ number: T, attributes: TelemetryAttributes = [:]) {
-			values[attributes] = number
+		values[attributes] = number
 	}
 
 	mutating func reset() {
-			values.removeAll()
+		values.removeAll()
 	}
 
 	mutating func snapshotAndReset() -> MetricValues<T> {
 		var copy = MetricValues<T>()
-			copy.values = values
-			values.removeAll()
+		copy.values = values
+		values.removeAll()
 
 		return copy
 	}
@@ -37,9 +37,5 @@ struct MetricValues<T: MetricNumeric> {
 	func valueFor(attributes: TelemetryAttributes) -> T? {
 		values[attributes]
 	}
-
-	// MARK: Private
-
-	var values = [TelemetryAttributes: T]()
 
 }

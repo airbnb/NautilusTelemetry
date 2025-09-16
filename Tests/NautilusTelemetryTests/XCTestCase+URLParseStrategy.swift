@@ -9,7 +9,7 @@ import Foundation
 import XCTest
 
 extension XCTestCase {
-	
+
 	func makeURL(_ string: String) throws -> URL {
 		try TestUtils.makeURL(string)
 	}

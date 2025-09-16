@@ -7,3 +7,5 @@
 ## SPM
 
 .swiftpm
+.build
+

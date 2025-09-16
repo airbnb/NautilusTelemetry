@@ -17,8 +17,8 @@ public final class Meter {
 	// MARK: Lifecycle
 
 	public init() {
-		self.flushInterval = 60
-		self.flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushActiveIntruments() }
+		flushInterval = 60
+		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushActiveIntruments() }
 	}
 
 	// MARK: Public
@@ -89,29 +89,10 @@ public final class Meter {
 
 	// MARK: Internal
 
-	func register(_ instrument: Instrument) {
-		Self.lock.withLock {
-			activeInstruments.append(instrument)
-		}
-	}
+	/// Optional to avoid initialization order issue
+	var flushTimer: FlushTimer?
 
-	func unregister(_ instrument: Instrument) {
-		Self.lock.withLock {
-			// O(N) -- may need to improve this
-			activeInstruments.removeAll { $0 === instrument }
-		}
-	}
-
-	func flushActiveIntruments() {
-		let instrumentsToReport = Self.lock.withLock {
-			// Make copies
-			activeInstruments.compactMap{ $0.snapshotAndReset () }
-		}
-
-		if instrumentsToReport.count > 0, let reporter = InstrumentationSystem.reporter {
-			reporter.reportInstruments(instrumentsToReport)
-		}
-	}
+	var activeInstruments = [Instrument]()
 
 	/// Sets the flush interval for reporting back to the configured ``Reporter``.
 	var flushInterval: TimeInterval {
@@ -120,12 +101,33 @@ public final class Meter {
 		}
 	}
 
-	/// Optional to avoid initialization order issue
-	var flushTimer: FlushTimer?
+	func register(_ instrument: Instrument) {
+		lock.withLock {
+			activeInstruments.append(instrument)
+		}
+	}
 
-	var activeInstruments = [Instrument]()
+	func unregister(_ instrument: Instrument) {
+		lock.withLock {
+			// O(N) -- may need to improve this
+			activeInstruments.removeAll { $0 === instrument }
+		}
+	}
+
+	func flushActiveIntruments() {
+		let instrumentsToReport = lock.withLock {
+			// Make copies
+			activeInstruments.compactMap { $0.snapshotAndReset() }
+		}
+
+		if instrumentsToReport.count > 0, let reporter = InstrumentationSystem.reporter {
+			reporter.reportInstruments(instrumentsToReport)
+		}
+	}
+
+	// MARK: Private
 
 	/// Used for protecting internal state
-	private static let lock = OSAllocatedUnfairLock()
+	private let lock = OSAllocatedUnfairLock()
 
 }

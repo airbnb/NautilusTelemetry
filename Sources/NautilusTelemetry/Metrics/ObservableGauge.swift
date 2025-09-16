@@ -36,8 +36,7 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 
 	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
-
-		invokeCallback()
+		callback(self)
 
 		return lock.withLock {
 			let copy = Self(name: name, unit: unit, description: description, callback: callback)
@@ -58,14 +57,12 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	let callback: (ObservableGauge<T>) -> Void
 	var values = MetricValues<T>()
 
-	func invokeCallback() {
-		callback(self)
-	}
-
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(gauge: self)
 	}
 
-	// Locking is handled at the Instrument level
+	// MARK: Private
+
+	/// Locking is handled at the Instrument level
 	private let lock = OSAllocatedUnfairLock()
 }

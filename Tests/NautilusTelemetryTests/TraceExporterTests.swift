@@ -33,7 +33,7 @@ final class TraceExporterTests: XCTestCase {
 	let testWithLocalCollector = TestUtils.testEnabled("testWithLocalCollector")
 	let testTracesWithRemoteCollector = TestUtils.testEnabled("testTracesWithRemoteCollector")
 
-	// remote endpoints can be set with environment variables:
+	/// remote endpoints can be set with environment variables:
 	let remoteTraceEndpointEnv = "remoteTraceEndpoint"
 
 	let timeReference = TimeReference(serverOffset: 0.0)
@@ -79,7 +79,7 @@ final class TraceExporterTests: XCTestCase {
 		let otlpSpans = spans.map { exporter.exportOTLP(span: $0) }
 
 		let data = try TestUtils.encodeJSON(otlpSpans)
-		
+
 		let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: data, options: []) as? [Any])
 
 		XCTAssertEqual(decoded.count, 4)

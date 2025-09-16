@@ -1,36 +1,35 @@
 // Created by Ladd Van Tol on 9/15/25.
 // Copyright © 2025 Airbnb Inc. All rights reserved.
 
-import Foundation
 import Compression
+import Foundation
+import OSLog
 import XCTest
 
 @testable import NautilusTelemetry
 
-struct TestUtils {
-
-	static let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
-	static let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
+enum TestUtils {
 
 	enum UtilError: Error {
 		case unexpectedNil
 		case environmentMissing
 	}
 
-	static func testEnabled(_ name: String) -> Bool {
-		if let val = ProcessInfo.processInfo.environment[name] {
-			return Bool(val) ?? false
-		}
-		return false
-	}
+	static let logger = Logger(subsystem: "NautilusTelemetry", category: "TestUtils")
 
-	static func endpoint(_ name: String) throws -> URL {
-		if let val = ProcessInfo.processInfo.environment[name] {
-			return try makeURL(val)
-		}
+	static let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
+	static let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
 
-		throw UtilError.unexpectedNil
-	}
+	static let urlStrategy = URL.ParseStrategy(
+		scheme: .defaultValue("https"),
+		user: .optional,
+		password: .optional,
+		host: .defaultValue("example.com"),
+		port: .optional,
+		path: .required,
+		query: .optional,
+		fragment: .optional
+	)
 
 	static var additionalAttributes: [String: String] {
 		get throws {
@@ -51,16 +50,20 @@ struct TestUtils {
 		}
 	}
 
-	static let urlStrategy = URL.ParseStrategy(
-		scheme: .defaultValue("https"),
-		user: .optional,
-		password: .optional,
-		host: .defaultValue("example.com"),
-		port: .optional,
-		path: .required,
-		query: .optional,
-		fragment: .optional
-	)
+	static func testEnabled(_ name: String) -> Bool {
+		if let val = ProcessInfo.processInfo.environment[name] {
+			return Bool(val) ?? false
+		}
+		return false
+	}
+
+	static func endpoint(_ name: String) throws -> URL {
+		if let val = ProcessInfo.processInfo.environment[name] {
+			return try makeURL(val)
+		}
+
+		throw UtilError.unexpectedNil
+	}
 
 	static func makeURL(_ string: String) throws -> URL {
 		try urlStrategy.parse(string)
@@ -69,6 +72,8 @@ struct TestUtils {
 	static func encodeJSON(_ value: some Encodable) throws -> Data {
 		let encoder = JSONEncoder()
 		OTLP.configure(encoder: encoder) // setup hex
+		// Forward slash escaping is only needed for HTML embedding.
+		// Add pretty printing and sortedKeys for ease of reading test output
 		encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
 		let json = try encoder.encode(value)
 
@@ -107,10 +112,10 @@ struct TestUtils {
 		guard let allHeaderFields = urlRequest.allHTTPHeaderFields else { throw UtilError.unexpectedNil }
 		let requestHeaders = formattedHeaders(allHeaderFields)
 
-		print("\(urlRequest.httpMethod?.description ?? "nil") \(url.path)\n\(requestHeaders)")
+		logger.debug("\(urlRequest.httpMethod?.description ?? "nil") \(url.path)\n\(requestHeaders)")
 
 		if let jsonString = String(data: json, encoding: .utf8) {
-			print("\(jsonString)")
+			logger.debug("\(jsonString)")
 		}
 
 		let completion = test.expectation(description: "postToLocalOpenTelemetryCollector")
@@ -118,24 +123,18 @@ struct TestUtils {
 			if let response = response as? HTTPURLResponse {
 				XCTAssertEqual(response.statusCode, 200)
 
-				let responseHeaders = self.formattedHeaders(response.allHeaderFields as! [String: String])
-				print("Response:\n\(responseHeaders)")
+				let responseHeaders = formattedHeaders(response.allHeaderFields as! [String: String])
+				logger.debug("Response:\n\(responseHeaders)")
 			}
 
 			if let data, let jsonString = String(data: data, encoding: .utf8) {
-				print("\(jsonString)")
+				logger.debug("\(jsonString)")
 			}
 
 			completion.fulfill()
 		}
 
 		task.resume()
-
-		test.waitForExpectations(timeout: 30) { error in
-			if let error {
-				print("error: \(error)")
-			}
-		}
+		test.wait(for: [completion], timeout: 30)
 	}
-
 }

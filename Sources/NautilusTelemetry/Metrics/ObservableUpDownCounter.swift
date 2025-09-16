@@ -38,8 +38,7 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 
 	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
-
-		invokeCallback()
+		callback(self)
 
 		return lock.withLock {
 			let copy = Self(name: name, unit: unit, description: description, callback: callback)
@@ -60,14 +59,12 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 	let callback: (ObservableUpDownCounter<T>) -> Void
 	var values = MetricValues<T>()
 
-	func invokeCallback() {
-		callback(self)
-	}
-
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(counter: self)
 	}
 
-	// Locking is handled at the Instrument level
+	// MARK: Private
+
+	/// Locking is handled at the Instrument level
 	private let lock = OSAllocatedUnfairLock()
 }

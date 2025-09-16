@@ -4,10 +4,15 @@
 import Foundation
 
 struct FlushTimer {
-	init (flushInterval: TimeInterval, handler: @escaping () -> Void) {
+
+	// MARK: Lifecycle
+
+	init(flushInterval: TimeInterval, handler: @escaping () -> Void) {
 		self.flushInterval = flushInterval
 		self.handler = handler
 	}
+
+	// MARK: Internal
 
 	var handler: () -> Void
 	var flushTimer: DispatchSourceTimer? = nil

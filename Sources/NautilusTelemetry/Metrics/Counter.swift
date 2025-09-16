@@ -62,7 +62,9 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 		exporter.exportOTLP(counter: self)
 	}
 
-	// Locking is handled at the Instrument level
-	// The implementation must take care to avoid concurrently modifying values
+	// MARK: Private
+
+	/// Locking is handled at the Instrument level
+	/// The implementation must take care to avoid concurrently modifying values
 	private let lock = OSAllocatedUnfairLock()
 }

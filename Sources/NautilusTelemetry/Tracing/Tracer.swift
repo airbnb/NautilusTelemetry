@@ -32,7 +32,7 @@ public final class Tracer {
 	public func flushTrace() {
 		root.end() // this implicitly retires
 
-		Tracer.lock.withLock {
+		lock.withLock {
 			traceId = Identifiers.generateTraceId()
 			root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
 		}
@@ -182,7 +182,7 @@ public final class Tracer {
 
 	// MARK: Internal
 
-	static let lock = OSAllocatedUnfairLock()
+	let lock = OSAllocatedUnfairLock()
 
 	var traceId = Identifiers.generateTraceId()
 	var root: Span
@@ -207,13 +207,13 @@ public final class Tracer {
 	}
 
 	func retire(span: Span) {
-		Tracer.lock.withLock {
+		lock.withLock {
 			retiredSpans.append(span)
 		}
 	}
 
 	func flushRetiredSpans() {
-		let spansToReport: [Span] = Tracer.lock.withLock {
+		let spansToReport: [Span] = lock.withLock {
 			// copy and empty the array.
 			let spans = retiredSpans
 			retiredSpans.removeAll()
