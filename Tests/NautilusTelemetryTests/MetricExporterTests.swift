@@ -12,7 +12,7 @@ import XCTest
 
 final class MetricExporterTests: XCTestCase {
 
-	let testMetricsWithRemoteCollector = TestUtils.testEnabled("testMetricsWithRemoteCollector")
+	let testWithRemoteCollector = TestUtils.testEnabled("testMetricsWithRemoteCollector")
 	let testWithLocalCollector = TestUtils.testEnabled("testWithLocalCollector")
 	let remoteMetricEndpointEnv = "remoteMetricEndpoint"
 
@@ -174,6 +174,10 @@ final class MetricExporterTests: XCTestCase {
 	}
 
 	func testOTLPExporterGaugeMetric() throws {
+		guard testWithLocalCollector || testWithRemoteCollector else {
+			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+		}
+
 		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 
 		let timeReference = TimeReference(serverOffset: 0.0)
@@ -226,7 +230,7 @@ final class MetricExporterTests: XCTestCase {
 
 		let json = try TestUtils.encodeJSON(exportMetricsServiceRequest)
 
-		if testMetricsWithRemoteCollector {
+		if testWithRemoteCollector {
 			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json, test: self)
 		}
 
@@ -236,6 +240,10 @@ final class MetricExporterTests: XCTestCase {
 	}
 
 	func testOTLPExporterCounterMetric() throws {
+		guard testWithLocalCollector || testWithRemoteCollector else {
+			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+		}
+
 		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 
 		let timeReference = TimeReference(serverOffset: 0.0)
@@ -284,7 +292,7 @@ final class MetricExporterTests: XCTestCase {
 
 		let json = try TestUtils.encodeJSON(exportMetricsServiceRequest)
 
-		if testMetricsWithRemoteCollector {
+		if testWithRemoteCollector {
 			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json, test: self)
 		}
 

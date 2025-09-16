@@ -31,7 +31,7 @@ final class TraceExporterTests: XCTestCase {
 	/// https://docs.docker.com/desktop/mac/install/
 	/// See detailed instructions in OpenTelemetryCollector directory
 	let testWithLocalCollector = TestUtils.testEnabled("testWithLocalCollector")
-	let testTracesWithRemoteCollector = TestUtils.testEnabled("testTracesWithRemoteCollector")
+	let testWithRemoteCollector = TestUtils.testEnabled("testTracesWithRemoteCollector")
 
 	/// remote endpoints can be set with environment variables:
 	let remoteTraceEndpointEnv = "remoteTraceEndpoint"
@@ -50,6 +50,10 @@ final class TraceExporterTests: XCTestCase {
 	let localEndpointBase = "http://localhost:4318"
 
 	func testOTLPExporterTraces() throws {
+		guard testWithLocalCollector || testWithRemoteCollector else {
+			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+		}
+
 		let tracer = Tracer()
 		tracer.withSpan(name: "span1", attributes: ["small integer": 42, "large integer": 2 << 54]) {
 			tracer.withSpan(name: "span2") {
@@ -101,7 +105,7 @@ final class TraceExporterTests: XCTestCase {
 		let jsonString = try XCTUnwrap(String(data: json, encoding: .utf8))
 		print(jsonString)
 
-		if testTracesWithRemoteCollector {
+		if testWithRemoteCollector {
 			let endpoint = try TestUtils.endpoint(remoteTraceEndpointEnv)
 			try TestUtils.postJSON(url: endpoint, json: json, test: self)
 		}
@@ -114,6 +118,8 @@ final class TraceExporterTests: XCTestCase {
 	}
 
 	func testOTLPExporterLogs() throws {
+		guard testWithLocalCollector else { throw XCTSkip("testWithLocalCollector is false") }
+
 		let timeReference = TimeReference(serverOffset: 0.0)
 		let exporter = Exporter(timeReference: timeReference)
 
