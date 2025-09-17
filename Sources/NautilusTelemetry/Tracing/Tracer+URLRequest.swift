@@ -26,7 +26,7 @@ extension Tracer {
 	) -> Span {
 		let name = Span.name(forRequest: request, target: template)
 		var span = startSpan(name: name, kind: .client, attributes: attributes, baggage: baggage)
-		Self.decorateSpan(
+		decorateSpan(
 			&span,
 			for: &request,
 			captureHeaders: captureHeaders,
@@ -55,7 +55,7 @@ extension Tracer {
 	) -> Span {
 		let name = Span.name(forRequest: request, target: template)
 		var span = startSubtraceSpan(name: name, kind: .client, attributes: attributes, baggage: baggage)
-		Self.decorateSpan(
+		decorateSpan(
 			&span,
 			for: &request,
 			captureHeaders: captureHeaders,
@@ -67,7 +67,7 @@ extension Tracer {
 
 	// MARK: Private
 
-	private static func decorateSpan(
+	private func decorateSpan(
 		_ span: inout Span,
 		for request: inout URLRequest,
 		captureHeaders: Set<String>? = nil,
@@ -86,7 +86,17 @@ extension Tracer {
 			span.addAttribute("url.template", template)
 		}
 
-		span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
+		switch traceParentMode {
+		case .never:
+			break
+
+		case .ifSampling:
+			span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
+
+		case .unconditionally:
+			span.addTraceHeadersUnconditionally(&request, isSampling: isSampling)
+		}
+
 		span.addHeaders(request: request, captureHeaders: captureHeaders)
 	}
 }
