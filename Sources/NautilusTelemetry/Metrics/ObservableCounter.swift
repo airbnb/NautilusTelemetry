@@ -6,12 +6,13 @@
 //
 
 import Foundation
+import os
 
 public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	// MARK: Lifecycle
 
-	init(name: String, unit: Unit?, description: String?, callback: @escaping (ObservableCounter<T>) -> Void) {
+	required init(name: String, unit: Unit?, description: String?, callback: @escaping (ObservableCounter<T>) -> Void) {
 		self.name = name
 		self.unit = unit
 		self.description = description
@@ -24,18 +25,35 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	public let unit: Unit?
 	public let description: String?
 	public private(set) var startTime = ContinuousClock.now
+	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public var aggregationTemporality = AggregationTemporality.delta
 
 	public var isMonotonic: Bool { true }
 
 	/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		values.set(number, attributes: attributes)
+		lock.withLockUnchecked {
+			values.set(number, attributes: attributes)
+		}
 	}
 
-	public func reset() {
-		startTime = ContinuousClock.now
-		values.reset()
+	public func snapshotAndReset() -> Instrument {
+		let now = ContinuousClock.now
+		callback(self)
+
+		return lock.withLock {
+			let copy = Self(name: name, unit: unit, description: description, callback: callback)
+			copy.startTime = startTime
+			copy.endTime = now
+			copy.aggregationTemporality = aggregationTemporality
+			copy.values = values.snapshotAndReset()
+
+			// now reset
+			startTime = now
+			endTime = nil
+			values.reset()
+			return copy
+		}
 	}
 
 	// MARK: Internal
@@ -43,11 +61,13 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	let callback: (ObservableCounter<T>) -> Void
 	var values = MetricValues<T>()
 
-	func invokeCallback() {
-		callback(self)
-	}
-
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(counter: self)
 	}
+
+	// MARK: Private
+
+	/// Locking is handled at the Instrument level
+	/// The implementation must take care to avoid concurrently modifying values
+	private let lock = OSAllocatedUnfairLock()
 }

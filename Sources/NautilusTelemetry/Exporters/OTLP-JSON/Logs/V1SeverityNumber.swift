@@ -12,31 +12,35 @@ typealias V1SeverityNumber = OTLP.V1SeverityNumber
 
 extension OTLP {
 	/** Possible values for LogRecord.SeverityNumber.   - SEVERITY_NUMBER_UNSPECIFIED: UNSPECIFIED is the default SeverityNumber, it MUST NOT be used. */
-	enum V1SeverityNumber: String, Codable, CaseIterable {
-		case unspecified = "SEVERITY_NUMBER_UNSPECIFIED"
-		case trace = "SEVERITY_NUMBER_TRACE"
-		case trace2 = "SEVERITY_NUMBER_TRACE2"
-		case trace3 = "SEVERITY_NUMBER_TRACE3"
-		case trace4 = "SEVERITY_NUMBER_TRACE4"
-		case debug = "SEVERITY_NUMBER_DEBUG"
-		case debug2 = "SEVERITY_NUMBER_DEBUG2"
-		case debug3 = "SEVERITY_NUMBER_DEBUG3"
-		case debug4 = "SEVERITY_NUMBER_DEBUG4"
-		case info = "SEVERITY_NUMBER_INFO"
-		case info2 = "SEVERITY_NUMBER_INFO2"
-		case info3 = "SEVERITY_NUMBER_INFO3"
-		case info4 = "SEVERITY_NUMBER_INFO4"
-		case warn = "SEVERITY_NUMBER_WARN"
-		case warn2 = "SEVERITY_NUMBER_WARN2"
-		case warn3 = "SEVERITY_NUMBER_WARN3"
-		case warn4 = "SEVERITY_NUMBER_WARN4"
-		case error = "SEVERITY_NUMBER_ERROR"
-		case error2 = "SEVERITY_NUMBER_ERROR2"
-		case error3 = "SEVERITY_NUMBER_ERROR3"
-		case error4 = "SEVERITY_NUMBER_ERROR4"
-		case fatal = "SEVERITY_NUMBER_FATAL"
-		case fatal2 = "SEVERITY_NUMBER_FATAL2"
-		case fatal3 = "SEVERITY_NUMBER_FATAL3"
-		case fatal4 = "SEVERITY_NUMBER_FATAL4"
+
+	// Enums are now numeric, per:
+	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
+	// https://github.com/open-telemetry/opentelemetry-proto/blob/v1.8.0/opentelemetry/proto/logs/v1/logs.proto#L88
+	enum V1SeverityNumber: Int, Codable {
+		case unspecified = 0
+		case trace = 1
+		case trace2 = 2
+		case trace3 = 3
+		case trace4 = 4
+		case debug = 5
+		case debug2 = 6
+		case debug3 = 7
+		case debug4 = 8
+		case info = 9
+		case info2 = 10
+		case info3 = 11
+		case info4 = 12
+		case warn = 13
+		case warn2 = 14
+		case warn3 = 15
+		case warn4 = 16
+		case error = 17
+		case error2 = 18
+		case error3 = 19
+		case error4 = 20
+		case fatal = 21
+		case fatal2 = 22
+		case fatal3 = 23
+		case fatal4 = 24
 	}
 }

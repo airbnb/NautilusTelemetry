@@ -16,6 +16,7 @@ final class TraceExporterTests: XCTestCase {
 
 	enum TestError: Error {
 		case failure
+		case endpointNotSpecified
 	}
 
 	// Since OTLP is defined in protobuf, we have to use the standard JSON mapping
@@ -29,13 +30,12 @@ final class TraceExporterTests: XCTestCase {
 	/// I used the Mac Docker Desktop:
 	/// https://docs.docker.com/desktop/mac/install/
 	/// See detailed instructions in OpenTelemetryCollector directory
-	let testWithLocalCollector = TraceExporterTests.testEnabled("testWithLocalCollector")
-	let testWithRemoteCollector = TraceExporterTests.testEnabled("testWithRemoteCollector")
+	let testWithLocalCollector = TestUtils.testEnabled("testWithLocalCollector")
+	let testWithRemoteCollector = TestUtils.testEnabled("testTracesWithRemoteCollector")
 
-	let instrumentationScope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
-	let schemaUrl = "https://github.com/airbnb/NautilusTelemetry"
+	/// remote endpoints can be set with environment variables:
+	let remoteTraceEndpointEnv = "remoteTraceEndpoint"
 
-	let remoteCollectorEndpoint = "https://FILL_IN_HERE/v1/traces"
 	let timeReference = TimeReference(serverOffset: 0.0)
 
 	// Setup for a local Jaeger instance run with instructions from: https://www.jaegertracing.io/docs/2.9/getting-started/
@@ -49,14 +49,11 @@ final class TraceExporterTests: XCTestCase {
 
 	let localEndpointBase = "http://localhost:4318"
 
-	static func testEnabled(_ name: String) -> Bool {
-		if let val = ProcessInfo.processInfo.environment[name] {
-			return Bool(val) ?? false
-		}
-		return false
-	}
-
 	func testOTLPExporterTraces() throws {
+		guard testWithLocalCollector || testWithRemoteCollector else {
+			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+		}
+
 		let tracer = Tracer()
 		tracer.withSpan(name: "span1", attributes: ["small integer": 42, "large integer": 2 << 54]) {
 			tracer.withSpan(name: "span2") {
@@ -82,12 +79,11 @@ final class TraceExporterTests: XCTestCase {
 		}
 
 		let spans = tracer.retiredSpans
-		let exporter = Exporter(timeReference: timeReference)
+		let exporter = Exporter(timeReference: timeReference, prettyPrint: true)
 		let otlpSpans = spans.map { exporter.exportOTLP(span: $0) }
 
-		let encoder = JSONEncoder()
-		encoder.outputFormatting = .prettyPrinted
-		let data = try encoder.encode(otlpSpans)
+		let data = try TestUtils.encodeJSON(otlpSpans)
+
 		let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: data, options: []) as? [Any])
 
 		XCTAssertEqual(decoded.count, 4)
@@ -110,17 +106,20 @@ final class TraceExporterTests: XCTestCase {
 		print(jsonString)
 
 		if testWithRemoteCollector {
-			try postJSON(url: remoteCollectorEndpoint, json: json)
+			let endpoint = try TestUtils.endpoint(remoteTraceEndpointEnv)
+			try TestUtils.postJSON(url: endpoint, json: json, test: self)
 		}
 
 		if testWithLocalCollector {
-			try postJSON(url: "\(localEndpointBase)/v1/traces", json: json)
+			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/traces"), json: json, test: self)
 		}
 
 		tracer.flushTrace()
 	}
 
 	func testOTLPExporterLogs() throws {
+		guard testWithLocalCollector else { throw XCTSkip("testWithLocalCollector is false") }
+
 		let timeReference = TimeReference(serverOffset: 0.0)
 		let exporter = Exporter(timeReference: timeReference)
 
@@ -187,16 +186,16 @@ final class TraceExporterTests: XCTestCase {
 			}
 		}
 
-		let scopeLogs = OTLP.V1ScopeLogs(scope: instrumentationScope, logRecords: logRecords, schemaUrl: schemaUrl)
+		let scopeLogs = OTLP.V1ScopeLogs(scope: TestUtils.instrumentationScope, logRecords: logRecords, schemaUrl: TestUtils.schemaUrl)
 
 		let resource = OTLP.V1Resource(attributes: [], droppedAttributesCount: nil)
-		let resourceLogs = OTLP.V1ResourceLogs(resource: resource, scopeLogs: [scopeLogs], schemaUrl: schemaUrl)
+		let resourceLogs = OTLP.V1ResourceLogs(resource: resource, scopeLogs: [scopeLogs], schemaUrl: TestUtils.schemaUrl)
 		let exportLogsServiceRequest = OTLP.V1ExportLogsServiceRequest(resourceLogs: [resourceLogs])
 
-		let json = try encodeJSON(exportLogsServiceRequest)
+		let json = try TestUtils.encodeJSON(exportLogsServiceRequest)
 
 		if testWithLocalCollector {
-			try postJSON(url: "\(localEndpointBase)/v1/logs", json: json)
+			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/logs"), json: json, test: self)
 		}
 	}
 
@@ -246,140 +245,5 @@ final class TraceExporterTests: XCTestCase {
 
 		print(normalizedJsonString)
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-	}
-
-	func testOTLPExporterMetrics() throws {
-		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
-
-		let tracer = Tracer()
-		tracer.withSpan(name: "hi", attributes: nil) { }
-
-		let traceId = tracer.traceId
-		let spanId = tracer.retiredSpans[0].id
-
-		let timeReference = TimeReference(serverOffset: 0.0)
-
-		var metrics = [OTLP.V1Metric]()
-
-		var dataPoints = [OTLP.V1NumberDataPoint]()
-
-		let now = ContinuousClock.now
-		let time = timeReference.nanosecondsSinceEpoch(from: now)
-		let timeString = "\(time)"
-
-		let residentMemory = 10000 // EBNResidentMemory() or not exposed to swift: let freeMemory = os_proc_available_memory()
-
-		let exemplar = OTLP.V1Exemplar(
-			filteredAttributes: nil,
-			timeUnixNano: timeString,
-			asDouble: nil,
-			asInt: "\(residentMemory)",
-			spanId: spanId,
-			traceId: traceId
-		)
-
-		// TBD: understand all these fields, especially exemplars
-		let dataPoint = OTLP.V1NumberDataPoint(
-			attributes: nil,
-			startTimeUnixNano: timeString,
-			timeUnixNano: timeString,
-			asDouble: nil,
-			asInt: "\(residentMemory)",
-			exemplars: [exemplar],
-			flags: nil
-		)
-
-		dataPoints.append(dataPoint)
-
-		let gauge = OTLP.V1Gauge(dataPoints: dataPoints)
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#instrument-naming-rule
-		// http://unitsofmeasure.org/ucum.html
-		let freeMemoryMetric = OTLP.V1Metric(
-			name: "resident_memory",
-			description: "How many bytes of memory are resident",
-			unit: "byte",
-			gauge: gauge
-		)
-
-		metrics.append(freeMemoryMetric)
-
-		let scopeMetrics = OTLP.V1ScopeMetrics(scope: instrumentationScope, metrics: metrics, schemaUrl: schemaUrl)
-		let resource = OTLP.V1Resource(attributes: [], droppedAttributesCount: nil)
-		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: schemaUrl)
-
-		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
-
-		let json = try encodeJSON(exportMetricsServiceRequest)
-
-		if testWithLocalCollector {
-			try postJSON(url: "\(localEndpointBase)/v1/metrics", json: json)
-		}
-	}
-
-	// MARK: utilities
-
-	func encodeJSON(_ value: some Encodable) throws -> Data {
-		let encoder = JSONEncoder()
-		OTLP.configure(encoder: encoder) // setup hex
-		// encoder.outputFormatting = .prettyPrinted
-		let json = try encoder.encode(value)
-
-		let jsonString = try XCTUnwrap(String(data: json, encoding: .utf8))
-		print("\(jsonString)")
-
-		return json
-	}
-
-	func formattedHeaders(_ headers: [String: String]) -> String {
-		var result = ""
-
-		let keys = headers.keys.sorted()
-		for key in keys {
-			if let value = headers[key] {
-				result.append("\(key): \(value)\n")
-			}
-		}
-
-		return result
-	}
-
-	/// https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/otlpreceiver/README.md
-	func postJSON(url: String, json: Data) throws {
-		let url = try makeURL(url)
-		var urlRequest = URLRequest(url: url)
-
-		urlRequest.httpMethod = "POST"
-		urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-		urlRequest.setValue("\(json.count)", forHTTPHeaderField: "Content-Length")
-
-		let compressedJSON = try Compression.compressDeflate(data: json)
-		urlRequest.setValue("deflate", forHTTPHeaderField: "Content-Encoding")
-		urlRequest.httpBody = compressedJSON
-		let requestHeaders = formattedHeaders(try XCTUnwrap(urlRequest.allHTTPHeaderFields))
-		print("\(urlRequest.httpMethod?.description ?? "nil") \(url.path)\n\(requestHeaders)")
-
-		let completion = expectation(description: "postToLocalOpenTelemetryCollector")
-		let task = URLSession.shared.dataTask(with: urlRequest) { data, response, _ in
-			if let response = response as? HTTPURLResponse {
-				XCTAssertEqual(response.statusCode, 200)
-
-				let responseHeaders = self.formattedHeaders(response.allHeaderFields as! [String: String])
-				print("Response:\n\(responseHeaders)")
-			}
-
-			if let data, let jsonString = String(data: data, encoding: .utf8) {
-				print("\(jsonString)")
-			}
-
-			completion.fulfill()
-		}
-
-		task.resume()
-
-		waitForExpectations(timeout: 30) { error in
-			if let error {
-				print("error: \(error)")
-			}
-		}
 	}
 }

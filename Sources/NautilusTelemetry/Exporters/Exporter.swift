@@ -35,9 +35,15 @@ public struct Exporter {
 		let encoder = JSONEncoder()
 		OTLP.configure(encoder: encoder) // setup hex
 
+		// Forward slash escaping is only needed for HTML embedding.
+		var outputFormatting: JSONEncoder.OutputFormatting = [.withoutEscapingSlashes]
+
 		if prettyPrint {
-			encoder.outputFormatting = .prettyPrinted
+			outputFormatting.insert(.prettyPrinted)
 		}
+
+		encoder.outputFormatting = outputFormatting
+
 		return try encoder.encode(value)
 	}
 

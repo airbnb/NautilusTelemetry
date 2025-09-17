@@ -12,10 +12,16 @@ import XCTest
 
 final class MetricExporterTests: XCTestCase {
 
+	let testWithRemoteCollector = TestUtils.testEnabled("testMetricsWithRemoteCollector")
+	let testWithLocalCollector = TestUtils.testEnabled("testWithLocalCollector")
+	let remoteMetricEndpointEnv = "remoteMetricEndpoint"
+
+	let localEndpointBase = "http://localhost:4318"
+
 	let redaction = ["startTimeUnixNano", "timeUnixNano"]
 	let unit = Unit(symbol: "bytes")
 
-	func testexportOTLPToJSON() throws {
+	func testExportOTLPToJSON() throws {
 		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
 		counter.add(100)
 
@@ -31,7 +37,7 @@ final class MetricExporterTests: XCTestCase {
 		))
 
 		let expectedOutput =
-			#"{"resourceMetrics":[{"resource":{"attributes":"***"},"scopeMetrics":[{"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":"***","startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}],"scope":{"name":"NautilusTelemetry","version":"1.0"}}]}]}"#
+			#"{"resourceMetrics":[{"resource":{"attributes":"***"},"scopeMetrics":[{"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"200","attributes":"***","startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}],"scope":{"name":"NautilusTelemetry","version":"1.0"}}]}]}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -52,11 +58,9 @@ final class MetricExporterTests: XCTestCase {
 		))
 
 		let expectedOutput =
-			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
+			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testUpDownCounter() throws {
@@ -67,17 +71,16 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = counter.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 
 		let expectedOutput =
-			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
+			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testObservableCounter() throws {
@@ -89,17 +92,16 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = counter.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 
 		let expectedOutput =
-			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
+			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testObservableUpDownCounter() throws {
@@ -110,17 +112,16 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = counter.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 
 		let expectedOutput =
-			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
+			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		counter.reset()
-		XCTAssert(counter.values.allValues.isEmpty)
 	}
 
 	func testObservableGauge() throws {
@@ -131,7 +132,8 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = gauge.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(gauge.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
@@ -140,8 +142,6 @@ final class MetricExporterTests: XCTestCase {
 			#"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		gauge.reset()
-		XCTAssert(gauge.values.allValues.isEmpty)
 	}
 
 	func testHistogram() throws {
@@ -161,17 +161,144 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let metric = histogram.exportOTLP(exporter)
+		let exportableInstrument = try XCTUnwrap(histogram.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
 		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
 
 		let expectedOutput =
-			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":"AGGREGATION_TEMPORALITY_DELTA","dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
+			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":1,"dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
-		histogram.reset()
-		XCTAssert(histogram.values.allValues.isEmpty)
+	}
+
+	func testOTLPExporterGaugeMetric() throws {
+		guard testWithLocalCollector || testWithRemoteCollector else {
+			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+		}
+
+		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
+
+		let timeReference = TimeReference(serverOffset: 0.0)
+
+		var metrics = [OTLP.V1Metric]()
+
+		var dataPoints = [OTLP.V1NumberDataPoint]()
+
+		let now = ContinuousClock.now
+		let time = timeReference.nanosecondsSinceEpoch(from: now)
+		let timeString = "\(time)"
+
+		let residentMemory = 20000 // not exposed to swift: let freeMemory = os_proc_available_memory()
+
+		let dataPoint = OTLP.V1NumberDataPoint(
+			attributes: nil,
+			startTimeUnixNano: timeString,
+			timeUnixNano: timeString,
+			asDouble: nil,
+			asInt: "\(residentMemory)",
+			exemplars: nil,
+			flags: nil
+		)
+
+		dataPoints.append(dataPoint)
+
+		let gauge = OTLP.V1Gauge(dataPoints: dataPoints)
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#instrument-naming-rule
+		// http://unitsofmeasure.org/ucum.html
+		let freeMemoryMetric = OTLP.V1Metric(
+			name: "resident_memory",
+			description: "How many bytes of memory are resident",
+			unit: "byte",
+			gauge: gauge
+		)
+
+		metrics.append(freeMemoryMetric)
+
+		let scopeMetrics = OTLP.V1ScopeMetrics(scope: TestUtils.instrumentationScope, metrics: metrics, schemaUrl: TestUtils.schemaUrl)
+
+		let exporter = Exporter(timeReference: timeReference)
+
+		let resource = OTLP.V1Resource(
+			attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes),
+			droppedAttributesCount: nil
+		)
+		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: TestUtils.schemaUrl)
+
+		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
+
+		let json = try TestUtils.encodeJSON(exportMetricsServiceRequest)
+
+		if testWithRemoteCollector {
+			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json, test: self)
+		}
+
+		if testWithLocalCollector {
+			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: json, test: self)
+		}
+	}
+
+	func testOTLPExporterCounterMetric() throws {
+		guard testWithLocalCollector || testWithRemoteCollector else {
+			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+		}
+
+		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
+
+		let timeReference = TimeReference(serverOffset: 0.0)
+
+		var metrics = [OTLP.V1Metric]()
+
+		var dataPoints = [OTLP.V1NumberDataPoint]()
+
+		let now = ContinuousClock.now
+		let startTime = timeReference.nanosecondsSinceEpoch(from: now)
+		let endTime = startTime + 1_000_000_000
+
+		let exporter = Exporter(timeReference: timeReference)
+
+		let dataPoint = OTLP.V1NumberDataPoint(
+			attributes: exporter.convertToOTLP(attributes: ["test": "1"]),
+			startTimeUnixNano: "\(startTime)",
+			timeUnixNano: "\(endTime)",
+			asDouble: 8880.0,
+			asInt: "8880", // int doesn't seem to work
+			exemplars: nil,
+			flags: nil
+		)
+
+		dataPoints.append(dataPoint)
+
+		let sum = OTLP.V1Sum(dataPoints: dataPoints, aggregationTemporality: .cumulative, isMonotonic: true)
+		let testCounterMetric = OTLP.V1Metric(
+			name: "lychee_counter",
+			description: "Test counter",
+			unit: nil,
+			sum: sum
+		)
+
+		metrics.append(testCounterMetric)
+
+		let scopeMetrics = OTLP.V1ScopeMetrics(scope: TestUtils.instrumentationScope, metrics: metrics, schemaUrl: TestUtils.schemaUrl)
+
+		let resource = OTLP.V1Resource(
+			attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes),
+			droppedAttributesCount: nil
+		)
+		let resourceMetrics = OTLP.V1ResourceMetrics(resource: resource, scopeMetrics: [scopeMetrics], schemaUrl: TestUtils.schemaUrl)
+
+		let exportMetricsServiceRequest = OTLP.V1ExportMetricsServiceRequest(resourceMetrics: [resourceMetrics])
+
+		let json = try TestUtils.encodeJSON(exportMetricsServiceRequest)
+
+		if testWithRemoteCollector {
+			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json, test: self)
+		}
+
+		if testWithLocalCollector {
+			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: json, test: self)
+		}
 	}
 
 }

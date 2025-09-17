@@ -47,7 +47,7 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(counter: Counter<T>) -> OTLP.V1Metric {
-		let values = counter.values.allValues
+		let values = counter.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -98,9 +98,7 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(counter: ObservableCounter<T>) -> OTLP.V1Metric {
-		counter.invokeCallback()
-
-		let values = counter.values.allValues
+		let values = counter.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -151,9 +149,7 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(counter: ObservableUpDownCounter<T>) -> OTLP.V1Metric {
-		counter.invokeCallback()
-
-		let values = counter.values.allValues
+		let values = counter.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -204,9 +200,7 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(gauge: ObservableGauge<T>) -> OTLP.V1Metric {
-		gauge.invokeCallback()
-
-		let values = gauge.values.allValues
+		let values = gauge.values.values
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -252,7 +246,7 @@ extension Exporter {
 	}
 
 	func exportOTLP<T>(histogram: Histogram<T>) -> OTLP.V1Metric {
-		let values = histogram.values.allValues
+		let values = histogram.values.values
 		var dataPoints = [OTLP.V1HistogramDataPoint]()
 
 		for key in values.keys {

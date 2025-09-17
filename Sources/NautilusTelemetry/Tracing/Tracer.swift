@@ -15,6 +15,7 @@ public final class Tracer {
 	public init() {
 		root = Span(name: "root", kind: .internal, traceId: traceId, parentId: nil)
 		flushInterval = 60
+		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushRetiredSpans() }
 		root.retireCallback = retire // initialization order
 	}
 
@@ -31,7 +32,7 @@ public final class Tracer {
 	public func flushTrace() {
 		root.end() // this implicitly retires
 
-		Tracer.lock.withLock {
+		lock.withLock {
 			traceId = Identifiers.generateTraceId()
 			root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
 		}
@@ -181,12 +182,14 @@ public final class Tracer {
 
 	// MARK: Internal
 
-	static let lock = OSAllocatedUnfairLock()
+	let lock = OSAllocatedUnfairLock()
 
 	var traceId = Identifiers.generateTraceId()
 	var root: Span
 	var retiredSpans = [Span]()
-	var flushTimer: DispatchSourceTimer? = nil
+
+	/// Optional to avoid initialization order issue
+	var flushTimer: FlushTimer? = nil
 
 	var currentBaggage: Baggage {
 		if let baggage = Baggage.currentBaggageTaskLocal {
@@ -199,33 +202,18 @@ public final class Tracer {
 	/// Sets the flush interval for reporting back to the configured ``Reporter``.
 	var flushInterval: TimeInterval {
 		didSet {
-			if let flushTimer {
-				flushTimer.cancel()
-				self.flushTimer = nil
-			}
-
-			flushTimer = DispatchSource.makeTimerSource(flags: [], queue: NautilusTelemetry.queue)
-
-			if let flushTimer {
-				flushTimer.setEventHandler(handler: { [weak self] in self?.flushRetiredSpans() })
-				flushTimer.schedule(
-					deadline: DispatchTime.now() + flushInterval,
-					repeating: flushInterval,
-					leeway: DispatchTimeInterval.milliseconds(100)
-				)
-				flushTimer.activate()
-			}
+			flushTimer?.flushInterval = flushInterval
 		}
 	}
 
 	func retire(span: Span) {
-		Tracer.lock.withLock {
+		lock.withLock {
 			retiredSpans.append(span)
 		}
 	}
 
 	func flushRetiredSpans() {
-		let spansToReport: [Span] = Tracer.lock.withLock {
+		let spansToReport: [Span] = lock.withLock {
 			// copy and empty the array.
 			let spans = retiredSpans
 			retiredSpans.removeAll()

@@ -22,9 +22,20 @@ public protocol Instrument: AnyObject {
 	/// A timestamp (start_time_unix_nano) which best represents the first possible moment a measurement could be recorded. This is commonly set to the timestamp when a metric collection system started.
 	var startTime: ContinuousClock.Instant { get }
 
+	var endTime: ContinuousClock.Instant? { get }
+
 	var aggregationTemporality: AggregationTemporality { get }
 
-	func reset()
+	/// In a thread safe manner:
+	///  - Invokes callback, if observable
+	///  - Captures a copy of the instrument at this moment in time
+	///  - Resets the original values to zero
+	///  - Returns the copy
+	/// In the copy: `endTime` is set to now
+	/// In the original: `startTime` is moved forward to now, values are reset to zero.
+	/// This model assumes delta mode metrics.
+	/// TBD: figure out aggregation model: https://opentelemetry.io/docs/specs/otel/metrics/data-model/#sums-delta-to-cumulative
+	func snapshotAndReset() -> Instrument
 }
 
 // MARK: - ExportableInstrument

@@ -15,7 +15,7 @@ extension OTLP {
 
 	// Enums are now numeric, per:
 	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
-	enum StatusStatusCode: Int, Codable, CaseIterable {
+	enum StatusStatusCode: Int, Codable {
 		case unset = 0
 		case ok = 1
 		case error = 2
