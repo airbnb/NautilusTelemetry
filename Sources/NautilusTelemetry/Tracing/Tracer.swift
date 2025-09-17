@@ -30,7 +30,7 @@ public final class Tracer {
 		case ifSampling
 
 		/// Always -- flag indicates sampling state
-		case unconditionally
+		case always
 	}
 
 	/// Convenience to track the expected state of sampling
@@ -38,7 +38,7 @@ public final class Tracer {
 	public var isSampling = false
 
 	/// Controls when to set `traceparent` header on HTTP spans
-	public var traceParentMode = TraceParentMode.unconditionally
+	public var traceParentMode = TraceParentMode.always
 
 	/// Fetch the current span, using task local or thread local values, falling back to the root span.
 	public var currentSpan: Span { currentBaggage.span }

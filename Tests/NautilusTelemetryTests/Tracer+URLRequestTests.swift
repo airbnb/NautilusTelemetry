@@ -103,7 +103,7 @@ final class TracerURLRequestTests: XCTestCase {
 	}
 
 	func testTraceParentModeUnconditionallyWhenSampled() throws {
-		tracer.traceParentMode = .unconditionally
+		tracer.traceParentMode = .always
 		tracer.isSampling = true
 
 		let url = try makeURL("/")
@@ -117,7 +117,7 @@ final class TracerURLRequestTests: XCTestCase {
 	}
 
 	func testTraceParentModeUnconditionallyWhenNotSampled() throws {
-		tracer.traceParentMode = .unconditionally
+		tracer.traceParentMode = .always
 		tracer.isSampling = false
 
 		let url = try makeURL("/")
@@ -145,6 +145,6 @@ final class TracerURLRequestTests: XCTestCase {
 	}
 
 	func testTraceParentModeDefaultValue() {
-		XCTAssertEqual(tracer.traceParentMode, .unconditionally)
+		XCTAssertEqual(tracer.traceParentMode, .always)
 	}
 }

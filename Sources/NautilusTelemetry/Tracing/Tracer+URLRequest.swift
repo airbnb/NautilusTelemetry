@@ -93,7 +93,7 @@ extension Tracer {
 		case .ifSampling:
 			span.addTraceHeadersIfSampling(&request, isSampling: isSampling)
 
-		case .unconditionally:
+		case .always:
 			span.addTraceHeadersUnconditionally(&request, isSampling: isSampling)
 		}
 
