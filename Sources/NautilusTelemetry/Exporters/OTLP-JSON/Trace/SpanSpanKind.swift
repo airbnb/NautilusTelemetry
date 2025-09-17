@@ -15,7 +15,7 @@ extension OTLP {
 
 	// Enums are now numeric, per:
 	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
-	enum SpanSpanKind: Int, Codable, CaseIterable {
+	enum SpanSpanKind: Int, Codable {
 		case unspecified = 0
 		case _internal = 1
 		case server = 2

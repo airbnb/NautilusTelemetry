@@ -75,13 +75,7 @@ enum TestUtils {
 		// Forward slash escaping is only needed for HTML embedding.
 		// Add pretty printing and sortedKeys for ease of reading test output
 		encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-		let json = try encoder.encode(value)
-
-		guard let jsonString = String(data: json, encoding: .utf8) else {
-			throw UtilError.unexpectedNil
-		}
-
-		return json
+		return try encoder.encode(value)
 	}
 
 	static func formattedHeaders(_ headers: [String: String]) -> String {

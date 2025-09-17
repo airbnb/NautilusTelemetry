@@ -65,16 +65,9 @@ struct HistogramValues<T: MetricNumeric> {
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
 
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		var value = values[attributes]
-		if value == nil {
-			value = HistogramBuckets<T>(explicitBounds: explicitBounds)
-		}
-		if var value {
-			value.record(number)
-			values[attributes] = value
-		} else {
-			assertionFailure("expected non-nil")
-		}
+		var value = values[attributes] ?? HistogramBuckets<T>(explicitBounds: explicitBounds)
+		value.record(number)
+		values[attributes] = value
 	}
 
 	mutating func reset() {

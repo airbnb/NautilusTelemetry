@@ -15,23 +15,18 @@ struct FlushTimer {
 	// MARK: Internal
 
 	var handler: () -> Void
-	var flushTimer: DispatchSourceTimer? = nil
+
+	lazy var flushTimer: DispatchSourceTimer = DispatchSource.makeTimerSource(flags: [], queue: NautilusTelemetry.queue)
 
 	var flushInterval: TimeInterval {
 		didSet {
-			if flushTimer == nil {
-				flushTimer = DispatchSource.makeTimerSource(flags: [], queue: NautilusTelemetry.queue)
-			}
-
-			if let flushTimer {
-				flushTimer.setEventHandler(handler: handler)
-				flushTimer.schedule(
-					deadline: DispatchTime.now() + flushInterval,
-					repeating: flushInterval,
-					leeway: DispatchTimeInterval.milliseconds(100)
-				)
-				flushTimer.activate()
-			}
+			flushTimer.setEventHandler(handler: handler)
+			flushTimer.schedule(
+				deadline: DispatchTime.now() + flushInterval,
+				repeating: flushInterval,
+				leeway: DispatchTimeInterval.milliseconds(100)
+			)
+			flushTimer.activate()
 		}
 	}
 }

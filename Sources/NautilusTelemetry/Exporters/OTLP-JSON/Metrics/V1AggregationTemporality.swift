@@ -20,7 +20,7 @@ extension OTLP {
 	// Enums are now numeric, per:
 	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
 	// https://github.com/open-telemetry/opentelemetry-proto/blob/v1.8.0/opentelemetry/proto/metrics/v1/metrics.proto#L283
-	enum V1AggregationTemporality: Int, Codable, CaseIterable {
+	enum V1AggregationTemporality: Int, Codable {
 		// UNSPECIFIED is the default AggregationTemporality, it MUST not be used.
 		case unspecified = 0
 		// DELTA is an AggregationTemporality for a metric aggregator which reports

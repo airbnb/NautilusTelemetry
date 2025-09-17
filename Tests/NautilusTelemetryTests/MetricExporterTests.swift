@@ -256,21 +256,23 @@ final class MetricExporterTests: XCTestCase {
 		let startTime = timeReference.nanosecondsSinceEpoch(from: now)
 		let endTime = startTime + 1_000_000_000
 
+		let exporter = Exporter(timeReference: timeReference)
+
 		let dataPoint = OTLP.V1NumberDataPoint(
-			attributes: nil,
+			attributes: exporter.convertToOTLP(attributes: ["test": "1"]),
 			startTimeUnixNano: "\(startTime)",
 			timeUnixNano: "\(endTime)",
-			asDouble: 666000,
-			asInt: nil, // int doesn't seem to work
+			asDouble: 8880.0,
+			asInt: "8880", // int doesn't seem to work
 			exemplars: nil,
 			flags: nil
 		)
 
 		dataPoints.append(dataPoint)
 
-		let sum = OTLP.V1Sum(dataPoints: dataPoints, aggregationTemporality: .cumulative, isMonotonic: false)
+		let sum = OTLP.V1Sum(dataPoints: dataPoints, aggregationTemporality: .cumulative, isMonotonic: true)
 		let testCounterMetric = OTLP.V1Metric(
-			name: "apple_counter",
+			name: "lychee_counter",
 			description: "Test counter",
 			unit: nil,
 			sum: sum
@@ -279,8 +281,6 @@ final class MetricExporterTests: XCTestCase {
 		metrics.append(testCounterMetric)
 
 		let scopeMetrics = OTLP.V1ScopeMetrics(scope: TestUtils.instrumentationScope, metrics: metrics, schemaUrl: TestUtils.schemaUrl)
-
-		let exporter = Exporter(timeReference: timeReference)
 
 		let resource = OTLP.V1Resource(
 			attributes: exporter.convertToOTLP(attributes: try TestUtils.additionalAttributes),

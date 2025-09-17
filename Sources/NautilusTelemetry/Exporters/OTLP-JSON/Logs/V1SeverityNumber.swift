@@ -16,7 +16,7 @@ extension OTLP {
 	// Enums are now numeric, per:
 	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
 	// https://github.com/open-telemetry/opentelemetry-proto/blob/v1.8.0/opentelemetry/proto/logs/v1/logs.proto#L88
-	enum V1SeverityNumber: Int, Codable, CaseIterable {
+	enum V1SeverityNumber: Int, Codable {
 		case unspecified = 0
 		case trace = 1
 		case trace2 = 2
