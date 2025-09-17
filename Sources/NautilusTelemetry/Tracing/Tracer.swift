@@ -21,9 +21,24 @@ public final class Tracer {
 
 	// MARK: Public
 
+	/// Controls when to set `traceparent` header on HTTP spans
+	public enum TraceParentMode {
+		/// Never set
+		case never
+
+		/// Only if sampling is enabled
+		case ifSampling
+
+		/// Always -- flag indicates sampling state
+		case always
+	}
+
 	/// Convenience to track the expected state of sampling
 	/// Traceparent headers use this by default
 	public var isSampling = false
+
+	/// Controls when to set `traceparent` header on HTTP spans
+	public var traceParentMode = TraceParentMode.always
 
 	/// Fetch the current span, using task local or thread local values, falling back to the root span.
 	public var currentSpan: Span { currentBaggage.span }

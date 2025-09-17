@@ -61,4 +61,90 @@ final class TracerURLRequestTests: XCTestCase {
 		let (headerName, headerValue) = span.traceParentHeaderValue(sampled: true)
 		XCTAssertEqual(urlRequest.value(forHTTPHeaderField: headerName), headerValue)
 	}
+
+	func testTraceParentModeNever() throws {
+		tracer.traceParentMode = .never
+		tracer.isSampling = true
+
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSpan(request: &urlRequest)
+
+		XCTAssertNil(urlRequest.value(forHTTPHeaderField: "traceparent"))
+
+		span.end()
+	}
+
+	func testTraceParentModeIfSamplingSampled() throws {
+		tracer.traceParentMode = .ifSampling
+		tracer.isSampling = true
+
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSpan(request: &urlRequest)
+
+		let (headerName, headerValue) = span.traceParentHeaderValue(sampled: true)
+		XCTAssertEqual(urlRequest.value(forHTTPHeaderField: headerName), headerValue)
+
+		span.end()
+	}
+
+	func testTraceParentModeIfSamplingNotSampled() throws {
+		tracer.traceParentMode = .ifSampling
+		tracer.isSampling = false
+
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSpan(request: &urlRequest)
+
+		XCTAssertNil(urlRequest.value(forHTTPHeaderField: "traceparent"))
+
+		span.end()
+	}
+
+	func testTraceParentModeUnconditionallyWhenSampled() throws {
+		tracer.traceParentMode = .always
+		tracer.isSampling = true
+
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSpan(request: &urlRequest)
+
+		let (headerName, headerValue) = span.traceParentHeaderValue(sampled: true)
+		XCTAssertEqual(urlRequest.value(forHTTPHeaderField: headerName), headerValue)
+
+		span.end()
+	}
+
+	func testTraceParentModeUnconditionallyWhenNotSampled() throws {
+		tracer.traceParentMode = .always
+		tracer.isSampling = false
+
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSpan(request: &urlRequest)
+
+		let (headerName, headerValue) = span.traceParentHeaderValue(sampled: false)
+		XCTAssertEqual(urlRequest.value(forHTTPHeaderField: headerName), headerValue)
+
+		span.end()
+	}
+
+	func testTraceParentModeWithSubtraceSpan() throws {
+		tracer.traceParentMode = .ifSampling
+		tracer.isSampling = true
+
+		let url = try makeURL("/")
+		var urlRequest = URLRequest(url: url)
+		let span = tracer.startSubtraceSpan(request: &urlRequest)
+
+		let (headerName, headerValue) = span.traceParentHeaderValue(sampled: true)
+		XCTAssertEqual(urlRequest.value(forHTTPHeaderField: headerName), headerValue)
+
+		span.end()
+	}
+
+	func testTraceParentModeDefaultValue() {
+		XCTAssertEqual(tracer.traceParentMode, .always)
+	}
 }
