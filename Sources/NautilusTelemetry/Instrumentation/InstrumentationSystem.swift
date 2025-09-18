@@ -29,6 +29,7 @@ public enum InstrumentationSystem {
 
 			// Convey the flush interval.
 			tracer.flushInterval = flushInterval
+			meter.flushInterval = flushInterval
 		}
 
 		#if DEBUG && os(iOS)
@@ -42,5 +43,9 @@ public enum InstrumentationSystem {
 	#if os(iOS)
 	static var metricKitInstrument = MetricKitInstrument()
 	#endif
+
+	static func resetBootstrapForTests() {
+		reporter = nil
+	}
 
 }

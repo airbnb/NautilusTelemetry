@@ -13,6 +13,7 @@ import XCTest
 final class ReporterTests: XCTestCase {
 
 	func testNoOpReporter() {
+		InstrumentationSystem.resetBootstrapForTests()
 		let reporter = NoOpReporter()
 		InstrumentationSystem.bootstrap(reporter: reporter)
 		XCTAssert((InstrumentationSystem.reporter as? NoOpReporter) === reporter)
@@ -21,5 +22,19 @@ final class ReporterTests: XCTestCase {
 		reporter.reportSpans([])
 		reporter.reportInstruments([])
 		reporter.subscribeToLifecycleEvents()
+	}
+
+	func testMeterFlushIntervalWiring() {
+		InstrumentationSystem.resetBootstrapForTests()
+		// Test that the meter flush interval gets wired up during bootstrap
+		let reporter = NoOpReporter()
+
+		// Bootstrap the instrumentation system
+		InstrumentationSystem.bootstrap(reporter: reporter)
+
+		// Verify that both tracer and meter got the flush interval from the reporter
+		let expectedInterval = reporter.flushInterval
+		XCTAssertEqual(InstrumentationSystem.tracer.flushInterval, expectedInterval)
+		XCTAssertEqual(InstrumentationSystem.meter.flushInterval, expectedInterval)
 	}
 }

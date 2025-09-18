@@ -40,4 +40,27 @@ final class MeterTests: XCTestCase {
 		}
 		XCTAssert(gauge.values.values.isEmpty)
 	}
+
+	func testFlushMetrics() throws {
+		let meter = Meter()
+
+		// Test that the flushMetrics method exists and can be called
+		// This tests the new public method added in the commit
+		meter.flushMetrics()
+
+		// The method should not crash when called with no instruments
+		XCTAssertNoThrow(meter.flushMetrics())
+	}
+
+	func testFlushIntervalWiring() throws {
+		let meter = Meter()
+
+		// Test that flush interval can be set
+		let originalInterval = meter.flushInterval
+		let newInterval: TimeInterval = 30.0
+
+		meter.flushInterval = newInterval
+		XCTAssertEqual(meter.flushInterval, newInterval)
+		XCTAssertNotEqual(meter.flushInterval, originalInterval)
+	}
 }
