@@ -318,9 +318,9 @@ extension Exporter {
 		}
 	}
 
-	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
-	// "Note that according to Protobuf specs 64-bit integer numbers in JSON-encoded payloads are encoded as decimal strings, and either numbers or strings are accepted when decoding."
-	// For simplicity, always use string
+	/// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
+	/// "Note that according to Protobuf specs 64-bit integer numbers in JSON-encoded payloads are encoded as decimal strings, and either numbers or strings are accepted when decoding."
+	/// For simplicity, always use string
 	func asIntString(_ value: some MetricNumeric) -> String? {
 		switch value {
 		case let i as Int: "\(i)"

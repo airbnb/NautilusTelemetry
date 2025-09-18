@@ -40,12 +40,12 @@ public enum InstrumentationSystem {
 
 	// MARK: Internal
 
-	static func resetBootstrapForTests() {
-		reporter = nil
-	}
-
 	#if os(iOS)
 	static var metricKitInstrument = MetricKitInstrument()
 	#endif
+
+	static func resetBootstrapForTests() {
+		reporter = nil
+	}
 
 }

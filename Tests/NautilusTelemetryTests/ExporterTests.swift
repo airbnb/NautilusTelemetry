@@ -160,11 +160,11 @@ final class ExporterTests: XCTestCase {
 		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
 
 		// Test Double conversion
-		let doubleValue: Double = 42.5
+		let doubleValue = 42.5
 		XCTAssertEqual(exporter.asDouble(doubleValue), 42.5)
 
 		// Test Int conversion
-		let intValue: Int = 100
+		let intValue = 100
 		XCTAssertEqual(exporter.asDouble(intValue), 100.0)
 	}
 
@@ -172,7 +172,7 @@ final class ExporterTests: XCTestCase {
 		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
 
 		// Test Int conversion
-		let intValue: Int = 42
+		let intValue = 42
 		XCTAssertEqual(exporter.asIntString(intValue), "42")
 
 		// Test negative Int
@@ -180,7 +180,7 @@ final class ExporterTests: XCTestCase {
 		XCTAssertEqual(exporter.asIntString(negativeIntValue), "-100")
 
 		// Test that Double returns nil (not supported by asIntString)
-		let doubleValue: Double = 42.5
+		let doubleValue = 42.5
 		XCTAssertNil(exporter.asIntString(doubleValue))
 	}
 
