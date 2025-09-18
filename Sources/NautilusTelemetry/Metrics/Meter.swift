@@ -18,7 +18,7 @@ public final class Meter {
 
 	public init() {
 		flushInterval = 60
-		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushActiveIntruments() }
+		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushActiveInstruments() }
 	}
 
 	// MARK: Public
@@ -87,6 +87,11 @@ public final class Meter {
 		return instrument
 	}
 
+	/// Flushes active metrics to the reporter
+	public func flushMetrics() {
+		flushActiveInstruments()
+	}
+
 	// MARK: Internal
 
 	/// Optional to avoid initialization order issue
@@ -114,7 +119,7 @@ public final class Meter {
 		}
 	}
 
-	func flushActiveIntruments() {
+	func flushActiveInstruments() {
 		let instrumentsToReport = lock.withLock {
 			// Make copies
 			activeInstruments.compactMap { $0.snapshotAndReset() }

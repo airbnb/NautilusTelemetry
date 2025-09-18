@@ -58,11 +58,8 @@ extension Exporter {
 			let attributes = convertToOTLP(attributes: key)
 			let startTimeUnixNano = convertToOTLP(time: counter.startTime)
 
-			let doubleValue: Double? = value as? Double
-			var intValueString: String? = nil
-			if let intValue = value as? Int {
-				intValueString = "\(intValue)"
-			}
+			let doubleValue: Double? = asDouble(value)
+			var intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -109,11 +106,8 @@ extension Exporter {
 			let attributes = convertToOTLP(attributes: key)
 			let startTimeUnixNano = convertToOTLP(time: counter.startTime)
 
-			let doubleValue: Double? = value as? Double
-			var intValueString: String? = nil
-			if let intValue = value as? Int {
-				intValueString = "\(intValue)"
-			}
+			let doubleValue: Double? = asDouble(value)
+			var intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -160,11 +154,8 @@ extension Exporter {
 			let attributes = convertToOTLP(attributes: key)
 			let startTimeUnixNano = convertToOTLP(time: counter.startTime)
 
-			let doubleValue: Double? = value as? Double
-			var intValueString: String? = nil
-			if let intValue = value as? Int {
-				intValueString = "\(intValue)"
-			}
+			let doubleValue: Double? = asDouble(value)
+			var intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -211,11 +202,8 @@ extension Exporter {
 			let attributes = convertToOTLP(attributes: key)
 			let startTimeUnixNano = convertToOTLP(time: gauge.startTime)
 
-			let doubleValue: Double? = value as? Double
-			var intValueString: String? = nil
-			if let intValue = value as? Int {
-				intValueString = "\(intValue)"
-			}
+			let doubleValue: Double? = asDouble(value)
+			var intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -298,7 +286,7 @@ extension Exporter {
 	}
 
 	func convertToOTLP(explicitBounds: [some MetricNumeric]) -> [Double] {
-		explicitBounds.map { asDouble($0) }
+		explicitBounds.compactMap { asDouble($0) }
 	}
 
 	func convertToOTLP(_ temporality: AggregationTemporality) -> OTLP.V1AggregationTemporality {
@@ -322,11 +310,21 @@ extension Exporter {
 		return unit.symbol
 	}
 
-	func asDouble(_ val: some MetricNumeric) -> Double {
-		switch val {
+	func asDouble(_ value: some MetricNumeric) -> Double? {
+		switch value {
 		case let d as Double: d
 		case let i as Int: Double(i)
-		default: fatalError()
+		default: nil
+		}
+	}
+
+	// https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding
+	// "Note that according to Protobuf specs 64-bit integer numbers in JSON-encoded payloads are encoded as decimal strings, and either numbers or strings are accepted when decoding."
+	// For simplicity, always use string
+	func asIntString(_ value: some MetricNumeric) -> String? {
+		switch value {
+		case let i as Int: "\(i)"
+		default: nil
 		}
 	}
 }

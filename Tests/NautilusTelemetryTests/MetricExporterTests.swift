@@ -37,7 +37,7 @@ final class MetricExporterTests: XCTestCase {
 		))
 
 		let expectedOutput =
-			#"{"resourceMetrics":[{"resource":{"attributes":"***"},"scopeMetrics":[{"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"200","attributes":"***","startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}],"scope":{"name":"NautilusTelemetry","version":"1.0"}}]}]}"#
+			#"{"resourceMetrics":[{"resource":{"attributes":"***"},"scopeMetrics":[{"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":200,"asInt":"200","attributes":"***","startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}],"scope":{"name":"NautilusTelemetry","version":"1.0"}}]}]}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -58,7 +58,7 @@ final class MetricExporterTests: XCTestCase {
 		))
 
 		let expectedOutput =
-			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
+			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":200,"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -78,7 +78,7 @@ final class MetricExporterTests: XCTestCase {
 		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 
 		let expectedOutput =
-			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
+			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":200,"asInt":"200","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -96,10 +96,10 @@ final class MetricExporterTests: XCTestCase {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 
 		let expectedOutput =
-			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
+			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -116,10 +116,10 @@ final class MetricExporterTests: XCTestCase {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 
 		let expectedOutput =
-			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
+			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -136,10 +136,10 @@ final class MetricExporterTests: XCTestCase {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 
 		let expectedOutput =
-			#"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
+			#"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
 
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
@@ -165,7 +165,7 @@ final class MetricExporterTests: XCTestCase {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction)
+		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
 
 		let expectedOutput =
 			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":1,"dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#

@@ -155,4 +155,51 @@ final class ExporterTests: XCTestCase {
 		let notConvertibleValue = exporter.convertToOTLP(value: notConvertible)
 		XCTAssertNil(notConvertibleValue)
 	}
+
+	func testAsDoubleHelper() throws {
+		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
+
+		// Test Double conversion
+		let doubleValue: Double = 42.5
+		XCTAssertEqual(exporter.asDouble(doubleValue), 42.5)
+
+		// Test Int conversion
+		let intValue: Int = 100
+		XCTAssertEqual(exporter.asDouble(intValue), 100.0)
+	}
+
+	func testAsIntStringHelper() throws {
+		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
+
+		// Test Int conversion
+		let intValue: Int = 42
+		XCTAssertEqual(exporter.asIntString(intValue), "42")
+
+		// Test negative Int
+		let negativeIntValue: Int = -100
+		XCTAssertEqual(exporter.asIntString(negativeIntValue), "-100")
+
+		// Test that Double returns nil (not supported by asIntString)
+		let doubleValue: Double = 42.5
+		XCTAssertNil(exporter.asIntString(doubleValue))
+	}
+
+	func testConvertToOTLPExplicitBounds() throws {
+		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
+
+		// Test with Int bounds
+		let intBounds = [10, 20, 30]
+		let convertedIntBounds = exporter.convertToOTLP(explicitBounds: intBounds)
+		XCTAssertEqual(convertedIntBounds, [10.0, 20.0, 30.0])
+
+		// Test with Double bounds
+		let doubleBounds = [10.5, 20.5, 30.5]
+		let convertedDoubleBounds = exporter.convertToOTLP(explicitBounds: doubleBounds)
+		XCTAssertEqual(convertedDoubleBounds, [10.5, 20.5, 30.5])
+
+		// Test empty bounds
+		let emptyBounds: [Int] = []
+		let convertedEmptyBounds = exporter.convertToOTLP(explicitBounds: emptyBounds)
+		XCTAssertEqual(convertedEmptyBounds, [])
+	}
 }
