@@ -37,7 +37,11 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
 
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		precondition(number >= 0, "counters can only be increased")
+		if number < 0 {
+			assert(false, "histograms can only be increased")
+			return
+		}
+
 		lock.withLockUnchecked {
 			values.record(number, attributes: attributes)
 		}
