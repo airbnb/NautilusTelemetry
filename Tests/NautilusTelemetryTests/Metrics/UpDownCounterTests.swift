@@ -449,7 +449,6 @@ final class UpDownCounterTests: XCTestCase {
 		let counter = UpDownCounter<Int>(name: "test_counter", unit: nil, description: nil)
 
 		// Should inherit Counter properties but override isMonotonic
-		XCTAssertTrue(counter is Counter<Int>)
 		XCTAssertFalse(counter.isMonotonic) // Overridden behavior
 
 		// Should have access to Counter methods

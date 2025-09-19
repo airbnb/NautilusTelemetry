@@ -250,7 +250,7 @@ final class CounterTests: XCTestCase {
 		let attributes: TelemetryAttributes = ["load_test": "true"]
 
 		// Add values many times
-		for i in 1...1000 {
+		for _ in 1...1000 {
 			counter.add(1, attributes: attributes)
 		}
 

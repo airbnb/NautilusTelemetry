@@ -166,7 +166,7 @@ final class ObservableCounterTests: XCTestCase {
 		let counter = ObservableCounter<Int>(name: "test_counter", unit: nil, description: nil, callback: callback)
 		counter.observe(42)
 
-		let snapshot = counter.snapshotAndReset()
+		_ = counter.snapshotAndReset()
 
 		XCTAssertTrue(callbackInvoked)
 		XCTAssertNotNil(callbackCounter)
@@ -197,9 +197,9 @@ final class ObservableCounterTests: XCTestCase {
 
 		let counter = ObservableCounter<Int>(name: "test_counter", unit: nil, description: nil, callback: callback)
 
-		counter.snapshotAndReset()
-		counter.snapshotAndReset()
-		counter.snapshotAndReset()
+		_ = counter.snapshotAndReset()
+		_ = counter.snapshotAndReset()
+		_ = counter.snapshotAndReset()
 
 		XCTAssertEqual(callbackCount, 3)
 	}

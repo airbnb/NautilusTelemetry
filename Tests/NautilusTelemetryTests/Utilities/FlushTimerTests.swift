@@ -64,7 +64,7 @@ final class FlushTimerTests: XCTestCase {
 
 		let expectation = XCTestExpectation(description: "Timer setup correctly on init")
 
-		let timer = FlushTimer(flushInterval: 0.05) {
+		_ = FlushTimer(flushInterval: 0.05) {
 			expectation.fulfill()
 		}
 

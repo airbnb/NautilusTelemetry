@@ -172,7 +172,7 @@ final class ObservableGaugeTests: XCTestCase {
 		let gauge = ObservableGauge<Int>(name: "test_gauge", unit: nil, description: nil, callback: callback)
 		gauge.observe(42)
 
-		let snapshot = gauge.snapshotAndReset()
+		_ = gauge.snapshotAndReset()
 
 		XCTAssertTrue(callbackInvoked)
 		XCTAssertNotNil(callbackGauge)
@@ -203,9 +203,9 @@ final class ObservableGaugeTests: XCTestCase {
 
 		let gauge = ObservableGauge<Int>(name: "test_gauge", unit: nil, description: nil, callback: callback)
 
-		gauge.snapshotAndReset()
-		gauge.snapshotAndReset()
-		gauge.snapshotAndReset()
+		_ = gauge.snapshotAndReset()
+		_ = gauge.snapshotAndReset()
+		_ = gauge.snapshotAndReset()
 
 		XCTAssertEqual(callbackCount, 3)
 	}
