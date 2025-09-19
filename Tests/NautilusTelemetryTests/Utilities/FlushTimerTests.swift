@@ -64,12 +64,14 @@ final class FlushTimerTests: XCTestCase {
 
 		let expectation = XCTestExpectation(description: "Timer setup correctly on init")
 
-		_ = FlushTimer(flushInterval: 0.05) {
+		let timer = FlushTimer(flushInterval: 0.05) {
 			expectation.fulfill()
 		}
 
 		// Verify the timer is active immediately after init
 		// (setupTimer is called in init, not just in didSet)
 		wait(for: [expectation], timeout: 1.0)
+
+		XCTAssertNotNil(timer) // keep timer alive
 	}
 }

@@ -13,8 +13,7 @@ struct MetricValues<T: MetricNumeric> {
 	var values = [TelemetryAttributes: T]()
 
 	var isEmpty: Bool {
-		guard !values.isEmpty else { return true }
-		return values.values.allSatisfy { $0 == 0 }
+		values.isEmpty || values.values.allSatisfy { $0 == 0 }
 	}
 
 	mutating func add(_ number: T, attributes: TelemetryAttributes = [:]) {

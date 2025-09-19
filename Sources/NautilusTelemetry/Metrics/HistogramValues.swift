@@ -27,8 +27,7 @@ struct HistogramBuckets<T: MetricNumeric> {
 	let explicitBounds: [T]
 
 	var isEmpty: Bool {
-		guard !data.isEmpty else { return true }
-		return data.allSatisfy { $0 == 0 }
+		return data.isEmpty || data.allSatisfy { $0 == 0 }
 	}
 
 	mutating func record(_ number: T) {
@@ -71,8 +70,7 @@ struct HistogramValues<T: MetricNumeric> {
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
 
 	var isEmpty: Bool {
-		guard !values.isEmpty else { return true }
-		return values.values.allSatisfy { $0.isEmpty }
+		values.isEmpty || values.values.allSatisfy { $0.isEmpty }
 	}
 
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
