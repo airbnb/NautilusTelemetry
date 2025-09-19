@@ -30,6 +30,8 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 
 	public var isMonotonic: Bool { true }
 
+	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+
 	/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
 		lock.withLockUnchecked {
