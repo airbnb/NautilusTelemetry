@@ -59,7 +59,7 @@ extension Exporter {
 			let startTimeUnixNano = convertToOTLP(time: counter.startTime)
 
 			let doubleValue: Double? = asDouble(value)
-			var intValueString: String? = asIntString(value)
+			let intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -107,7 +107,7 @@ extension Exporter {
 			let startTimeUnixNano = convertToOTLP(time: counter.startTime)
 
 			let doubleValue: Double? = asDouble(value)
-			var intValueString: String? = asIntString(value)
+			let intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -155,7 +155,7 @@ extension Exporter {
 			let startTimeUnixNano = convertToOTLP(time: counter.startTime)
 
 			let doubleValue: Double? = asDouble(value)
-			var intValueString: String? = asIntString(value)
+			let intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 
@@ -203,7 +203,7 @@ extension Exporter {
 			let startTimeUnixNano = convertToOTLP(time: gauge.startTime)
 
 			let doubleValue: Double? = asDouble(value)
-			var intValueString: String? = asIntString(value)
+			let intValueString: String? = asIntString(value)
 
 			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
 

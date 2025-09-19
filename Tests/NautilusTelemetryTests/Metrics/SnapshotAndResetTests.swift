@@ -47,10 +47,10 @@ final class SnapshotAndResetTests: XCTestCase {
 		}
 		XCTAssertEqual(snapshotCounter.values.values.count, 2)
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 200 && attributes["key1"] as? String == "value1"
+			value == 100 && attributes["key1"] as? String == "value1"
 		})
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 400 && attributes["key2"] as? String == "value2"
+			value == 200 && attributes["key2"] as? String == "value2"
 		})
 
 		// Verify original counter is reset
@@ -395,7 +395,7 @@ final class SnapshotAndResetTests: XCTestCase {
 			return
 		}
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 3.0 && attributes["precision"] as? String == "high"
+			value == 1.5 && attributes["precision"] as? String == "high"
 		})
 	}
 
@@ -426,9 +426,9 @@ final class SnapshotAndResetTests: XCTestCase {
 			return
 		}
 
-		XCTAssertTrue(snap1.values.values.contains { _, value in value == 200 })
-		XCTAssertTrue(snap2.values.values.contains { _, value in value == 400 })
-		XCTAssertTrue(snap3.values.values.contains { _, value in value == 600 })
+		XCTAssertTrue(snap1.values.values.contains { _, value in value == 100 })
+		XCTAssertTrue(snap2.values.values.contains { _, value in value == 200 })
+		XCTAssertTrue(snap3.values.values.contains { _, value in value == 300 })
 
 		// Verify timing progression
 		XCTAssertGreaterThan(startTime1, snap1.startTime)

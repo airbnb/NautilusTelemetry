@@ -36,6 +36,8 @@ public protocol Instrument: AnyObject {
 	/// This model assumes delta mode metrics.
 	/// TBD: figure out aggregation model: https://opentelemetry.io/docs/specs/otel/metrics/data-model/#sums-delta-to-cumulative
 	func snapshotAndReset() -> Instrument
+
+	var isEmpty: Bool { get }
 }
 
 // MARK: - ExportableInstrument

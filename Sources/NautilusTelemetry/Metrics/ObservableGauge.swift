@@ -28,6 +28,8 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public let aggregationTemporality = AggregationTemporality.unspecified
 
+	public var isEmpty: Bool { false }
+
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
 		lock.withLockUnchecked {
 			values.set(number, attributes: attributes)

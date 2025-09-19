@@ -12,6 +12,6 @@ public class UpDownCounter<T: MetricNumeric>: Counter<T> {
 
 	/// May be negative.
 	override public func add(_ number: T, attributes: TelemetryAttributes = [:]) {
-		values.add(number, attributes: attributes)
+		super.add(number, attributes: attributes)
 	}
 }

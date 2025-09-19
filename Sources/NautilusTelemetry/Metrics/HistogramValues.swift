@@ -26,6 +26,10 @@ struct HistogramBuckets<T: MetricNumeric> {
 	var data: [UInt64]
 	let explicitBounds: [T]
 
+	var isEmpty: Bool {
+		return data.isEmpty || data.allSatisfy { $0 == 0 }
+	}
+
 	mutating func record(_ number: T) {
 		sum += number
 		count += 1
@@ -42,6 +46,7 @@ struct HistogramBuckets<T: MetricNumeric> {
 		// In the range of (lastBound...infinity).
 		data[count] += 1
 	}
+
 }
 
 // MARK: - HistogramValues
@@ -64,6 +69,10 @@ struct HistogramValues<T: MetricNumeric> {
 
 	var values = [TelemetryAttributes: HistogramBuckets<T>]()
 
+	var isEmpty: Bool {
+		values.isEmpty || values.values.allSatisfy { $0.isEmpty }
+	}
+
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
 		var value = values[attributes] ?? HistogramBuckets<T>(explicitBounds: explicitBounds)
 		value.record(number)
@@ -81,4 +90,5 @@ struct HistogramValues<T: MetricNumeric> {
 
 		return copy
 	}
+
 }

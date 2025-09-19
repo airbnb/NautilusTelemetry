@@ -71,5 +71,7 @@ final class FlushTimerTests: XCTestCase {
 		// Verify the timer is active immediately after init
 		// (setupTimer is called in init, not just in didSet)
 		wait(for: [expectation], timeout: 1.0)
+
+		XCTAssertNotNil(timer) // keep timer alive
 	}
 }

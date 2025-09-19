@@ -29,8 +29,14 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	public var isMonotonic: Bool { true }
 
+	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+
 	public func add(_ number: T, attributes: TelemetryAttributes = [:]) {
-		precondition(number >= 0, "counters can only be increased")
+		if isMonotonic, number < 0 {
+			// UpDownCounter is not monotonic
+			assert(false, "monotonic counters can only be increased")
+			return
+		}
 		lock.withLockUnchecked {
 			values.add(number, attributes: attributes)
 		}
