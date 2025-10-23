@@ -24,7 +24,7 @@ public struct ResourceAttributes {
 		vendorIdentifier: String,
 		deviceModelIdentifier: String,
 		osType: String = "darwin",
-		osName: String = "iOS",
+		osName: String = defaultOSName,
 		osVersion: String,
 		additionalAttributes: TelemetryAttributes?
 	) {
@@ -39,6 +39,14 @@ public struct ResourceAttributes {
 	}
 
 	// MARK: Public
+
+	#if os(macOS)
+	public static let defaultOSName = "macOS"
+	#elseif os(iOS)
+	public static let defaultOSName = "iOS"
+	#else
+	public static let defaultOSName = "unknown"
+	#endif
 
 	/// Create a default set of resource attributes.
 	/// - Parameter additionalAttributes: Additional attributes, that may override existing attributes. Must conform to https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/attribute-naming.md
@@ -96,7 +104,7 @@ public struct ResourceAttributes {
 		var attributes = TelemetryAttributes()
 
 		// https://opentelemetry.io/docs/specs/semconv/registry/attributes/service/
-		attributes["service.name"] = "ios.app"
+		attributes["service.name"] = "\(osName.lowercased()).app"
 		attributes["service.namespace"] = bundleIdentifier
 		attributes["service.version"] = applicationVersion
 		attributes["telemetry.sdk.name"] = "NautilusTelemetry"
@@ -108,7 +116,7 @@ public struct ResourceAttributes {
 		attributes["device.manufacturer"] = "Apple"
 		attributes["device.model"] = deviceModelIdentifier
 
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/os.md
+		// https://opentelemetry.io/docs/specs/semconv/resource/os/
 		attributes["os.type"] = osType
 		attributes["os.name"] = osName
 		attributes["os.version"] = osVersion
