@@ -25,7 +25,10 @@ public enum HardwareDetails {
 	// MARK: Private
 
 	private static var isOnMac: Bool = {
-		// This doesn't change after launch, so evaluate once.
+		#if os(macOS)
+		true
+		#else
+		/// This doesn't change after launch, so evaluate once.
 		var isOnMac = false
 
 		#if targetEnvironment(simulator)
@@ -43,8 +46,8 @@ public enum HardwareDetails {
 			}
 		}
 		#endif
-
 		return isOnMac
+		#endif
 	}()
 
 	private static func sysctlbyname(_ name: String) -> String {

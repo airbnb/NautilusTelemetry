@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Exporter
+
 /// Provides conversions to OTLP-JSON format
 public struct Exporter {
 
@@ -106,9 +108,10 @@ public struct Exporter {
 			return nil
 		}
 
+		let filteredAttributes = attributes.filteringNilValues()
 		var otlpAttributes = [OTLP.V1KeyValue]()
 
-		let keys = attributes.keys.sorted()
+		let keys = filteredAttributes.keys.sorted()
 		for key in keys {
 			if let value = attributes[key] {
 				if let v1AnyValue = convertToOTLP(value: value) {
@@ -123,4 +126,19 @@ public struct Exporter {
 		return otlpAttributes
 	}
 
+}
+
+extension Dictionary where Value == AnyHashable {
+
+	/// Filters Optional values boxed as AnyHashable
+	/// - Returns: a filtered dictionary, with optional values removed
+	func filteringNilValues() -> [Key: Value] {
+		compactMapValues { value -> AnyHashable? in
+			// Check if the AnyHashable wraps an Optional that is nil
+			if case Optional<Any>.none = value.base {
+				return nil
+			}
+			return value
+		}
+	}
 }

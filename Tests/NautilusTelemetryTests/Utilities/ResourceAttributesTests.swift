@@ -19,15 +19,24 @@ final class ResourceAttributesTests: XCTestCase {
 
 		_ = try XCTUnwrap(exporter.convertToOTLP(attributes: attributes)) // make sure it converts
 
-		_ = try XCTUnwrap(attributes["service.name"])
+		let serviceName = try XCTUnwrap(attributes["service.name"] as? String)
 		_ = try XCTUnwrap(attributes["service.version"])
 		_ = try XCTUnwrap(attributes["telemetry.sdk.name"])
 		_ = try XCTUnwrap(attributes["telemetry.sdk.language"])
 		_ = try XCTUnwrap(attributes["device.id"])
 		_ = try XCTUnwrap(attributes["foo"])
 		_ = try XCTUnwrap(attributes["os.type"])
-		_ = try XCTUnwrap(attributes["os.name"])
+		let osName = try XCTUnwrap(attributes["os.name"] as? String)
 		let osVersion = try XCTUnwrap(attributes["os.version"] as? String)
+
+		// Verify platform-specific OS name
+		#if os(macOS)
+		XCTAssertEqual(osName, "macOS")
+		XCTAssertEqual(serviceName, "macos.app")
+		#elseif os(iOS)
+		XCTAssertEqual(osName, "iOS")
+		XCTAssertEqual(serviceName, "ios.app")
+		#endif
 
 		let components = osVersion.split(separator: ".")
 		XCTAssert(components.count >= 2)

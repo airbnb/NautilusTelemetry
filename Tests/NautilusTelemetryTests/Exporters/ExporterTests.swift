@@ -202,4 +202,32 @@ final class ExporterTests: XCTestCase {
 		let convertedEmptyBounds = exporter.convertToOTLP(explicitBounds: emptyBounds)
 		XCTAssertEqual(convertedEmptyBounds, [])
 	}
+
+	func testFilteringNilValues() throws {
+		// Test that nil values wrapped in AnyHashable are properly filtered out
+		let nilValue: String? = nil
+		let validString = "hello"
+		let validInt = 42
+		let validBool = true
+
+		let dictionary: [String: AnyHashable] = [
+			"nilKey": AnyHashable(nilValue),
+			"stringKey": AnyHashable(validString),
+			"intKey": AnyHashable(validInt),
+			"boolKey": AnyHashable(validBool),
+		]
+
+		let filtered = dictionary.filteringNilValues()
+
+		// Verify that the nil value was removed
+		XCTAssertNil(filtered["nilKey"])
+
+		// Verify that valid values remain
+		XCTAssertEqual(filtered["stringKey"] as? String, validString)
+		XCTAssertEqual(filtered["intKey"] as? Int, validInt)
+		XCTAssertEqual(filtered["boolKey"] as? Bool, validBool)
+
+		// Verify the count
+		XCTAssertEqual(filtered.count, 3)
+	}
 }

@@ -117,6 +117,8 @@ public final class Span: Identifiable {
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
 	///   - value: a value.
 	public func addAttribute(_ name: String, _ value: AnyHashable?) {
+		guard let value else { return }
+
 		// AnyHashable is not Sendable. For now, make this unchecked, but could consider wrapping ala:
 		// https://github.com/pointfreeco/swift-concurrency-extras/blob/main/Sources/ConcurrencyExtras/AnyHashableSendable.swift
 		lock.withLockUnchecked {
