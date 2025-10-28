@@ -203,31 +203,40 @@ final class ExporterTests: XCTestCase {
 		XCTAssertEqual(convertedEmptyBounds, [])
 	}
 
-	func testFilteringNilValues() throws {
-		// Test that nil values wrapped in AnyHashable are properly filtered out
-		let nilValue: String? = nil
-		let validString = "hello"
-		let validInt = 42
-		let validBool = true
+	func testConvertToOTLPAttributes() throws {
+		let exporter = Exporter(timeReference: timeReference, prettyPrint: false)
 
-		let dictionary: [String: AnyHashable] = [
-			"nilKey": AnyHashable(nilValue),
-			"stringKey": AnyHashable(validString),
-			"intKey": AnyHashable(validInt),
-			"boolKey": AnyHashable(validBool),
+		// Test nil attributes returns nil
+		XCTAssertNil(exporter.convertToOTLP(attributes: nil))
+
+		// Test sorting by key
+		let attributes: TelemetryAttributes = [
+			"zebra": "last",
+			"apple": "first",
+			"middle": 123,
 		]
 
-		let filtered = dictionary.filteringNilValues()
+		let result = try XCTUnwrap(exporter.convertToOTLP(attributes: attributes))
 
-		// Verify that the nil value was removed
-		XCTAssertNil(filtered["nilKey"])
+		// Verify sorting
+		XCTAssertEqual(result.count, 3)
+		XCTAssertEqual(result[0].key, "apple")
+		XCTAssertEqual(result[0].value?.stringValue, "first")
+		XCTAssertEqual(result[1].key, "middle")
+		XCTAssertEqual(result[1].value?.intValue as? Int, 123)
+		XCTAssertEqual(result[2].key, "zebra")
+		XCTAssertEqual(result[2].value?.stringValue, "last")
 
-		// Verify that valid values remain
-		XCTAssertEqual(filtered["stringKey"] as? String, validString)
-		XCTAssertEqual(filtered["intKey"] as? Int, validInt)
-		XCTAssertEqual(filtered["boolKey"] as? Bool, validBool)
+		// Test nil filtering
+		let nilValue: String? = nil
+		let attributesWithNil: TelemetryAttributes = [
+			"valid": "value",
+			"invalid": AnyHashable(nilValue),
+		]
 
-		// Verify the count
-		XCTAssertEqual(filtered.count, 3)
+		let filteredResult = try XCTUnwrap(exporter.convertToOTLP(attributes: attributesWithNil))
+		XCTAssertEqual(filteredResult.count, 1)
+		XCTAssertEqual(filteredResult[0].key, "valid")
+		XCTAssertEqual(filteredResult[0].value?.stringValue, "value")
 	}
 }

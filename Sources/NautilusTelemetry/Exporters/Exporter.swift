@@ -108,37 +108,22 @@ public struct Exporter {
 			return nil
 		}
 
-		let filteredAttributes = attributes.filteringNilValues()
-		var otlpAttributes = [OTLP.V1KeyValue]()
-
-		let keys = filteredAttributes.keys.sorted()
-		for key in keys {
-			if let value = attributes[key] {
-				if let v1AnyValue = convertToOTLP(value: value) {
-					let keyValue = OTLP.V1KeyValue(key: key, value: v1AnyValue)
-					otlpAttributes.append(keyValue)
-				} else {
-					assert(false, "failed to convert \(key), \(value)")
-				}
-			}
-		}
-
-		return otlpAttributes
-	}
-
-}
-
-extension Dictionary where Value == AnyHashable {
-
-	/// Filters Optional values boxed as AnyHashable
-	/// - Returns: a filtered dictionary, with optional values removed
-	func filteringNilValues() -> [Key: Value] {
-		compactMapValues { value -> AnyHashable? in
-			// Check if the AnyHashable wraps an Optional that is nil
+		let otlpAttributes = attributes.compactMap { (key, value) -> OTLP.V1KeyValue? in
+			// Skip nil values wrapped in AnyHashable
 			if case Optional<Any>.none = value.base {
 				return nil
 			}
-			return value
+
+			guard let v1AnyValue = convertToOTLP(value: value) else {
+				assert(false, "failed to convert \(key), \(value)")
+				return nil
+			}
+
+			return OTLP.V1KeyValue(key: key, value: v1AnyValue)
 		}
+
+		// Sort by key for deterministic output
+		return otlpAttributes.sorted { ($0.key ?? "") < ($1.key ?? "") }
 	}
+
 }
