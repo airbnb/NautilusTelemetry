@@ -45,13 +45,14 @@ public final class Tracer {
 
 	/// Flushes the root span, and cycles the trace id
 	public func flushTrace() {
-		root.end() // this implicitly retires
-
-		lock.withLock {
+		let priorRoot = lock.withLock {
+			let priorRoot = root
 			traceId = Identifiers.generateTraceId()
 			root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
+			return priorRoot
 		}
 
+		priorRoot.end() // this implicitly retires
 		flushRetiredSpans()
 	}
 
@@ -210,7 +211,7 @@ public final class Tracer {
 		if let baggage = Baggage.currentBaggageTaskLocal {
 			baggage
 		} else {
-			Baggage(span: root)
+			Baggage(span: lock.withLock { root })
 		}
 	}
 

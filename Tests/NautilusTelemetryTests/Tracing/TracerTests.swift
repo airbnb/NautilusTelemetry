@@ -22,4 +22,29 @@ final class TracerTests: XCTestCase {
 		XCTAssertEqual(parent.links[0].id, child.id)
 		XCTAssertEqual(parent.links[0].traceId, child.traceId)
 	}
+
+	func testFlushTrace() {
+		let originalRoot = tracer.root
+		let originalTraceId = tracer.traceId
+
+		XCTAssertFalse(originalRoot.ended)
+
+		let childSpan = tracer.startSpan(name: "test-child")
+		childSpan.end()
+
+		tracer.flushTrace()
+
+		XCTAssertTrue(originalRoot.ended)
+
+		let newRoot = tracer.root
+		XCTAssertNotIdentical(originalRoot, newRoot)
+
+		let newTraceId = tracer.traceId
+		XCTAssertNotEqual(originalTraceId, newTraceId)
+		XCTAssertEqual(newRoot.traceId, newTraceId)
+
+		XCTAssertFalse(newRoot.ended)
+
+		XCTAssertEqual(tracer.retiredSpans.count, 0)
+	}
 }
