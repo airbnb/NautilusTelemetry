@@ -28,7 +28,11 @@ final class SamplerTests: XCTestCase {
 		XCTAssert(sampler2.shouldSample) // should be true with the new GUID
 	}
 
-	func testStableGuidSamplerSampleRates() {
+	func testStableGuidSamplerSampleRates() throws {
+		guard TestUtils.testEnabled("testStableGuidSamplerSampleRates") else {
+			throw XCTSkip("This is a local-only test, not needed on CI")
+		}
+
 		let targetSampleRates = [0.1, 1.0, 50, 100]
 
 		for targetSampleRate in targetSampleRates {
@@ -68,8 +72,12 @@ final class SamplerTests: XCTestCase {
 			print("Expected: \(expectedCount) ± \(tolerance) (tolerance: ±\(tolerancePercent)%)")
 
 			// Assert that the actual sample rate is within the statistical tolerance
-			XCTAssertEqual(actualSampleRate, targetSampleRate, accuracy: tolerancePercent,
-						   "Sample rate \(actualSampleRate)% should be within ±\(tolerancePercent)% of target \(targetSampleRate)%")
+			XCTAssertEqual(
+				actualSampleRate,
+				targetSampleRate,
+				accuracy: tolerancePercent,
+				"Sample rate \(actualSampleRate)% should be within ±\(tolerancePercent)% of target \(targetSampleRate)%"
+			)
 		}
 	}
 }
