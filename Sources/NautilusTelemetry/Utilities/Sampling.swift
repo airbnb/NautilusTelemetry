@@ -93,7 +93,7 @@ public final class StableGuidSampler: Sampler {
 
 		let val = hashResult.withUnsafeBytes { $0.load(as: UInt32.self) }
 		let sessionRampVal = Double(val) / Double(UInt32.max) * 100.0
-		shouldSample = sessionRampVal < sampleRate
+		shouldSample = sessionRampVal <= sampleRate
 	}
 
 	// MARK: Private
