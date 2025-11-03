@@ -27,7 +27,7 @@ struct HistogramBuckets<T: MetricNumeric> {
 	let explicitBounds: [T]
 
 	var isEmpty: Bool {
-		return data.isEmpty || data.allSatisfy { $0 == 0 }
+		data.isEmpty || data.allSatisfy { $0 == 0 }
 	}
 
 	mutating func record(_ number: T) {
