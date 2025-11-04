@@ -13,7 +13,7 @@ public final class Tracer {
 	// MARK: Lifecycle
 
 	public init() {
-		root = Span(name: "root", kind: .internal, traceId: traceId, parentId: nil)
+		_root = Span(name: "root", kind: .internal, traceId: traceId, parentId: nil)
 		flushInterval = 60
 		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushRetiredSpans() }
 		root.retireCallback = retire // initialization order
@@ -43,12 +43,14 @@ public final class Tracer {
 	/// Fetch the current span, using task local or thread local values, falling back to the root span.
 	public var currentSpan: Span { currentBaggage.span }
 
+	public var root: Span { lock.withLock { _root } }
+
 	/// Flushes the root span, and cycles the trace id
 	public func flushTrace() {
 		let priorRoot = lock.withLock {
-			let priorRoot = root
+			let priorRoot = _root
 			traceId = Identifiers.generateTraceId()
-			root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
+			_root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
 			return priorRoot
 		}
 
@@ -201,7 +203,6 @@ public final class Tracer {
 	let lock = OSAllocatedUnfairLock()
 
 	var traceId = Identifiers.generateTraceId()
-	var root: Span
 	var retiredSpans = [Span]()
 
 	/// Optional to avoid initialization order issue
@@ -211,7 +212,7 @@ public final class Tracer {
 		if let baggage = Baggage.currentBaggageTaskLocal {
 			baggage
 		} else {
-			Baggage(span: lock.withLock { root })
+			Baggage(span: root)
 		}
 	}
 
@@ -291,4 +292,10 @@ public final class Tracer {
 			)
 		}
 	}
+
+	// MARK: Private
+
+	/// Must be accessed with lock
+	private var _root: Span
+
 }
