@@ -108,7 +108,7 @@ public struct Exporter {
 			return nil
 		}
 
-		let otlpAttributes = attributes.compactMap { (key, value) -> OTLP.V1KeyValue? in
+		let otlpAttributes = attributes.compactMap { key, value -> OTLP.V1KeyValue? in
 			// Skip nil values wrapped in AnyHashable
 			if case Optional<Any>.none = value.base {
 				return nil

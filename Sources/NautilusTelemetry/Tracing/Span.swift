@@ -103,7 +103,7 @@ public final class Span: Identifiable {
 	}
 
 	public func end() {
-		assert(endTime == nil)
+		assert(endTime == nil, "span \(name) was ended more than once")
 		endTime = ContinuousClock.now
 
 		if let retireCallback {
