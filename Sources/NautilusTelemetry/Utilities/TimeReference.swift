@@ -20,7 +20,12 @@ public struct TimeReference {
 	///  I.e., if the server clock is exactly one hour ahead, this value should be `3600.0`.
 	/// - Parameter serverOffset: time offset to server.
 	public init(serverOffset: TimeInterval) {
-		serverOffsetNanos = Int64(serverOffset * Double(NSEC_PER_SEC))
+		if serverOffset.isFinite {
+			serverOffsetNanos = Int64(serverOffset * Double(NSEC_PER_SEC))
+		} else {
+			assertionFailure("expected finite serverOffset")
+			serverOffsetNanos = 0
+		}
 	}
 
 	// MARK: Internal
