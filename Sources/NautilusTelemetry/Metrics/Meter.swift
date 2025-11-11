@@ -18,7 +18,7 @@ public final class Meter {
 
 	public init() {
 		flushInterval = 60
-		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushActiveInstruments() }
+		flushTimer = FlushTimer(flushInterval: flushInterval, repeating: true) { [weak self] in self?.flushActiveInstruments() }
 	}
 
 	// MARK: Public

@@ -7,9 +7,10 @@ struct FlushTimer {
 
 	// MARK: Lifecycle
 
-	init(flushInterval: TimeInterval, handler: @escaping () -> Void) {
+	init(flushInterval: TimeInterval, repeating: Bool, handler: @escaping () -> Void) {
 		flushTimer = DispatchSource.makeTimerSource(flags: [], queue: NautilusTelemetry.queue)
-		self.flushInterval = flushInterval
+		self._flushInterval = max(minimumFlushInterval, flushInterval)
+		self.repeating = repeating
 		self.handler = handler
 		// didSet doesn't run in init
 		setupTimer()
@@ -22,7 +23,9 @@ struct FlushTimer {
 	let flushTimer: DispatchSourceTimer
 
 	var flushInterval: TimeInterval {
-		didSet {
+		get { _flushInterval }
+		set {
+			_flushInterval = max(minimumFlushInterval, newValue)
 			setupTimer()
 		}
 	}
@@ -31,9 +34,15 @@ struct FlushTimer {
 		flushTimer.setEventHandler(handler: handler)
 		flushTimer.schedule(
 			deadline: DispatchTime.now() + flushInterval,
-			repeating: flushInterval,
+			repeating: repeating ? flushInterval : .infinity,
 			leeway: DispatchTimeInterval.milliseconds(100)
 		)
 		flushTimer.activate()
 	}
+
+	// MARK: Private
+
+	var _flushInterval: TimeInterval
+	let minimumFlushInterval: TimeInterval = 0.1
+	let repeating: Bool
 }

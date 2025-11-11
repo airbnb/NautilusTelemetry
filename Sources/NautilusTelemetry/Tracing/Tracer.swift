@@ -10,12 +10,22 @@ import os
 
 public final class Tracer {
 
+	public static let defaultFlushInterval: TimeInterval = 60
+	public static let defaultIdleInterval: TimeInterval = 10
+
 	// MARK: Lifecycle
 
 	public init() {
 		_root = Span(name: "root", kind: .internal, traceId: traceId, parentId: nil)
-		flushInterval = 60
-		flushTimer = FlushTimer(flushInterval: flushInterval) { [weak self] in self?.flushRetiredSpans() }
+		flushInterval = Self.defaultFlushInterval
+		idleTimeoutInterval = Self.defaultIdleInterval
+		flushTimer = FlushTimer(flushInterval: flushInterval, repeating: true) { [weak self] in self?.flushRetiredSpans() }
+		idleTimer = FlushTimer(flushInterval: idleTimeoutInterval, repeating: false) {
+			if let reporter = InstrumentationSystem.reporter {
+				reporter.idleTimeout()
+			}
+		}
+
 		root.retireCallback = retire // initialization order
 	}
 
@@ -207,6 +217,7 @@ public final class Tracer {
 
 	/// Optional to avoid initialization order issue
 	var flushTimer: FlushTimer? = nil
+	var idleTimer: FlushTimer? = nil
 
 	var currentBaggage: Baggage {
 		if let baggage = Baggage.currentBaggageTaskLocal {
@@ -223,10 +234,19 @@ public final class Tracer {
 		}
 	}
 
+	var idleTimeoutInterval: TimeInterval {
+		didSet {
+			idleTimer?.flushInterval = idleTimeoutInterval
+		}
+	}
+
 	func retire(span: Span) {
 		lock.withLock {
 			retiredSpans.append(span)
 		}
+
+		// Push the timeout ahead
+		idleTimer?.setupTimer()
 	}
 
 	func flushRetiredSpans() {
