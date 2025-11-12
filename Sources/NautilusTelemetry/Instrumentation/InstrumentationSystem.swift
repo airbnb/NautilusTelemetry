@@ -22,13 +22,11 @@ public enum InstrumentationSystem {
 
 			reporter = _reporter
 
-			var flushInterval = _reporter.flushInterval
-			if flushInterval <= 0 {
-				flushInterval = 1
-			}
-
+			let flushInterval = _reporter.flushInterval
 			// Convey the flush interval.
 			tracer.flushInterval = flushInterval
+			tracer.idleTimeoutInterval = _reporter.idleTimeoutInterval
+
 			meter.flushInterval = flushInterval
 		}
 

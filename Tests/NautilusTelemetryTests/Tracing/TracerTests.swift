@@ -47,4 +47,47 @@ final class TracerTests: XCTestCase {
 
 		XCTAssertEqual(tracer.retiredSpans.count, 0)
 	}
+
+	func testIdleTimeout() {
+		InstrumentationSystem.resetBootstrapForTests()
+
+		let expectation = expectation(description: "Idle received")
+		let reporter = TestReporter(self, idleExpectation: expectation)
+		InstrumentationSystem.bootstrap(reporter: reporter)
+
+		let span = InstrumentationSystem.tracer.startSpan(name: "retire test")
+		span.end()
+
+		waitForExpectations(timeout: 10)
+	}
+
+	class TestReporter : NautilusTelemetryReporter {
+
+		let test: XCTestCase
+		let idleExpectation: XCTestExpectation
+
+		init(_ test: XCTestCase,
+			 idleExpectation: XCTestExpectation) {
+			self.test = test
+			self.idleExpectation = idleExpectation
+		}
+
+		func reportSpans(_ spans: [Span]) {
+		}
+
+		func reportInstruments(_ instruments: [any Instrument]) {
+		}
+
+		func subscribeToLifecycleEvents() {
+
+		}
+
+		/// Shorten the idle timeout for the test
+		var idleTimeoutInterval: TimeInterval { 0.1 }
+
+		func idleTimeout() {
+			idleExpectation.fulfill()
+		}
+	}
+
 }

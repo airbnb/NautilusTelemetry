@@ -99,6 +99,24 @@ extension Span {
 		// CTTelephonyNetworkInfo.serviceCurrentRadioAccessTechnology.
 		addAttribute("network.connection.type", metric.isCellular ? "cell" : "wifi")
 		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
+
+		// No official semantic convention exists yet for the properties below
+		addAttribute("http.connection.reused", metric.isReusedConnection)
+		addAttribute("http.connection.proxied", metric.isProxyConnection)
+
+		// Connection sub-phase timings could also be expressed as sub-spans of the HTTP span, but that's less
+		// convenient for analytics.
+		// Will be omitted if the timestamps are nil, or express a negative duration.
+		addAttribute("http.dns.duration", elapsedNanoseconds(metric.domainLookupStartDate, metric.domainLookupEndDate))
+		if let connectDuration = elapsedNanoseconds(metric.connectStartDate, metric.connectEndDate),
+		   let tlsDuration = elapsedNanoseconds(metric.secureConnectionStartDate, metric.secureConnectionEndDate) {
+
+			if connectDuration > tlsDuration {
+				addAttribute("http.tcp.duration", connectDuration-tlsDuration)
+			}
+
+			addAttribute("http.tls.duration", tlsDuration)
+		}
 	}
 
 	/// Annotates the span with attributes from the task's URLRequest.
@@ -213,6 +231,13 @@ extension Span {
 	}
 
 	// MARK: Internal
+
+	func elapsedNanoseconds(_ start: Date?, _ end: Date?) -> Int64? {
+		guard let start, let end else { return nil }
+		let duration = end.timeIntervalSince(start)
+		guard duration >= 0 else { return nil }
+		return Int64(duration * 1_000_000_000)
+	}
 
 	static func message(statusCode: Int) -> String {
 		Span.statusCodeMap[statusCode] ?? "Unassigned"

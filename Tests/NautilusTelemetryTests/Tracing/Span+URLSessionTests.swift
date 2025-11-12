@@ -109,4 +109,19 @@ final class SpanURLSessionTests: XCTestCase {
 		XCTAssertNil(attributes["http.response.header.content-encoding"])
 	}
 
+	func testNilDateElapsedNanosecondAttribute() throws {
+		let span = tracer.startSpan(name: #function)
+		let now = Date()
+
+		span.addAttribute("duration_nils", span.elapsedNanoseconds(nil, nil))
+		span.addAttribute("duration_start_in_future", span.elapsedNanoseconds(NSDate.distantFuture, NSDate.distantPast))
+		span.addAttribute("duration_zero", span.elapsedNanoseconds(now, now))
+		span.addAttribute("duration_one_second", span.elapsedNanoseconds(now, now+1.0))
+
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertNil(attributes["duration_nils"])
+		XCTAssertNil(attributes["duration_start_in_future"])
+		XCTAssertEqual(attributes["duration_zero"], 0)
+		XCTAssertEqual(attributes["duration_one_second"], 1_000_000_000)
+	}
 }

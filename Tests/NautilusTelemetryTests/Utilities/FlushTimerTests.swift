@@ -16,16 +16,30 @@ final class FlushTimerTests: XCTestCase {
 		let expectation = XCTestExpectation(description: "Timer handler called")
 		var handlerCallCount = 0
 
-		let timer = FlushTimer(flushInterval: 0.1) {
+		let timer = FlushTimer(flushInterval: 0.1, repeating: true) {
 			handlerCallCount += 1
 			expectation.fulfill()
 		}
 
-		// Verify initial state
 		XCTAssertEqual(timer.flushInterval, 0.1)
 		XCTAssertNotNil(timer.flushTimer)
 
-		// Wait for timer to fire
+		wait(for: [expectation], timeout: 1.0)
+		XCTAssertGreaterThanOrEqual(handlerCallCount, 1)
+	}
+
+	func testFlushTimerNonRepeating() throws {
+		let expectation = XCTestExpectation(description: "Timer handler called")
+		var handlerCallCount = 0
+
+		let timer = FlushTimer(flushInterval: 0.1, repeating: false) {
+			handlerCallCount += 1
+			expectation.fulfill()
+		}
+
+		XCTAssertEqual(timer.flushInterval, 0.1)
+		XCTAssertNotNil(timer.flushTimer)
+
 		wait(for: [expectation], timeout: 1.0)
 		XCTAssertGreaterThanOrEqual(handlerCallCount, 1)
 	}
@@ -35,7 +49,7 @@ final class FlushTimerTests: XCTestCase {
 		let expectation2 = XCTestExpectation(description: "Second timer interval")
 		var handlerCallCount = 0
 
-		var timer = FlushTimer(flushInterval: 0.05) {
+		var timer = FlushTimer(flushInterval: 0.1, repeating: true) {
 			handlerCallCount += 1
 			if handlerCallCount == 1 {
 				expectation1.fulfill()
@@ -44,32 +58,26 @@ final class FlushTimerTests: XCTestCase {
 			}
 		}
 
-		// Wait for first firing
 		wait(for: [expectation1], timeout: 1.0)
 		XCTAssertEqual(handlerCallCount, 1)
 
-		// Change interval and verify it takes effect
-		timer.flushInterval = 0.05
-		XCTAssertEqual(timer.flushInterval, 0.05)
+		// Check minimum enforced
+		let tooSmallFlushInterval = 0.05
+		XCTAssertNotEqual(tooSmallFlushInterval, timer.minimumFlushInterval)
+		timer.flushInterval = tooSmallFlushInterval
+		XCTAssertEqual(timer.flushInterval, timer.minimumFlushInterval)
 
-		// Wait for second firing with new interval
 		wait(for: [expectation2], timeout: 1.0)
 		XCTAssertGreaterThanOrEqual(handlerCallCount, 2)
 	}
 
 	func testFlushTimerSetupCalledOnInit() throws {
-		// This test verifies that setupTimer is called during initialization
-		// Since setupTimer is now called both in init and didSet, we test
-		// that the timer is properly configured immediately after creation
-
 		let expectation = XCTestExpectation(description: "Timer setup correctly on init")
 
-		let timer = FlushTimer(flushInterval: 0.05) {
+		let timer = FlushTimer(flushInterval: 0.05, repeating: true) {
 			expectation.fulfill()
 		}
 
-		// Verify the timer is active immediately after init
-		// (setupTimer is called in init, not just in didSet)
 		wait(for: [expectation], timeout: 1.0)
 
 		XCTAssertNotNil(timer) // keep timer alive
