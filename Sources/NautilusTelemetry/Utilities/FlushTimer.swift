@@ -34,7 +34,7 @@ struct FlushTimer {
 		flushTimer.setEventHandler(handler: handler)
 		flushTimer.schedule(
 			deadline: DispatchTime.now() + flushInterval,
-			repeating: repeating ? flushInterval : .infinity,
+			repeating: repeating ? DispatchTimeInterval(flushInterval) : .never,
 			leeway: DispatchTimeInterval.milliseconds(100)
 		)
 		flushTimer.activate()
@@ -45,4 +45,10 @@ struct FlushTimer {
 	var _flushInterval: TimeInterval
 	let minimumFlushInterval: TimeInterval = 0.1
 	let repeating: Bool
+}
+
+extension DispatchTimeInterval {
+	init(_ timeInterval: TimeInterval) {
+		self = .nanoseconds(Int(timeInterval * 1_000_000_000))
+	}
 }

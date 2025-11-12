@@ -28,6 +28,22 @@ final class FlushTimerTests: XCTestCase {
 		XCTAssertGreaterThanOrEqual(handlerCallCount, 1)
 	}
 
+	func testFlushTimerNonRepeating() throws {
+		let expectation = XCTestExpectation(description: "Timer handler called")
+		var handlerCallCount = 0
+
+		let timer = FlushTimer(flushInterval: 0.1, repeating: false) {
+			handlerCallCount += 1
+			expectation.fulfill()
+		}
+
+		XCTAssertEqual(timer.flushInterval, 0.1)
+		XCTAssertNotNil(timer.flushTimer)
+
+		wait(for: [expectation], timeout: 1.0)
+		XCTAssertGreaterThanOrEqual(handlerCallCount, 1)
+	}
+
 	func testFlushTimerIntervalChange() throws {
 		let expectation1 = XCTestExpectation(description: "First timer interval")
 		let expectation2 = XCTestExpectation(description: "Second timer interval")
@@ -46,7 +62,9 @@ final class FlushTimerTests: XCTestCase {
 		XCTAssertEqual(handlerCallCount, 1)
 
 		// Check minimum enforced
-		timer.flushInterval = 0.05
+		let tooSmallFlushInterval = 0.05
+		XCTAssertNotEqual(tooSmallFlushInterval, timer.minimumFlushInterval)
+		timer.flushInterval = tooSmallFlushInterval
 		XCTAssertEqual(timer.flushInterval, timer.minimumFlushInterval)
 
 		wait(for: [expectation2], timeout: 1.0)

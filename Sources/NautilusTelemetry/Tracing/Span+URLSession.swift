@@ -100,7 +100,7 @@ extension Span {
 		addAttribute("network.connection.type", metric.isCellular ? "cell" : "wifi")
 		addAttribute("network.protocol.version", Self.networkProtocolVersion(metric.networkProtocolName))
 
-		// No official semantic convention exists yet for the the properties below
+		// No official semantic convention exists yet for the properties below
 		addAttribute("http.connection.reused", metric.isReusedConnection)
 		addAttribute("http.connection.proxied", metric.isProxyConnection)
 

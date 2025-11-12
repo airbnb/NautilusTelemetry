@@ -21,7 +21,7 @@ public protocol NautilusTelemetryReporter {
 	/// Add listeners for application lifecycle events -- typically called during didFinishLaunching.
 	func subscribeToLifecycleEvents()
 
-	/// Called when no spans have been retied in `idleTimeoutInterval`
+	/// Called when no spans have been retired in `idleTimeoutInterval`
 	func idleTimeout()
 }
 
