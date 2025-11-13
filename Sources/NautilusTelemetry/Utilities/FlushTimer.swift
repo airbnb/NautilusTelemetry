@@ -2,6 +2,7 @@
 // Copyright © 2025 Airbnb Inc. All rights reserved.
 
 import Foundation
+import os
 
 // MARK: - FlushTimer
 
@@ -42,10 +43,12 @@ class FlushTimer {
 	}
 
 	func suspend() {
-		if !suspended {
-			// Must match calls between suspend/resume
-			flushTimer.suspend()
-			suspended = true
+		lock.withLock {
+			if !suspended {
+				// Must match calls between suspend/resume
+				flushTimer.suspend()
+				suspended = true
+			}
 		}
 	}
 
@@ -59,16 +62,18 @@ class FlushTimer {
 			leeway: DispatchTimeInterval.milliseconds(100)
 		)
 		flushTimer.activate()
-		if suspended {
-			flushTimer.resume()
-			suspended = false
+		lock.withLock {
+			if suspended {
+				flushTimer.resume()
+				suspended = false
+			}
 		}
 	}
 
 	// MARK: Private
 
 	private var _flushInterval: TimeInterval
-
+	private var lock = OSAllocatedUnfairLock()
 }
 
 extension DispatchTimeInterval {
