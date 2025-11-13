@@ -283,7 +283,7 @@ final class SpanTests: XCTestCase {
 	func testNonRootSpanHasIsRootFalse() {
 		let traceId = Identifiers.generateTraceId()
 		let parentId = Identifiers.generateSpanId()
-		let span = Span(name: "child", kind: .internal, traceId: traceId, parentId: parentId, isRoot: false)
+		let span = Span(name: "child", kind: .internal, traceId: traceId, parentId: parentId)
 
 		XCTAssertFalse(span.isRoot)
 	}
