@@ -32,6 +32,8 @@ final class TracerTests: XCTestCase {
 		func subscribeToLifecycleEvents() { }
 
 		func idleTimeout() {
+			// Turn off the timer
+			InstrumentationSystem.tracer.flushTimer?.suspend()
 			idleExpectation.fulfill()
 		}
 	}
@@ -90,6 +92,7 @@ final class TracerTests: XCTestCase {
 		span.end()
 
 		waitForExpectations(timeout: 10)
+		InstrumentationSystem.resetBootstrapForTests()
 	}
 
 	func testTracerRootSpanIsRoot() {

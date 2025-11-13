@@ -30,7 +30,6 @@ class FlushTimer {
 
 	var suspended = false
 
-	var _flushInterval: TimeInterval
 	let minimumFlushInterval: TimeInterval = 0.1
 	let repeating: Bool
 
@@ -65,6 +64,11 @@ class FlushTimer {
 			suspended = false
 		}
 	}
+
+	// MARK: Private
+
+	private var _flushInterval: TimeInterval
+
 }
 
 extension DispatchTimeInterval {
