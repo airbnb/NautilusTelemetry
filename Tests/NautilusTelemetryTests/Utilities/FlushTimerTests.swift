@@ -49,7 +49,7 @@ final class FlushTimerTests: XCTestCase {
 		let expectation2 = XCTestExpectation(description: "Second timer interval")
 		var handlerCallCount = 0
 
-		var timer = FlushTimer(flushInterval: 0.1, repeating: true) {
+		let timer = FlushTimer(flushInterval: 0.1, repeating: true) {
 			handlerCallCount += 1
 			if handlerCallCount == 1 {
 				expectation1.fulfill()
@@ -81,5 +81,36 @@ final class FlushTimerTests: XCTestCase {
 		wait(for: [expectation], timeout: 1.0)
 
 		XCTAssertNotNil(timer) // keep timer alive
+	}
+
+	func testFlushTimerSuspendAndResume() throws {
+		let expectation1 = XCTestExpectation(description: "Timer handler called before suspend")
+		let expectation2 = XCTestExpectation(description: "Timer handler called after resume")
+		var handlerCallCount = 0
+
+		let timer = FlushTimer(flushInterval: 0.1, repeating: true) {
+			handlerCallCount += 1
+			if handlerCallCount == 1 {
+				expectation1.fulfill()
+			} else if handlerCallCount == 2 {
+				expectation2.fulfill()
+			}
+		}
+
+		wait(for: [expectation1], timeout: 1.0)
+		XCTAssertEqual(handlerCallCount, 1)
+
+		timer.suspend()
+		XCTAssertTrue(timer.suspended)
+
+		Thread.sleep(forTimeInterval: 0.3)
+		XCTAssertEqual(handlerCallCount, 1)
+
+		timer.flushInterval = 0.1
+
+		XCTAssertFalse(timer.suspended)
+
+		wait(for: [expectation2], timeout: 1.0)
+		XCTAssertEqual(handlerCallCount, 2)
 	}
 }

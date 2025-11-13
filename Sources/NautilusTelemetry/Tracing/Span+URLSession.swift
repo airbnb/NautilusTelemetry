@@ -108,11 +108,12 @@ extension Span {
 		// convenient for analytics.
 		// Will be omitted if the timestamps are nil, or express a negative duration.
 		addAttribute("http.dns.duration", elapsedNanoseconds(metric.domainLookupStartDate, metric.domainLookupEndDate))
-		if let connectDuration = elapsedNanoseconds(metric.connectStartDate, metric.connectEndDate),
-		   let tlsDuration = elapsedNanoseconds(metric.secureConnectionStartDate, metric.secureConnectionEndDate) {
-
+		if
+			let connectDuration = elapsedNanoseconds(metric.connectStartDate, metric.connectEndDate),
+			let tlsDuration = elapsedNanoseconds(metric.secureConnectionStartDate, metric.secureConnectionEndDate)
+		{
 			if connectDuration > tlsDuration {
-				addAttribute("http.tcp.duration", connectDuration-tlsDuration)
+				addAttribute("http.tcp.duration", connectDuration - tlsDuration)
 			}
 
 			addAttribute("http.tls.duration", tlsDuration)
@@ -232,13 +233,6 @@ extension Span {
 
 	// MARK: Internal
 
-	func elapsedNanoseconds(_ start: Date?, _ end: Date?) -> Int64? {
-		guard let start, let end else { return nil }
-		let duration = end.timeIntervalSince(start)
-		guard duration >= 0 else { return nil }
-		return Int64(duration * 1_000_000_000)
-	}
-
 	static func message(statusCode: Int) -> String {
 		Span.statusCodeMap[statusCode] ?? "Unassigned"
 	}
@@ -286,6 +280,13 @@ extension Span {
 		case nil: nil
 		@unknown default: nil
 		}
+	}
+
+	func elapsedNanoseconds(_ start: Date?, _ end: Date?) -> Int64? {
+		guard let start, let end else { return nil }
+		let duration = end.timeIntervalSince(start)
+		guard duration >= 0 else { return nil }
+		return Int64(duration * 1_000_000_000)
 	}
 
 	// MARK: Private

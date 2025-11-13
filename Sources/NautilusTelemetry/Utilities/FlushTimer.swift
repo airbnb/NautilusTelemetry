@@ -3,17 +3,23 @@
 
 import Foundation
 
-struct FlushTimer {
+// MARK: - FlushTimer
+
+class FlushTimer {
 
 	// MARK: Lifecycle
 
 	init(flushInterval: TimeInterval, repeating: Bool, handler: @escaping () -> Void) {
 		flushTimer = DispatchSource.makeTimerSource(flags: [], queue: NautilusTelemetry.queue)
-		self._flushInterval = max(minimumFlushInterval, flushInterval)
+		_flushInterval = max(minimumFlushInterval, flushInterval)
 		self.repeating = repeating
 		self.handler = handler
 		// didSet doesn't run in init
 		setupTimer()
+	}
+
+	deinit {
+		flushTimer.cancel()
 	}
 
 	// MARK: Internal
@@ -21,6 +27,11 @@ struct FlushTimer {
 	var handler: () -> Void
 
 	let flushTimer: DispatchSourceTimer
+
+	var suspended = false
+
+	let minimumFlushInterval: TimeInterval = 0.1
+	let repeating: Bool
 
 	var flushInterval: TimeInterval {
 		get { _flushInterval }
@@ -30,21 +41,34 @@ struct FlushTimer {
 		}
 	}
 
+	func suspend() {
+		if !suspended {
+			// Must match calls between suspend/resume
+			flushTimer.suspend()
+			suspended = true
+		}
+	}
+
 	func setupTimer() {
 		flushTimer.setEventHandler(handler: handler)
+
+		let dispatchFlushInterval = DispatchTimeInterval(flushInterval)
 		flushTimer.schedule(
-			deadline: DispatchTime.now() + flushInterval,
-			repeating: repeating ? DispatchTimeInterval(flushInterval) : .never,
+			deadline: DispatchTime.now() + dispatchFlushInterval,
+			repeating: repeating ? dispatchFlushInterval : .never,
 			leeway: DispatchTimeInterval.milliseconds(100)
 		)
 		flushTimer.activate()
+		if suspended {
+			flushTimer.resume()
+			suspended = false
+		}
 	}
 
 	// MARK: Private
 
-	var _flushInterval: TimeInterval
-	let minimumFlushInterval: TimeInterval = 0.1
-	let repeating: Bool
+	private var _flushInterval: TimeInterval
+
 }
 
 extension DispatchTimeInterval {

@@ -10,13 +10,9 @@ import os
 
 public final class Tracer {
 
-	public static let defaultFlushInterval: TimeInterval = 60
-	public static let defaultIdleInterval: TimeInterval = 10
-
 	// MARK: Lifecycle
 
 	public init() {
-		_root = Span(name: "root", kind: .internal, traceId: traceId, parentId: nil)
 		flushInterval = Self.defaultFlushInterval
 		idleTimeoutInterval = Self.defaultIdleInterval
 		flushTimer = FlushTimer(flushInterval: flushInterval, repeating: true) { [weak self] in self?.flushRetiredSpans() }
@@ -25,8 +21,6 @@ public final class Tracer {
 				reporter.idleTimeout()
 			}
 		}
-
-		root.retireCallback = retire // initialization order
 	}
 
 	// MARK: Public
@@ -43,6 +37,9 @@ public final class Tracer {
 		case always
 	}
 
+	public static let defaultFlushInterval: TimeInterval = 60
+	public static let defaultIdleInterval: TimeInterval = 10
+
 	/// Convenience to track the expected state of sampling
 	/// Traceparent headers use this by default
 	public var isSampling = false
@@ -53,18 +50,30 @@ public final class Tracer {
 	/// Fetch the current span, using task local or thread local values, falling back to the root span.
 	public var currentSpan: Span { currentBaggage.span }
 
-	public var root: Span { lock.withLock { _root } }
+	public var root: Span {
+		lock.withLock {
+			if let root = _root {
+				return root
+			} else {
+				let root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire, isRoot: true)
+				_root = root
+				return root
+			}
+		}
+	}
 
 	/// Flushes the root span, and cycles the trace id
 	public func flushTrace() {
+		idleTimer?.suspend()
+
 		let priorRoot = lock.withLock {
 			let priorRoot = _root
 			traceId = Identifiers.generateTraceId()
-			_root = Span(name: "root", traceId: traceId, parentId: nil, retireCallback: retire)
+			_root = nil // will be recreated on next access
 			return priorRoot
 		}
 
-		priorRoot.end() // this implicitly retires
+		priorRoot?.end() // this implicitly retires if there is a current root
 		flushRetiredSpans()
 	}
 
@@ -316,6 +325,6 @@ public final class Tracer {
 	// MARK: Private
 
 	/// Must be accessed with lock
-	private var _root: Span
+	private var _root: Span?
 
 }

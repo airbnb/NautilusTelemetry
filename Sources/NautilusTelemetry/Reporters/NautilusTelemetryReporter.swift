@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - NautilusTelemetryReporter
+
 public protocol NautilusTelemetryReporter {
 
 	/// Desired flush interval.

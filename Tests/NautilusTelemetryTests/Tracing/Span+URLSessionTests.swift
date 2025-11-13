@@ -116,7 +116,7 @@ final class SpanURLSessionTests: XCTestCase {
 		span.addAttribute("duration_nils", span.elapsedNanoseconds(nil, nil))
 		span.addAttribute("duration_start_in_future", span.elapsedNanoseconds(NSDate.distantFuture, NSDate.distantPast))
 		span.addAttribute("duration_zero", span.elapsedNanoseconds(now, now))
-		span.addAttribute("duration_one_second", span.elapsedNanoseconds(now, now+1.0))
+		span.addAttribute("duration_one_second", span.elapsedNanoseconds(now, now + 1.0))
 
 		let attributes = try XCTUnwrap(span.attributes)
 		XCTAssertNil(attributes["duration_nils"])
