@@ -53,7 +53,8 @@ public final class Span: Identifiable {
 		id: SpanId = Identifiers.generateSpanId(),
 		parentId: SpanId?,
 		links: [Link] = [Link](),
-		retireCallback: ((_: Span) -> Void)? = nil
+		retireCallback: ((_: Span) -> Void)? = nil,
+		isRoot: Bool = false
 	) {
 		self.name = name
 		self.kind = kind
@@ -65,6 +66,7 @@ public final class Span: Identifiable {
 		self.startTime = startTime
 		self.endTime = endTime
 		self.retireCallback = retireCallback
+		self.isRoot = isRoot
 
 		addDefaultAttributes()
 	}
@@ -97,6 +99,7 @@ public final class Span: Identifiable {
 	public let name: String
 	public let traceId: TraceId
 	public let id: SpanId
+	public let isRoot: Bool
 
 	public var ended: Bool {
 		endTime != nil

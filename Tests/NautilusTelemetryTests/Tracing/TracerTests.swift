@@ -5,6 +5,37 @@ import XCTest
 @testable import NautilusTelemetry
 
 final class TracerTests: XCTestCase {
+	class TestReporter: NautilusTelemetryReporter {
+
+		// MARK: Lifecycle
+
+		init(
+			_ test: XCTestCase,
+			idleExpectation: XCTestExpectation
+		) {
+			self.test = test
+			self.idleExpectation = idleExpectation
+		}
+
+		// MARK: Internal
+
+		let test: XCTestCase
+		let idleExpectation: XCTestExpectation
+
+		/// Shorten the idle timeout for the test
+		var idleTimeoutInterval: TimeInterval { 0.1 }
+
+		func reportSpans(_: [Span]) { }
+
+		func reportInstruments(_: [any Instrument]) { }
+
+		func subscribeToLifecycleEvents() { }
+
+		func idleTimeout() {
+			idleExpectation.fulfill()
+		}
+	}
+
 	let tracer = Tracer()
 
 	func testBuildSpanSubtraceLinking() {
@@ -61,33 +92,35 @@ final class TracerTests: XCTestCase {
 		waitForExpectations(timeout: 10)
 	}
 
-	class TestReporter : NautilusTelemetryReporter {
+	func testTracerRootSpanIsRoot() {
+		let tracer = Tracer()
+		let root = tracer.root
 
-		let test: XCTestCase
-		let idleExpectation: XCTestExpectation
+		XCTAssertTrue(root.isRoot)
+		XCTAssertEqual(root.name, "root")
+		XCTAssertEqual(root.kind, .internal)
+		XCTAssertNil(root.parentId)
+	}
 
-		init(_ test: XCTestCase,
-			 idleExpectation: XCTestExpectation) {
-			self.test = test
-			self.idleExpectation = idleExpectation
-		}
+	func testTracerRootSpanIsRootAfterFlush() {
+		let tracer = Tracer()
+		let originalRoot = tracer.root
 
-		func reportSpans(_ spans: [Span]) {
-		}
+		XCTAssertTrue(originalRoot.isRoot)
 
-		func reportInstruments(_ instruments: [any Instrument]) {
-		}
+		tracer.flushTrace()
 
-		func subscribeToLifecycleEvents() {
+		let newRoot = tracer.root
+		XCTAssertTrue(newRoot.isRoot)
+		XCTAssertNotIdentical(originalRoot, newRoot)
+	}
 
-		}
+	func testTracerChildSpanIsNotRoot() {
+		let tracer = Tracer()
+		let childSpan = tracer.startSpan(name: "child")
 
-		/// Shorten the idle timeout for the test
-		var idleTimeoutInterval: TimeInterval { 0.1 }
-
-		func idleTimeout() {
-			idleExpectation.fulfill()
-		}
+		XCTAssertFalse(childSpan.isRoot)
+		XCTAssertEqual(childSpan.parentId, tracer.root.id)
 	}
 
 }

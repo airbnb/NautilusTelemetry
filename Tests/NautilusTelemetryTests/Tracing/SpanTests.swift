@@ -258,4 +258,33 @@ final class SpanTests: XCTestCase {
 			span.addLink(child, relationship: .child)
 		}
 	}
+
+	func testSpanIsRootDefaultValue() {
+		let traceId = Identifiers.generateTraceId()
+		let span = Span(name: "test", kind: .internal, traceId: traceId, parentId: nil)
+
+		XCTAssertFalse(span.isRoot)
+	}
+
+	func testSpanIsRootExplicitlySetToTrue() {
+		let traceId = Identifiers.generateTraceId()
+		let span = Span(name: "test", kind: .internal, traceId: traceId, parentId: nil, isRoot: true)
+
+		XCTAssertTrue(span.isRoot)
+	}
+
+	func testSpanIsRootExplicitlySetToFalse() {
+		let traceId = Identifiers.generateTraceId()
+		let span = Span(name: "test", kind: .internal, traceId: traceId, parentId: nil, isRoot: false)
+
+		XCTAssertFalse(span.isRoot)
+	}
+
+	func testNonRootSpanHasIsRootFalse() {
+		let traceId = Identifiers.generateTraceId()
+		let parentId = Identifiers.generateSpanId()
+		let span = Span(name: "child", kind: .internal, traceId: traceId, parentId: parentId, isRoot: false)
+
+		XCTAssertFalse(span.isRoot)
+	}
 }
