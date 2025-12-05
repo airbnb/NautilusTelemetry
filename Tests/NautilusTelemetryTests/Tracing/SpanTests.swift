@@ -250,6 +250,17 @@ final class SpanTests: XCTestCase {
 		XCTAssertEqual(exceptionAttributes["exception.message"], "failure")
 	}
 
+	func test_recordErrorWithMessage() throws {
+		let span = tracer.startSpan(name: "errorSpan")
+		span.recordError(withType: "custom", message: "custom error message")
+
+		let exceptionEvent = try XCTUnwrap(span.events?.first)
+		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
+		XCTAssertEqual(span.status, .error(message: "custom error message"))
+		XCTAssertEqual(exceptionAttributes["exception.type"], "custom")
+		XCTAssertEqual(exceptionAttributes["exception.message"], "custom error message")
+	}
+
 	func test_concurrentAddLinks() throws {
 		let span = tracer.startSpan(name: "concurrentAddLinks")
 
