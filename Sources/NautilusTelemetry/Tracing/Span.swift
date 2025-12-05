@@ -246,10 +246,27 @@ public final class Span: Identifiable {
 		)
 	}
 
+	func addDefaultAttributes() {
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/span-general.md#general-thread-attributes
+
+		if Thread.isMainThread {
+			addAttribute("thread.name", "main")
+		} else {
+			// No nice way to get the current queue, so we'll try thread name
+			if let threadName = Thread.current.name, threadName.count > 0 {
+				addAttribute("thread.name", threadName)
+			}
+		}
+	}
+
+	// MARK: Private
+
+	private let lock = OSAllocatedUnfairLock()
+
 	private static func exceptionAttributes(type: String, message: String, stacktrace: String?) -> [String: String] {
 		var attributes = [
 			"exception.type": type,
-			"exception.message": message
+			"exception.message": message,
 		]
 		if let stacktrace {
 			attributes["exception.stacktrace"] = stacktrace
@@ -269,20 +286,4 @@ public final class Span: Identifiable {
 		return callstackSymbols.joined(separator: "\n")
 	}
 
-	func addDefaultAttributes() {
-		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/span-general.md#general-thread-attributes
-
-		if Thread.isMainThread {
-			addAttribute("thread.name", "main")
-		} else {
-			// No nice way to get the current queue, so we'll try thread name
-			if let threadName = Thread.current.name, threadName.count > 0 {
-				addAttribute("thread.name", threadName)
-			}
-		}
-	}
-
-	// MARK: Private
-
-	private let lock = OSAllocatedUnfairLock()
 }
