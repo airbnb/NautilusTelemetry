@@ -157,7 +157,7 @@ public final class Span: Identifiable {
 		status = .ok
 	}
 
-	/// Record an error into this span
+	/// Record an error into the span.
 	/// - Parameters:
 	///   - error: any error object -- NSErrors have special handling to capture domain and code.
 	///   - includeBacktrace: whether to include a backtrace. This defaults to false, and is costly at runtime.
@@ -169,6 +169,23 @@ public final class Span: Identifiable {
 		let exceptionEvent = Event(name: "exception", attributes: attributes)
 		addEvent(exceptionEvent)
 		status = .error(message: message) // this duplicates exception.message, but makes the reporting work better
+	}
+
+	/// Record an error with a given message into the span.
+	/// - Parameters:
+	///   - type: a type of an error.
+	///   - message: an error message to record.
+	///   - includeBacktrace: whether to include a backtrace. This defaults to false, and is costly at runtime.
+	public func recordError(withType type: String, message: String, includeBacktrace: Bool = false) {
+		let attributes = Self.exceptionAttributes(
+			type: type,
+			message: message,
+			stacktrace: includeBacktrace ? Self.captureStacktrace() : nil
+		)
+
+		let exceptionEvent = Event(name: "exception", attributes: attributes)
+		addEvent(exceptionEvent)
+		status = .error(message: message)
 	}
 
 	/// Records a result. This convenience method records either a success or an error,
@@ -205,41 +222,28 @@ public final class Span: Identifiable {
 	}
 
 	static func exceptionAttributes(_ error: any Error, includeBacktrace: Bool) -> [String: String] {
-		var attributes: [String: String]
+		let exceptionType: String
+		let exceptionMessage: String
 
 		// All swift errors bridge to NSError, so instead check the type explicitly
 		if type(of: error) is NSError.Type {
 			// a "real" NSError
 			let nsError = error as NSError
-			let message = (error as NSError).localizedDescription
-			attributes = [
-				// OpenTelemetry doesn't have the concept of error codes. Pack it in exception.type.
-				"exception.type": "NSError.\(nsError.domain).\(nsError.code)",
-				"exception.message": message,
-			]
+			// OpenTelemetry doesn't have the concept of error codes. Pack it in exception.type.
+			exceptionType = "NSError.\(nsError.domain).\(nsError.code)"
+			exceptionMessage = (error as NSError).localizedDescription
 		} else {
-			let message = String(describing: error)
-			attributes = [
-				"exception.type": String(reflecting: type(of: error)),
-				"exception.message": message,
-			]
-		}
-
-		if includeBacktrace {
-			// TBD: figure out proper backtracing and Swift symbol demangling?
-			// This doesn't seem to exist yet: https://forums.swift.org/t/demangle-function/25416
-			// This looks OK, but is ≈9K lines: https://github.com/oozoofrog/SwiftDemangle
-			// Will try this, once it lands as public API:
-			// https://github.com/swiftlang/swift-evolution/blob/main/proposals/0419-backtrace-api.md
-			let callStackLimit = 20
-			let callstackSymbols = Thread.callStackSymbols.prefix(callStackLimit)
-			let callstack = callstackSymbols.joined(separator: "\n")
-			attributes["exception.stacktrace"] = callstack
+			exceptionType = String(reflecting: type(of: error))
+			exceptionMessage = String(describing: error)
 		}
 
 		// nsError.underlyingErrors contains lower-level info for network errors and may be interesting here
 
-		return attributes
+		return exceptionAttributes(
+			type: exceptionType,
+			message: exceptionMessage,
+			stacktrace: includeBacktrace ? captureStacktrace() : nil
+		)
 	}
 
 	func addDefaultAttributes() {
@@ -258,4 +262,28 @@ public final class Span: Identifiable {
 	// MARK: Private
 
 	private let lock = OSAllocatedUnfairLock()
+
+	private static func exceptionAttributes(type: String, message: String, stacktrace: String?) -> [String: String] {
+		var attributes = [
+			"exception.type": type,
+			"exception.message": message,
+		]
+		if let stacktrace {
+			attributes["exception.stacktrace"] = stacktrace
+		}
+
+		return attributes
+	}
+
+	private static func captureStacktrace() -> String {
+		// TBD: figure out proper backtracing and Swift symbol demangling?
+		// This doesn't seem to exist yet: https://forums.swift.org/t/demangle-function/25416
+		// This looks OK, but is ≈9K lines: https://github.com/oozoofrog/SwiftDemangle
+		// Will try this, once it lands as public API:
+		// https://github.com/swiftlang/swift-evolution/blob/main/proposals/0419-backtrace-api.md
+		let callStackLimit = 20
+		let callstackSymbols = Thread.callStackSymbols.prefix(callStackLimit)
+		return callstackSymbols.joined(separator: "\n")
+	}
+
 }
