@@ -133,6 +133,7 @@ extension Span {
 				addAttribute("server.address", url.host)
 				addAttribute("server.port", url.port)
 				addAttribute("url.full", url.absoluteString)
+				addAttribute("url.scheme", url.scheme)
 			}
 
 			addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
