@@ -41,5 +41,5 @@ public enum Redaction {
 
 	// MARK: Internal
 
-	static let redacted = "REDACTED"
+	static public let redacted = "REDACTED"
 }
