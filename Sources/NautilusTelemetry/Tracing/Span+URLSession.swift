@@ -124,20 +124,16 @@ extension Span {
 	/// - Parameters:
 	///   - _:  the URLSession instance.
 	///   - task: the task.
-	///   - captureHeaders: a set of request headers to capture, or nil to capture none.
-	public func urlSession(_: URLSession, didCreateTask task: URLSessionTask, captureHeaders: Set<String>? = nil) {
+	///   - captureHeaders: a set of request headers to capture, or nil to capture none. Must be lowercase strings.
+	///   - urlRedaction: A closure to map an URL into a String, redacting sensitive data. If not provided, a default implementation is used.
+	public func urlSession(
+		_: URLSession,
+		didCreateTask task: URLSessionTask,
+		captureHeaders: Set<String>? = nil,
+		urlRedaction: ((URL) -> String?) = Redaction.defaultUrlRedaction
+	) {
 		if let request = task.currentRequest {
-			addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
-
-			if let url = request.url {
-				addAttribute("server.address", url.host)
-				addAttribute("server.port", url.port)
-				addAttribute("url.full", url.absoluteString)
-				addAttribute("url.scheme", url.scheme)
-			}
-
-			addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
-			addHeaders(request: request, captureHeaders: captureHeaders)
+			addRequestAttributes(request, captureHeaders: captureHeaders, urlRedaction: urlRedaction)
 		}
 	}
 
@@ -147,7 +143,7 @@ extension Span {
 	///   - task: the task.
 	///   - error: an optional error.
 	///   - recordAsStatusCodeFailure: whether to record as a failure due to status code when error == nil.
-	///   - captureHeaders: a set of response headers to capture, or nil to capture none.
+	///   - captureHeaders: a set of response headers to capture, or nil to capture none. Must be lowercase strings.
 	public func urlSession(
 		_: URLSession,
 		task: URLSessionTask,
@@ -199,7 +195,7 @@ extension Span {
 	/// Adds specified headers from a HTTPURLResponse to this span
 	/// - Parameters:
 	///   - request: HTTPURLResponse containing headers
-	///   - captureHeaders: Headers to capture. Must be lowercase strings.
+	///   - captureHeaders: a set of response headers to capture, or nil to capture none. Must be lowercase strings.
 	public func addHeaders(response: HTTPURLResponse, captureHeaders: Set<String>? = nil) {
 		guard let captureHeaders else { return }
 		validate(captureHeaders: captureHeaders)
@@ -288,6 +284,30 @@ extension Span {
 		let duration = end.timeIntervalSince(start)
 		guard duration >= 0 else { return nil }
 		return Int64(duration * 1_000_000_000)
+	}
+
+	/// Add URLRequest attributes to the span
+	/// - Parameters:
+	///   - request: request to fetch attributes from
+	///   - captureHeaders: a list of headers to capture. If nil, none will be captured
+	///   - urlRedaction: A closure to map an URL into a String, redacting sensitive data. If not provided, a default implementation is used.
+	func addRequestAttributes(
+		_ request: URLRequest,
+		captureHeaders: Set<String>? = nil,
+		urlRedaction: ((URL) -> String?) = Redaction.defaultUrlRedaction
+	) {
+		addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
+		addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
+
+		if let url = request.url {
+			addAttribute("server.address", url.host)
+			addAttribute("server.port", url.port)
+			addAttribute("url.scheme", url.scheme)
+
+			addAttribute("url.full", urlRedaction(url))
+		}
+
+		addHeaders(request: request, captureHeaders: captureHeaders)
 	}
 
 	// MARK: Private

@@ -124,4 +124,54 @@ final class SpanURLSessionTests: XCTestCase {
 		XCTAssertEqual(attributes["duration_zero"], 0)
 		XCTAssertEqual(attributes["duration_one_second"], 1_000_000_000)
 	}
+
+	func testUrlSchemeAttributeCaptured() throws {
+		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/test")
+		let urlRequest = URLRequest(url: url)
+
+		span.addRequestAttributes(urlRequest)
+
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertEqual(attributes["url.scheme"], url.scheme)
+	}
+
+	func testCustomUrlRedaction() throws {
+		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/sensitive/path?key=secret")
+		let urlRequest = URLRequest(url: url)
+
+		let customRedaction: (URL) -> String? = { _ in "https://redacted.example.com" }
+
+		span.addRequestAttributes(urlRequest, urlRedaction: customRedaction)
+
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertEqual(attributes["url.full"], "https://redacted.example.com")
+	}
+
+	func testUrlSessionDidCreateTaskWithCustomRedaction() throws {
+		let span = tracer.startSpan(name: #function)
+		let url = try XCTUnwrap(URL(string: "https://user:pass@example.com/path"))
+		let urlRequest = URLRequest(url: url)
+		let task = urlSession.dataTask(with: urlRequest)
+
+		let customRedaction: (URL) -> String? = { _ in "https://custom.redacted.com" }
+
+		span.urlSession(urlSession, didCreateTask: task, urlRedaction: customRedaction)
+
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertEqual(attributes["url.full"], "https://custom.redacted.com")
+	}
+
+	func testUrlSessionDidCreateTaskUsesDefaultRedaction() throws {
+		let span = tracer.startSpan(name: #function)
+		let url = try XCTUnwrap(URL(string: "https://user:password@example.com/path"))
+		let urlRequest = URLRequest(url: url)
+		let task = urlSession.dataTask(with: urlRequest)
+
+		span.urlSession(urlSession, didCreateTask: task)
+
+		let attributes = try XCTUnwrap(span.attributes as? [String: String])
+		XCTAssertEqual(attributes["url.full"], "https://REDACTED:REDACTED@example.com/path")
+	}
 }

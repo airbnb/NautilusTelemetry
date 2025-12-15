@@ -13,7 +13,7 @@ extension Tracer {
 	/// - Parameters:
 	///   - request: the URLRequest. The `traceparent` header will be added if needed.
 	///   - template: optional [`url.template`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/url/#url-template) value.
-	///   - captureHeaders: a set of request headers to capture, or nil to capture none.
+	///   - captureHeaders: a set of request headers to capture, or nil to capture none. Must be lowercase strings.
 	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: A newly created span.
@@ -42,7 +42,7 @@ extension Tracer {
 	/// - Parameters:
 	///   - request: the URLRequest. The `traceparent` header will be added if needed.
 	///   - template: optional [`url.template`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/url/#url-template) value.
-	///   - captureHeaders: a set of request headers to capture, or nil to capture none.
+	///   - captureHeaders: a set of request headers to capture, or nil to capture none. Must be lowercase strings.
 	///   - attributes: optional attributes.
 	///   - baggage: Optional ``Baggage``, describing parent span. If nil, will be inferred from task/thread local baggage.
 	/// - Returns: A newly created span.
@@ -74,14 +74,8 @@ extension Tracer {
 		template: String? = nil,
 		isSampling: Bool
 	) {
-		span.addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
-		span.addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
+		span.addRequestAttributes(request)
 
-		if let url = request.url {
-			span.addAttribute("server.address", url.host)
-			span.addAttribute("server.port", url.port)
-			span.addAttribute("url.full", url.absoluteString)
-		}
 		if let template {
 			span.addAttribute("url.template", template)
 		}
