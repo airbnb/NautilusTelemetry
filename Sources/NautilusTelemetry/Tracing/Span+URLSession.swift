@@ -130,7 +130,7 @@ extension Span {
 		_: URLSession,
 		didCreateTask task: URLSessionTask,
 		captureHeaders: Set<String>? = nil,
-		urlRedaction: ((URL) -> String?)? = nil
+		urlRedaction: ((URL) -> String?) = Redaction.defaultUrlRedaction
 	) {
 		if let request = task.currentRequest {
 			addRequestAttributes(request, captureHeaders: captureHeaders, urlRedaction: urlRedaction)
@@ -291,7 +291,11 @@ extension Span {
 	///   - request: request to fetch attributes from
 	///   - captureHeaders: a list of headers to capture. If nil, none will be captured
 	///   - urlRedaction: A closure to map an URL into a String, redacting sensitive data. If not provided, a default implementation is used.
-	func addRequestAttributes(_ request: URLRequest, captureHeaders: Set<String>? = nil, urlRedaction: ((URL) -> String?)? = nil) {
+	func addRequestAttributes(
+		_ request: URLRequest,
+		captureHeaders: Set<String>? = nil,
+		urlRedaction: ((URL) -> String?) = Redaction.defaultUrlRedaction
+	) {
 		addAttribute("http.request.method", request.httpMethod ?? "_OTHER")
 		addAttribute("user_agent.original", request.value(forHTTPHeaderField: "user-agent"))
 
@@ -300,40 +304,10 @@ extension Span {
 			addAttribute("server.port", url.port)
 			addAttribute("url.scheme", url.scheme)
 
-			let urlRedaction = urlRedaction ?? defaultUrlRedaction
 			addAttribute("url.full", urlRedaction(url))
 		}
 
 		addHeaders(request: request, captureHeaders: captureHeaders)
-	}
-
-	/// https://opentelemetry.io/docs/specs/semconv/registry/attributes/url/#url-full
-	func defaultUrlRedaction(_ url: URL) -> String? {
-		let redacted = "REDACTED"
-		guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return nil }
-
-		if components.user != nil {
-			components.user = redacted
-		}
-
-		if components.password != nil {
-			components.password = redacted
-		}
-
-		if let queryItems = components.queryItems {
-			// Redact AWS security parameters by default
-			let prefixes: Set<String> = ["x-amz-"]
-			components.queryItems = queryItems.map { queryItem in
-				let queryItemName = queryItem.name.lowercased()
-				if prefixes.contains(where: { queryItemName.hasPrefix($0) }) {
-					return URLQueryItem(name: queryItem.name, value: redacted)
-				} else {
-					return queryItem
-				}
-			}
-		}
-
-		return components.url?.absoluteString
 	}
 
 	// MARK: Private

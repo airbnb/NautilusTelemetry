@@ -136,39 +136,6 @@ final class SpanURLSessionTests: XCTestCase {
 		XCTAssertEqual(attributes["url.scheme"], url.scheme)
 	}
 
-	func testDefaultUrlRedactionRedactsUserAndPassword() throws {
-		let span = tracer.startSpan(name: #function)
-		let url = try XCTUnwrap(URL(string: "https://user:password@example.com/path"))
-
-		let redacted = span.defaultUrlRedaction(url)
-
-		XCTAssertEqual(redacted, "https://REDACTED:REDACTED@example.com/path")
-	}
-
-	func testDefaultUrlRedactionRedactsAmzQueryParams() throws {
-		let span = tracer.startSpan(name: #function)
-		let url =
-			try XCTUnwrap(
-				URL(string: "https://example.com/path?X-Amz-Security-Token=secret1&X-Amz-Signature=secret&other=value&X-Amz-Date=123")
-			)
-
-		let redacted = try XCTUnwrap(span.defaultUrlRedaction(url))
-
-		XCTAssert(redacted.contains("X-Amz-Security-Token=REDACTED"))
-		XCTAssert(redacted.contains("X-Amz-Signature=REDACTED"))
-		XCTAssert(redacted.contains("other=value"))
-		XCTAssert(redacted.contains("X-Amz-Date=REDACTED"))
-	}
-
-	func testDefaultUrlRedactionPreservesRegularQueryParams() throws {
-		let span = tracer.startSpan(name: #function)
-		let url = try XCTUnwrap(URL(string: "https://example.com/path?foo=bar&baz=qux"))
-
-		let redacted = span.defaultUrlRedaction(url)
-
-		XCTAssertEqual(redacted, "https://example.com/path?foo=bar&baz=qux")
-	}
-
 	func testCustomUrlRedaction() throws {
 		let span = tracer.startSpan(name: #function)
 		let url = try makeURL("/sensitive/path?key=secret")
