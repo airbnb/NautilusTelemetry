@@ -122,7 +122,7 @@ extension Span {
 		addAttribute("http.first_byte.duration", elapsedNanoseconds(metric.fetchStartDate, metric.responseStartDate))
 	}
 
-	/// Annotates the span with attributes from the task and its urlRequest.
+	/// Annotates the span with attributes from the task and its URLRequest.
 	/// - Parameters:
 	///   - _:  the URLSession instance.
 	///   - task: the task.
