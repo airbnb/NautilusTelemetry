@@ -34,7 +34,7 @@ final class SpanURLSessionTests: XCTestCase {
 		let task = urlSession.dataTask(with: urlRequest)
 		span.urlSession(urlSession, didCreateTask: task, captureHeaders: Set(["content-type"]))
 
-		let attributes = try XCTUnwrap(span.attributes as? [String: String])
+		let attributes = try XCTUnwrap(span.attributes)
 		XCTAssertEqual(attributes["url.full"], url.absoluteString)
 		XCTAssertEqual(attributes["http.request.header.content-type"], "application/json")
 	}
@@ -171,7 +171,21 @@ final class SpanURLSessionTests: XCTestCase {
 
 		span.urlSession(urlSession, didCreateTask: task)
 
-		let attributes = try XCTUnwrap(span.attributes as? [String: String])
+		let attributes = try XCTUnwrap(span.attributes)
 		XCTAssertEqual(attributes["url.full"], "https://REDACTED:REDACTED@example.com/path")
 	}
+
+	func testUrlPriority() throws {
+		let span = tracer.startSpan(name: #function)
+		let url = try makeURL("/")
+		let urlRequest = URLRequest(url: url)
+		let task = urlSession.dataTask(with: urlRequest)
+
+		task.priority = 1.0
+		span.urlSession(urlSession, didCreateTask: task)
+
+		let attributes = try XCTUnwrap(span.attributes)
+		XCTAssertEqual(attributes["http.priority"], task.priority)
+	}
+
 }
