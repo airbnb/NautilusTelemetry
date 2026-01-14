@@ -5,7 +5,7 @@ import Foundation
 
 public enum Redaction {
 
-	// MARK: Public
+	static public let redacted = "REDACTED"
 
 	/// Provides a default implementation of URL redaction that hides common sensitive elements.
 	/// - Parameter url: A URL to redact
@@ -39,7 +39,4 @@ public enum Redaction {
 		return components.url?.absoluteString
 	}
 
-	// MARK: Internal
-
-	static public let redacted = "REDACTED"
 }
