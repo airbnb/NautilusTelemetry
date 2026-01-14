@@ -118,9 +118,11 @@ extension Span {
 
 			addAttribute("http.tls.duration", tlsDuration)
 		}
+
+		addAttribute("http.first_byte.duration", elapsedNanoseconds(metric.fetchStartDate, metric.responseStartDate))
 	}
 
-	/// Annotates the span with attributes from the task's URLRequest.
+	/// Annotates the span with attributes from the task and its URLRequest.
 	/// - Parameters:
 	///   - _:  the URLSession instance.
 	///   - task: the task.
@@ -135,6 +137,12 @@ extension Span {
 		if let request = task.currentRequest {
 			addRequestAttributes(request, captureHeaders: captureHeaders, urlRedaction: urlRedaction)
 		}
+
+		// No semantic convention available
+		// Reported in iOS's 0.0-1.0 range, but is translated inside the network stack,
+		// based on HTTP protocol version.
+		// https://blog.cloudflare.com/better-http-3-prioritization-for-a-faster-web/
+		addAttribute("http.priority", task.priority)
 	}
 
 	/// Annotates the span with attributes from the task's response.
