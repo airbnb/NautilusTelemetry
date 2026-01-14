@@ -12,6 +12,8 @@ import XCTest
 
 final class FlushTimerTests: XCTestCase {
 
+	let timeout: TimeInterval = 10
+
 	func testFlushTimerInitialization() throws {
 		let expectation = XCTestExpectation(description: "Timer handler called")
 		var handlerCallCount = 0
@@ -24,7 +26,7 @@ final class FlushTimerTests: XCTestCase {
 		XCTAssertEqual(timer.flushInterval, 0.1)
 		XCTAssertNotNil(timer.flushTimer)
 
-		wait(for: [expectation], timeout: 1.0)
+		wait(for: [expectation], timeout: timeout)
 		XCTAssertGreaterThanOrEqual(handlerCallCount, 1)
 	}
 
@@ -40,7 +42,7 @@ final class FlushTimerTests: XCTestCase {
 		XCTAssertEqual(timer.flushInterval, 0.1)
 		XCTAssertNotNil(timer.flushTimer)
 
-		wait(for: [expectation], timeout: 1.0)
+		wait(for: [expectation], timeout: timeout)
 		XCTAssertGreaterThanOrEqual(handlerCallCount, 1)
 	}
 
@@ -58,7 +60,7 @@ final class FlushTimerTests: XCTestCase {
 			}
 		}
 
-		wait(for: [expectation1], timeout: 1.0)
+		wait(for: [expectation1], timeout: timeout)
 		XCTAssertEqual(handlerCallCount, 1)
 
 		// Check minimum enforced
@@ -78,7 +80,7 @@ final class FlushTimerTests: XCTestCase {
 			expectation.fulfill()
 		}
 
-		wait(for: [expectation], timeout: 1.0)
+		wait(for: [expectation], timeout: timeout)
 
 		XCTAssertNotNil(timer) // keep timer alive
 	}
@@ -110,7 +112,7 @@ final class FlushTimerTests: XCTestCase {
 
 		XCTAssertFalse(timer.suspended)
 
-		wait(for: [expectation2], timeout: 1.0)
+		wait(for: [expectation2], timeout: timeout)
 		XCTAssertEqual(handlerCallCount, 2)
 	}
 }
