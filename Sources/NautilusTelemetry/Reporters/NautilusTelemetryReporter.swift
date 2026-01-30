@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - NautilusTelemetryReporter
 
-public protocol NautilusTelemetryReporter {
+public protocol NautilusTelemetryReporter: AnyObject {
 
 	/// Desired flush interval.
 	var flushInterval: TimeInterval { get }

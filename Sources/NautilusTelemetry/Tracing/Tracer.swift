@@ -48,7 +48,9 @@ public final class Tracer {
 	public var traceParentMode = TraceParentMode.always
 
 	/// Fetch the current span, using task local or thread local values, falling back to the root span.
-	public var currentSpan: Span { currentBaggage.span }
+	public var currentSpan: Span {
+		currentBaggage.span
+	}
 
 	public var root: Span {
 		lock.withLock {
@@ -90,13 +92,14 @@ public final class Tracer {
 		name: String,
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
-		baggage: Baggage? = nil
+		baggage: Baggage? = nil,
 	) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let subTraceBaggage = Baggage(
 			span: resolvedBaggage.span,
 			subTraceId: Identifiers.generateTraceId(),
-			subtraceLinking: resolvedBaggage.subtraceLinking
+			subtraceLinking: resolvedBaggage.subtraceLinking,
+			attributes: resolvedBaggage.attributes
 		)
 		return startSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage)
 	}
@@ -113,13 +116,14 @@ public final class Tracer {
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
 		baggage: Baggage? = nil,
-		block: () throws -> T
+		block: () throws -> T,
 	) rethrows -> T {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let subTraceBaggage = Baggage(
 			span: resolvedBaggage.span,
 			subTraceId: Identifiers.generateTraceId(),
-			subtraceLinking: resolvedBaggage.subtraceLinking
+			subtraceLinking: resolvedBaggage.subtraceLinking,
+			attributes: resolvedBaggage.attributes
 		)
 		return try withSpan(name: name, kind: kind, attributes: attributes, baggage: subTraceBaggage, block: block)
 	}
@@ -135,25 +139,36 @@ public final class Tracer {
 		name: String,
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
-		baggage: Baggage? = nil
+		baggage: Baggage? = nil,
 	) -> Span {
 		buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 	}
 
 	/// Propagate a parent span into the enclosed block via TaskLocal.
+	/// Preferred to use `propagateBaggage`, as it can
 	/// - Parameters:
 	///   - span: The parent span.
 	///   - block: The code to execute.
 	/// - Returns: The return value of the closure.
 	public func propagateParent<T>(_ span: Span, block: () throws -> T) rethrows -> T {
 		let baggage = Baggage(span: span)
-		return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
-			do {
-				return try block()
-			} catch {
-				span.recordError(error)
-				throw error // rethrow
-			}
+
+		do {
+			return try propagateBaggage(baggage, block: block)
+		} catch {
+			span.recordError(error)
+			throw error // rethrow
+		}
+	}
+
+	/// Propagate baggage into the enclosed block via TaskLocal.
+	/// - Parameters:
+	///   - baggage: The baggage to propagate.
+	///   - block: The code to execute.
+	/// - Returns: The return value of the closure.
+	public func propagateBaggage<T>(_ baggage: Baggage, block: () throws -> T) rethrows -> T {
+		try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
+			try block()
 		}
 	}
 
@@ -169,7 +184,7 @@ public final class Tracer {
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
 		baggage: Baggage? = nil,
-		block: () throws -> T
+		block: () throws -> T,
 	) rethrows -> T {
 		let span = buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 
@@ -177,7 +192,9 @@ public final class Tracer {
 			span.end() // automatically retires the span
 		}
 
-		return try Baggage.$currentBaggageTaskLocal.withValue(Baggage(span: span)) {
+		// Carry forward any previous baggage attributes
+		let newBaggage = Baggage(span: span, attributes: baggage?.attributes)
+		return try Baggage.$currentBaggageTaskLocal.withValue(newBaggage) {
 			do {
 				return try block()
 			} catch {
@@ -199,7 +216,7 @@ public final class Tracer {
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
 		baggage: Baggage? = nil,
-		block: () async throws -> T
+		block: () async throws -> T,
 	) async rethrows -> T {
 		let span = buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 
@@ -207,7 +224,9 @@ public final class Tracer {
 			span.end() // automatically retires the span
 		}
 
-		return try await Baggage.$currentBaggageTaskLocal.withValue(Baggage(span: span)) {
+		// Carry forward any previous baggage attributes
+		let newBaggage = Baggage(span: span, attributes: baggage?.attributes)
+		return try await Baggage.$currentBaggageTaskLocal.withValue(newBaggage) {
 			do {
 				return try await block()
 			} catch {
@@ -283,10 +302,12 @@ public final class Tracer {
 		name: String,
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
-		baggage: Baggage? = nil
+		baggage: Baggage? = nil,
 	) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
+
+		let mergedAttributes = mergeAttributes(baggageAttributes: resolvedBaggage.attributes, spanAttributes: attributes)
 
 		if let subTraceId = resolvedBaggage.subTraceId {
 			// Create a new detached trace with optional linking
@@ -294,10 +315,10 @@ public final class Tracer {
 			let result = Span(
 				name: name,
 				kind: finalKind,
-				attributes: attributes,
+				attributes: mergedAttributes,
 				traceId: subTraceId,
 				parentId: nil,
-				retireCallback: retire
+				retireCallback: retire,
 			)
 
 			let parent = resolvedBaggage.span
@@ -314,12 +335,24 @@ public final class Tracer {
 			return Span(
 				name: name,
 				kind: finalKind,
-				attributes: attributes,
+				attributes: mergedAttributes,
 				traceId: resolvedBaggage.span.traceId,
 				parentId: resolvedBaggage.span.id,
-				retireCallback: retire
+				retireCallback: retire,
 			)
 		}
+	}
+
+	/// Produces the merged dictionary of baggage and span attributes, or nil when both are nil.
+	/// Span attributes are preferred
+	/// - Parameters:
+	///   - baggageAttributes: attributes from baggage
+	///   - spanAttributes: any attributes from the span
+	/// - Returns: The merged attribute dictionary
+	func mergeAttributes(baggageAttributes: TelemetryAttributes?, spanAttributes: TelemetryAttributes?) -> TelemetryAttributes? {
+		guard let baggageAttributes else { return spanAttributes }
+		guard let spanAttributes else { return baggageAttributes }
+		return baggageAttributes.merging(spanAttributes) { _, new in new }
 	}
 
 	// MARK: Private

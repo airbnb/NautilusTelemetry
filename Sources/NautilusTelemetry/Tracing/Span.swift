@@ -39,7 +39,7 @@ public enum SpanKind {
 
 /// Implements a pared down version of the spec
 /// Not thread safe -- it's assumed that Span will only be modified from a single thread.
-public final class Span: Identifiable {
+public final class Span: TelemetryAttributesContainer, Identifiable {
 
 	// MARK: Lifecycle
 
@@ -58,7 +58,7 @@ public final class Span: Identifiable {
 	) {
 		self.name = name
 		self.kind = kind
-		self.attributes = attributes
+		_attributes = attributes
 		self.traceId = traceId
 		self.id = id
 		self.parentId = parentId
@@ -125,11 +125,22 @@ public final class Span: Identifiable {
 		// AnyHashable is not Sendable. For now, make this unchecked, but could consider wrapping ala:
 		// https://github.com/pointfreeco/swift-concurrency-extras/blob/main/Sources/ConcurrencyExtras/AnyHashableSendable.swift
 		lock.withLockUnchecked {
-			if attributes == nil {
-				attributes = TelemetryAttributes()
+			if _attributes == nil {
+				_attributes = TelemetryAttributes()
 			}
 
-			attributes?[name] = value
+			_attributes?[name] = value
+		}
+	}
+
+	public subscript(name: String) -> AnyHashable? {
+		get {
+			lock.withLockUnchecked {
+				_attributes?[name]
+			}
+		}
+		set(newValue) {
+			addAttribute(name, newValue)
 		}
 	}
 
@@ -209,12 +220,16 @@ public final class Span: Identifiable {
 	/// Span references are converted  to `Link` to avoid cyclic references.
 	var links: [Link]
 	let startTime: ContinuousClock.Instant
-	var attributes: TelemetryAttributes?
 	var events: [Event]? = nil // optimization -- don't generate if no events added
 	var status = Status
 		.unset // optimization -- we will omit status fields when unset: https://opentelemetry.io/docs/concepts/signals/traces/#span-status
 	var endTime: ContinuousClock.Instant?
 	var retireCallback: ((_: Span) -> Void)?
+
+	/// Vend private attributes as a thread-safe copy
+	var attributes: TelemetryAttributes? {
+		lock.withLockUnchecked { _attributes }
+	}
 
 	var elapsed: Duration? {
 		guard let endTime else { return nil }
@@ -262,6 +277,8 @@ public final class Span: Identifiable {
 	// MARK: Private
 
 	private let lock = OSAllocatedUnfairLock()
+
+	private var _attributes: TelemetryAttributes?
 
 	private static func exceptionAttributes(type: String, message: String, stacktrace: String?) -> [String: String] {
 		var attributes = [
