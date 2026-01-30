@@ -11,7 +11,7 @@ import Foundation
 
 public typealias MetricNumeric = Comparable & Numeric
 
-/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
+/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md#attribute
 public typealias TelemetryAttributes = [String: AnyHashable]
 
 // MARK: - TelemetryAttributesContainer

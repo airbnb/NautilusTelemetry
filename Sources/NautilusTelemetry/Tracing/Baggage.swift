@@ -46,17 +46,13 @@ public final class Baggage: TelemetryAttributesContainer, @unchecked Sendable {
 		self.span = span
 		self.subTraceId = subTraceId
 		self.subtraceLinking = subtraceLinking
-		if attributes == nil {
-			// Infer baggage attributes from current context if not provided
-			_attributes = Baggage.currentBaggageTaskLocal?.attributes
-		} else {
-			_attributes = attributes
-		}
-	}
+		// Infer baggage attributes from current context if not provided
+		_attributes = attributes ?? Baggage.currentBaggageTaskLocal?.attributes	}
 
 	// MARK: Public
 
 	/// Adds an attribute to the baggage. This can be used to propagate selected attributes to child spans.
+	/// https://opentelemetry.io/docs/concepts/signals/baggage/#baggage-is-not-the-same-as-attributes
 	/// - Parameters:
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
 	///   - value: a value.

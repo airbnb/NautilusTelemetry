@@ -145,7 +145,7 @@ public final class Tracer {
 	}
 
 	/// Propagate a parent span into the enclosed block via TaskLocal.
-	/// Preferred to use `propagateBaggage`, as it can
+	/// Preferred to use `propagateBaggage`, as it introduces fewer stack frames.
 	/// - Parameters:
 	///   - span: The parent span.
 	///   - block: The code to execute.
