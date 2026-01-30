@@ -126,4 +126,46 @@ final class TracerTests: XCTestCase {
 		XCTAssertEqual(childSpan.parentId, tracer.root.id)
 	}
 
+	// MARK: - Baggage Attribute Propagation Tests
+
+	func testBaggageAttributesPropagateToSpan() {
+		let parent = tracer.startSpan(name: "parent")
+		let baggage = Baggage(span: parent)
+		baggage["baggage.key"] = "baggage.value"
+
+		let child = tracer.buildSpan(name: "child", baggage: baggage)
+
+		XCTAssertEqual(child["baggage.key"], "baggage.value")
+	}
+
+	func testSpanAttributesOverrideBaggageAttributes() {
+		let parent = tracer.startSpan(name: "parent")
+		let baggage = Baggage(span: parent)
+		baggage["shared.key"] = "from.baggage"
+
+		let spanAttributes: TelemetryAttributes = ["shared.key": "from.span"]
+		let child = tracer.buildSpan(name: "child", attributes: spanAttributes, baggage: baggage)
+
+		XCTAssertEqual(child["shared.key"], "from.span")
+	}
+
+	func testMergeAttributesBothNil() {
+		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: nil)
+		XCTAssertNil(result)
+	}
+
+	func testMergeAttributesBaggageOnlyNil() {
+		let spanAttributes: TelemetryAttributes = ["span.key": "span.value"]
+		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: spanAttributes)
+
+		XCTAssertEqual(result?["span.key"], "span.value")
+	}
+
+	func testMergeAttributesSpanOnlyNil() {
+		let baggageAttributes: TelemetryAttributes = ["baggage.key": "baggage.value"]
+		let result = tracer.mergeAttributes(baggageAttributes: baggageAttributes, spanAttributes: nil)
+
+		XCTAssertEqual(result?["baggage.key"], "baggage.value")
+	}
+
 }

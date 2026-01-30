@@ -298,4 +298,10 @@ final class SpanTests: XCTestCase {
 
 		XCTAssertFalse(span.isRoot)
 	}
+
+	func testSpanSubscript() {
+		let span = tracer.startSpan(name: "test")
+		span["key1"] = "value1"
+		XCTAssertEqual(span["key1"], "value1")
+	}
 }

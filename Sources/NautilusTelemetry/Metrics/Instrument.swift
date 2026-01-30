@@ -42,7 +42,7 @@ public protocol Instrument: AnyObject {
 
 // MARK: - ExportableInstrument
 
-protocol ExportableInstrument {
+protocol ExportableInstrument: AnyObject {
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric
 }
 
