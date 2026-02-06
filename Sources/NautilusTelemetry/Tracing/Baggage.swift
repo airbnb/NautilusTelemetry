@@ -47,7 +47,8 @@ public final class Baggage: TelemetryAttributesContainer, @unchecked Sendable {
 		self.subTraceId = subTraceId
 		self.subtraceLinking = subtraceLinking
 		// Infer baggage attributes from current context if not provided
-		_attributes = attributes ?? Baggage.currentBaggageTaskLocal?.attributes	}
+		_attributes = attributes ?? Baggage.currentBaggageTaskLocal?.attributes
+	}
 
 	// MARK: Public
 

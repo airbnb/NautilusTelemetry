@@ -168,4 +168,45 @@ final class TracerTests: XCTestCase {
 		XCTAssertEqual(result?["baggage.key"], "baggage.value")
 	}
 
+	// MARK: - Error Propagation Tests
+
+	func testPropagateSpanRecordsErrorOnSpan() {
+		let span = tracer.startSpan(name: "test-span")
+
+		struct TestError: Error { }
+
+		do {
+			try tracer.propagateParent(span) {
+				throw TestError()
+			}
+			XCTFail("Expected error to be thrown")
+		} catch {
+			// Expected
+		}
+
+		XCTAssertEqual(span.status, .error(message: "TestError()"))
+		XCTAssertEqual(span.events?.count, 1)
+		XCTAssertEqual(span.events?.first?.name, "exception")
+	}
+
+	func testPropagateBaggageRecordsErrorOnSpan() {
+		let span = tracer.startSpan(name: "test-span")
+		let baggage = Baggage(span: span)
+
+		struct TestError: Error { }
+
+		do {
+			try tracer.propagateBaggage(baggage) {
+				throw TestError()
+			}
+			XCTFail("Expected error to be thrown")
+		} catch {
+			// Expected
+		}
+
+		XCTAssertEqual(span.status, .error(message: "TestError()"))
+		XCTAssertEqual(span.events?.count, 1)
+		XCTAssertEqual(span.events?.first?.name, "exception")
+	}
+
 }

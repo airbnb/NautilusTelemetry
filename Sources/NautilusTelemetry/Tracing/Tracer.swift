@@ -152,13 +152,7 @@ public final class Tracer {
 	/// - Returns: The return value of the closure.
 	public func propagateParent<T>(_ span: Span, block: () throws -> T) rethrows -> T {
 		let baggage = Baggage(span: span)
-
-		do {
-			return try propagateBaggage(baggage, block: block)
-		} catch {
-			span.recordError(error)
-			throw error // rethrow
-		}
+		return try propagateBaggage(baggage, block: block)
 	}
 
 	/// Propagate baggage into the enclosed block via TaskLocal.
@@ -167,8 +161,13 @@ public final class Tracer {
 	///   - block: The code to execute.
 	/// - Returns: The return value of the closure.
 	public func propagateBaggage<T>(_ baggage: Baggage, block: () throws -> T) rethrows -> T {
-		try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
-			try block()
+		do {
+			return try Baggage.$currentBaggageTaskLocal.withValue(baggage) {
+				try block()
+			}
+		} catch {
+			baggage.span.recordError(error)
+			throw error // rethrow
 		}
 	}
 
