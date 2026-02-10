@@ -115,6 +115,11 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		}
 	}
 
+	public func overlapsInterval(_ startInterval: ContinuousClock.Instant, endInterval: ContinuousClock.Instant) -> Bool {
+		let endTime = endTime ?? .now
+		return startTime <= endInterval && startInterval <= endTime
+	}
+
 	/// Adds an attribute to the span.
 	/// - Parameters:
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
