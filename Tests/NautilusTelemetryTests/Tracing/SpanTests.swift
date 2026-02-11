@@ -310,16 +310,16 @@ final class SpanTests: XCTestCase {
 		let span = makeSpan(start: .seconds(2), end: .seconds(4))
 
 		// Overlapping cases
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(1), endInterval: t + .seconds(5)), "interval encompasses span")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(3), endInterval: t + .seconds(3)), "span encompasses interval")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(1), endInterval: t + .seconds(3)), "overlap at start")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(3), endInterval: t + .seconds(5)), "overlap at end")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(2), endInterval: t + .seconds(4)), "exact match")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(4), endInterval: t + .seconds(5)), "shared endpoint")
+		XCTAssertTrue(span.overlapsInterval(t + .seconds(1), t + .seconds(5)), "interval encompasses span")
+		XCTAssertTrue(span.overlapsInterval(t + .seconds(3), t + .seconds(3)), "span encompasses interval")
+		XCTAssertTrue(span.overlapsInterval(t + .seconds(1), t + .seconds(3)), "overlap at start")
+		XCTAssertTrue(span.overlapsInterval(t + .seconds(3), t + .seconds(5)), "overlap at end")
+		XCTAssertTrue(span.overlapsInterval(t + .seconds(2), t + .seconds(4)), "exact match")
+		XCTAssertTrue(span.overlapsInterval(t + .seconds(4), t + .seconds(5)), "shared endpoint")
 
 		// Non-overlapping cases
-		XCTAssertFalse(span.overlapsInterval(t + .seconds(0), endInterval: t + .seconds(1)), "entirely before")
-		XCTAssertFalse(span.overlapsInterval(t + .seconds(5), endInterval: t + .seconds(6)), "entirely after")
+		XCTAssertFalse(span.overlapsInterval(t + .seconds(0), t + .seconds(1)), "entirely before")
+		XCTAssertFalse(span.overlapsInterval(t + .seconds(5), t + .seconds(6)), "entirely after")
 	}
 
 	func testSpanSubscript() {
