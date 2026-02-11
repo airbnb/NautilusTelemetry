@@ -116,6 +116,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	}
 
 	public func overlapsInterval(_ startInterval: ContinuousClock.Instant, endInterval: ContinuousClock.Instant) -> Bool {
+		precondition(startInterval <= endInterval, "startInterval must be <= endInterval")
 		let endTime = endTime ?? .now
 		return startTime <= endInterval && startInterval <= endTime
 	}
