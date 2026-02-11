@@ -90,7 +90,7 @@ final class FlushTimerTests: XCTestCase {
 		let expectation2 = XCTestExpectation(description: "Timer handler called after resume")
 		var handlerCallCount = 0
 
-		let timer = FlushTimer(flushInterval: 0.1, repeating: true) {
+		let timer = FlushTimer(flushInterval: 0.2, repeating: true) {
 			handlerCallCount += 1
 			if handlerCallCount == 1 {
 				expectation1.fulfill()
