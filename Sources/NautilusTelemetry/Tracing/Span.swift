@@ -218,6 +218,15 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		}
 	}
 
+	/// Adjust start and/or end timestamps. This can be used for cases where the time is inferred from other sources, such as `ProcessDetails.timeSinceStart`.
+	/// - Parameters:
+	///   - start: duration to add to startTime. May be negative.
+	///   - end: duration to add to endTime. May be negative. If the span is not yet ended, endTime will remain nil.
+	public func adjust(start: Duration = Duration.seconds(0), end: Duration = Duration.seconds(0)) {
+		startTime = startTime.advanced(by: start)
+		endTime = endTime?.advanced(by: end)
+	}
+
 	// MARK: Internal
 
 	let kind: SpanKind
@@ -225,7 +234,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 
 	/// Span references are converted  to `Link` to avoid cyclic references.
 	var links: [Link]
-	let startTime: ContinuousClock.Instant
+	var startTime: ContinuousClock.Instant
 	var events: [Event]? = nil // optimization -- don't generate if no events added
 	var status = Status
 		.unset // optimization -- we will omit status fields when unset: https://opentelemetry.io/docs/concepts/signals/traces/#span-status

@@ -327,4 +327,33 @@ final class SpanTests: XCTestCase {
 		span["key1"] = "value1"
 		XCTAssertEqual(span["key1"], "value1")
 	}
+
+	func test_adjust() {
+		let traceId = Identifiers.generateTraceId()
+		let t = ContinuousClock.now
+
+		// start only
+		let span1 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
+		span1.adjust(start: .seconds(2))
+		XCTAssertEqual(span1.startTime, t + .seconds(2))
+		XCTAssertEqual(span1.endTime, t + .seconds(10))
+
+		// end only
+		let span2 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
+		span2.adjust(end: .seconds(3))
+		XCTAssertEqual(span2.startTime, t)
+		XCTAssertEqual(span2.endTime, t + .seconds(13))
+
+		// both start and end
+		let span3 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
+		span3.adjust(start: .seconds(-1), end: .seconds(-2))
+		XCTAssertEqual(span3.startTime, t - .seconds(1))
+		XCTAssertEqual(span3.endTime, t + .seconds(8))
+
+		// nil endTime is unaffected
+		let span4 = Span(name: "test", startTime: t, traceId: traceId, parentId: nil)
+		span4.adjust(start: .seconds(5), end: .seconds(5))
+		XCTAssertEqual(span4.startTime, t + .seconds(5))
+		XCTAssertNil(span4.endTime)
+	}
 }
