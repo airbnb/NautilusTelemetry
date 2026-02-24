@@ -12,7 +12,7 @@ public enum ProcessDetails {
 
 	/// Provide the elapsed time since the process started.
 	public static var timeSinceStart: Duration {
-		let now = Date.timeIntervalBetween1970AndReferenceDate + Date.timeIntervalSinceReferenceDate
+		let now = Date().timeIntervalSince1970
 
 		var kp = kinfo_proc()
 		var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
