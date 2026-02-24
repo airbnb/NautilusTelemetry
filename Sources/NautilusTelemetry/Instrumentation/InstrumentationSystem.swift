@@ -18,7 +18,7 @@ public enum InstrumentationSystem {
 
 	public static func bootstrap(reporter _reporter: NautilusTelemetryReporter) {
 		NautilusTelemetry.queue.sync {
-			precondition(reporter == nil, "Only bootstrap once!")
+			assert(reporter == nil, "Only bootstrap once!")
 
 			reporter = _reporter
 
