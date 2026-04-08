@@ -8,11 +8,15 @@ import Synchronization
 
 // MARK: - NetworkMonitor
 
-final class NetworkMonitor {
+public final class NetworkMonitor {
 
-	// MARK: Internal
+	// MARK: Lifecycle
 
-	var attributes: TelemetryAttributes {
+	public init() { }
+
+	// MARK: Public
+
+	public var attributes: TelemetryAttributes {
 		var attributes = TelemetryAttributes()
 
 		if let networkPath = networkPath.withLock({ $0 }) {
@@ -39,17 +43,19 @@ final class NetworkMonitor {
 		return attributes
 	}
 
-	func start() {
+	public func start() {
 		pathMonitor.pathUpdateHandler = { [weak self] path in
 			self?.networkPath.withLock { $0 = path }
 		}
 		pathMonitor.start(queue: pathMonitorQueue)
 	}
 
-	func stop() {
+	public func stop() {
 		pathMonitor.cancel()
 		networkPath.withLock { $0 = nil }
 	}
+
+	// MARK: Internal
 
 	#if os(iOS)
 	func radioAccessTechnologyDescription(_ technology: String) -> String {
