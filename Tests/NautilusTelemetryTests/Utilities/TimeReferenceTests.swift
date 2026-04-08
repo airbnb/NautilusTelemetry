@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import NautilusTelemetry
 
-@Suite("TimeReference Tests")
+@Suite
 struct TimeReferenceTests {
 
 	let toleranceMS: Int64 = 500

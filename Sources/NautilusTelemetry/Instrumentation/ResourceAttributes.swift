@@ -11,6 +11,42 @@ import Foundation
 import UIKit
 #endif
 
+// MARK: - ResourceAttributeOptions
+
+/// Options for which resource attributes to include in telemetry exports.
+public struct ResourceAttributeOptions: OptionSet, Sendable {
+
+	// MARK: Lifecycle
+
+	public init(rawValue: Int) {
+		self.rawValue = rawValue
+	}
+
+	// MARK: Public
+
+	public static let serviceName = ResourceAttributeOptions(rawValue: 1 << 0)
+	public static let serviceNamespace = ResourceAttributeOptions(rawValue: 1 << 1)
+	public static let serviceVersion = ResourceAttributeOptions(rawValue: 1 << 2)
+	public static let telemetrySdk = ResourceAttributeOptions(rawValue: 1 << 3)
+	public static let deviceId = ResourceAttributeOptions(rawValue: 1 << 4)
+	public static let deviceManufacturer = ResourceAttributeOptions(rawValue: 1 << 5)
+	public static let deviceModel = ResourceAttributeOptions(rawValue: 1 << 6)
+	public static let osType = ResourceAttributeOptions(rawValue: 1 << 7)
+	public static let osName = ResourceAttributeOptions(rawValue: 1 << 8)
+	public static let osVersion = ResourceAttributeOptions(rawValue: 1 << 9)
+
+	public static let all: ResourceAttributeOptions = [
+		.serviceName, .serviceNamespace, .serviceVersion, .telemetrySdk,
+		.deviceId, .deviceManufacturer, .deviceModel,
+		.osType, .osName, .osVersion,
+	]
+
+	public static let metricSubset = ResourceAttributeOptions.all.subtracting([.deviceId, .osVersion])
+
+	public let rawValue: Int
+
+}
+
 // MARK: - ResourceAttributes
 
 /// Defines top-level
@@ -98,28 +134,48 @@ public struct ResourceAttributes {
 	let osVersion: String
 	let additionalAttributes: TelemetryAttributes?
 
-	var keyValues: TelemetryAttributes {
+	func keyValues(options: ResourceAttributeOptions = .all) -> TelemetryAttributes {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md
 
 		var attributes = TelemetryAttributes()
 
 		// https://opentelemetry.io/docs/specs/semconv/registry/attributes/service/
-		attributes["service.name"] = "\(osName.lowercased()).app"
-		attributes["service.namespace"] = bundleIdentifier
-		attributes["service.version"] = applicationVersion
-		attributes["telemetry.sdk.name"] = "NautilusTelemetry"
-		attributes["telemetry.sdk.language"] = "swift"
-		attributes["device.id"] = vendorIdentifier
+		if options.contains(.serviceName) {
+			attributes["service.name"] = "\(osName.lowercased()).app"
+		}
+		if options.contains(.serviceNamespace) {
+			attributes["service.namespace"] = bundleIdentifier
+		}
+		if options.contains(.serviceVersion) {
+			attributes["service.version"] = applicationVersion
+		}
+		if options.contains(.telemetrySdk) {
+			attributes["telemetry.sdk.name"] = "NautilusTelemetry"
+			attributes["telemetry.sdk.language"] = "swift"
+		}
+		if options.contains(.deviceId) {
+			attributes["device.id"] = vendorIdentifier
+		}
 		// Can we set "deployment.environment" here?
 
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/device.md
-		attributes["device.manufacturer"] = "Apple"
-		attributes["device.model"] = deviceModelIdentifier
+		if options.contains(.deviceManufacturer) {
+			attributes["device.manufacturer"] = "Apple"
+		}
+		if options.contains(.deviceModel) {
+			attributes["device.model"] = deviceModelIdentifier
+		}
 
 		// https://opentelemetry.io/docs/specs/semconv/resource/os/
-		attributes["os.type"] = osType
-		attributes["os.name"] = osName
-		attributes["os.version"] = osVersion
+		if options.contains(.osType) {
+			attributes["os.type"] = osType
+		}
+		if options.contains(.osName) {
+			attributes["os.name"] = osName
+		}
+		if options.contains(.osVersion) {
+			attributes["os.version"] = osVersion
+		}
 
 		if let additionalAttributes {
 			// Overwrite any existing keys.

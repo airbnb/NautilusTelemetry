@@ -15,7 +15,7 @@ final class ResourceAttributesTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0.0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let attributes = ResourceAttributes.makeWithDefaults(additionalAttributes: ["foo": "bar"]).keyValues
+		let attributes = ResourceAttributes.makeWithDefaults(additionalAttributes: ["foo": "bar"]).keyValues()
 
 		_ = try XCTUnwrap(exporter.convertToOTLP(attributes: attributes)) // make sure it converts
 
@@ -50,5 +50,36 @@ final class ResourceAttributesTests: XCTestCase {
 		#else
 		XCTAssertGreaterThanOrEqual(firstComponent, 11)
 		#endif
+	}
+
+	func testAttributeOptionsFiltering() {
+		let resourceAttributes = ResourceAttributes.makeWithDefaults(additionalAttributes: nil)
+
+		// Test with only serviceName option
+		let filtered = resourceAttributes.keyValues(options: .serviceName)
+		XCTAssertNotNil(filtered["service.name"])
+		XCTAssertNil(filtered["service.namespace"])
+		XCTAssertNil(filtered["device.id"])
+		XCTAssertNil(filtered["os.version"])
+
+		// Test excluding deviceId and osVersion (metrics default)
+		let metricsOptions: ResourceAttributeOptions = [
+			.serviceName, .serviceNamespace, .serviceVersion, .telemetrySdk,
+			.deviceManufacturer, .deviceModel, .osType, .osName,
+		]
+		let metricsFiltered = resourceAttributes.keyValues(options: metricsOptions)
+		XCTAssertNotNil(metricsFiltered["service.name"])
+		XCTAssertNotNil(metricsFiltered["os.name"])
+		XCTAssertNil(metricsFiltered["device.id"])
+		XCTAssertNil(metricsFiltered["os.version"])
+	}
+
+	func testAdditionalAttributesAlwaysIncluded() {
+		let resourceAttributes = ResourceAttributes.makeWithDefaults(additionalAttributes: ["custom.key": "value"])
+
+		// Even with empty options, additionalAttributes should be included
+		let filtered = resourceAttributes.keyValues(options: [])
+		XCTAssertEqual(filtered["custom.key"] as? String, "value")
+		XCTAssertNil(filtered["service.name"])
 	}
 }

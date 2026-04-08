@@ -92,7 +92,7 @@ public final class Tracer {
 		name: String,
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
-		baggage: Baggage? = nil,
+		baggage: Baggage? = nil
 	) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let subTraceBaggage = Baggage(
@@ -116,7 +116,7 @@ public final class Tracer {
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
 		baggage: Baggage? = nil,
-		block: () throws -> T,
+		block: () throws -> T
 	) rethrows -> T {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let subTraceBaggage = Baggage(
@@ -139,7 +139,7 @@ public final class Tracer {
 		name: String,
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
-		baggage: Baggage? = nil,
+		baggage: Baggage? = nil
 	) -> Span {
 		buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 	}
@@ -183,7 +183,7 @@ public final class Tracer {
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
 		baggage: Baggage? = nil,
-		block: () throws -> T,
+		block: () throws -> T
 	) rethrows -> T {
 		let span = buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 
@@ -215,7 +215,7 @@ public final class Tracer {
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
 		baggage: Baggage? = nil,
-		block: () async throws -> T,
+		block: () async throws -> T
 	) async rethrows -> T {
 		let span = buildSpan(name: name, kind: kind, attributes: attributes, baggage: baggage)
 
@@ -301,7 +301,7 @@ public final class Tracer {
 		name: String,
 		kind: SpanKind = .unspecified,
 		attributes: TelemetryAttributes? = nil,
-		baggage: Baggage? = nil,
+		baggage: Baggage? = nil
 	) -> Span {
 		let resolvedBaggage = baggage ?? currentBaggage
 		let finalKind = (kind == .unspecified) ? resolvedBaggage.span.kind : kind // infer from parent span if unspecified
@@ -317,7 +317,7 @@ public final class Tracer {
 				attributes: mergedAttributes,
 				traceId: subTraceId,
 				parentId: nil,
-				retireCallback: retire,
+				retireCallback: retire
 			)
 
 			let parent = resolvedBaggage.span
@@ -337,7 +337,7 @@ public final class Tracer {
 				attributes: mergedAttributes,
 				traceId: resolvedBaggage.span.traceId,
 				parentId: resolvedBaggage.span.id,
-				retireCallback: retire,
+				retireCallback: retire
 			)
 		}
 	}

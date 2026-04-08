@@ -182,8 +182,8 @@ struct URLTemplate {
 	private static func parseRequiredParameters(from queryTemplate: Substring)
 		-> (templated: Set<Substring>, literal: [Substring: Substring])
 	{
-		var templatedParams: Set<Substring> = []
-		var literalParams: [Substring: Substring] = [:]
+		var templatedParams = Set<Substring>()
+		var literalParams = [Substring: Substring]()
 
 		for (name, value) in parseQueryStringPairs(from: queryTemplate) {
 			if (try? parameterRegex.wholeMatch(in: value)) != nil {

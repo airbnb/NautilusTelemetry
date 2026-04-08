@@ -59,7 +59,7 @@ final class HistogramTests: XCTestCase {
 	}
 
 	func testInitializationWithEmptyBounds() {
-		let explicitBounds: [Int] = []
+		let explicitBounds = [Int]()
 		let histogram = Histogram<Int>(name: "empty_bounds", unit: nil, description: nil, explicitBounds: explicitBounds)
 
 		XCTAssertEqual(histogram.values.explicitBounds, explicitBounds)
