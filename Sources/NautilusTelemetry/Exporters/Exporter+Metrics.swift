@@ -22,7 +22,7 @@ extension Exporter {
 	public func exportOTLPToJSON(
 		instruments: [Instrument],
 		additionalAttributes: TelemetryAttributes?,
-		resourceAttributeOptions: ResourceAttributeOptions = ResourceAttributeOptions.all.subtracting([.deviceId, .osVersion])
+		resourceAttributeOptions: ResourceAttributeOptions = ResourceAttributeOptions.metricSubset
 	) throws -> Data {
 		let metrics = exportOTLP(instruments: instruments)
 

@@ -41,6 +41,8 @@ public struct ResourceAttributeOptions: OptionSet, Sendable {
 		.osType, .osName, .osVersion,
 	]
 
+	public static let metricSubset: ResourceAttributeOptions = .all.subtracting([.deviceId, .osVersion])
+
 	public let rawValue: Int
 
 }
