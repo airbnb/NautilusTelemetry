@@ -17,7 +17,7 @@ public enum TestDataNormalization {
 	/// - Throws: errors
 	/// - Returns: normalized json string, or nil
 	public static func normalizedJsonString(data: Data, keyValuesToRedact: [String]) throws -> String? {
-		// recursive redaction
+		/// recursive redaction
 		func redact(_ obj: Any) -> Any {
 			if var dict = obj as? [String: Any] {
 				for (key, value) in dict {

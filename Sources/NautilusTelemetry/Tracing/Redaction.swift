@@ -25,7 +25,7 @@ public enum Redaction {
 
 		if let queryItems = components.queryItems {
 			// Redact AWS security parameters by default
-			let prefixes: Set<String> = ["x-amz-"]
+			let prefixes: Set = ["x-amz-"]
 			components.queryItems = queryItems.map { queryItem in
 				let queryItemName = queryItem.name.lowercased()
 				if prefixes.contains(where: { queryItemName.hasPrefix($0) }) {

@@ -198,7 +198,7 @@ final class ExporterTests: XCTestCase {
 		XCTAssertEqual(convertedDoubleBounds, [10.5, 20.5, 30.5])
 
 		// Test empty bounds
-		let emptyBounds: [Int] = []
+		let emptyBounds = [Int]()
 		let convertedEmptyBounds = exporter.convertToOTLP(explicitBounds: emptyBounds)
 		XCTAssertEqual(convertedEmptyBounds, [])
 	}

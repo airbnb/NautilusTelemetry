@@ -27,7 +27,7 @@ final class HistogramValuesTests: XCTestCase {
 	}
 
 	func testHistogramBucketsEmptyBounds() {
-		let explicitBounds: [Int] = []
+		let explicitBounds = [Int]()
 		let buckets = HistogramBuckets<Int>(explicitBounds: explicitBounds)
 
 		XCTAssertEqual(buckets.explicitBounds, explicitBounds)

@@ -222,7 +222,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	/// - Parameters:
 	///   - start: duration to add to startTime. May be negative.
 	///   - end: duration to add to endTime. May be negative. If the span is not yet ended, endTime will remain nil.
-	public func adjust(start: Duration = Duration.seconds(0), end: Duration = Duration.seconds(0)) {
+	public func adjust(start: Duration = .seconds(0), end: Duration = .seconds(0)) {
 		startTime = startTime.advanced(by: start)
 		endTime = endTime?.advanced(by: end)
 	}
