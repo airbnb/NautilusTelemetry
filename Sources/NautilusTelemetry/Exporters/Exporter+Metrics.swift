@@ -17,13 +17,18 @@ extension Exporter {
 	/// - Parameters:
 	///   - instruments: array of instruments.
 	///   - additionalAttributes: Additional attributes to be added to resource attributes.
+	///   - resourceAttributeOptions: Options controlling which resource attributes to include. Defaults to all except `deviceId` and `osVersion` in order to reduce metric cardinality.
 	/// - Returns: JSON data.
-	public func exportOTLPToJSON(instruments: [Instrument], additionalAttributes: TelemetryAttributes?) throws -> Data {
+	public func exportOTLPToJSON(
+		instruments: [Instrument],
+		additionalAttributes: TelemetryAttributes?,
+		resourceAttributeOptions: ResourceAttributeOptions = ResourceAttributeOptions.all.subtracting([.deviceId, .osVersion])
+	) throws -> Data {
 		let metrics = exportOTLP(instruments: instruments)
 
 		let scope = OTLP.V1InstrumentationScope(name: "NautilusTelemetry", version: "1.0")
 		let resourceAttributes = ResourceAttributes.makeWithDefaults(additionalAttributes: additionalAttributes)
-		let attributes = convertToOTLP(attributes: resourceAttributes.keyValues)
+		let attributes = convertToOTLP(attributes: resourceAttributes.keyValues(options: resourceAttributeOptions))
 		let resource = OTLP.V1Resource(attributes: attributes, droppedAttributesCount: nil)
 
 		let scopeMetrics = OTLP.V1ScopeMetrics(scope: scope, metrics: metrics, schemaUrl: schemaUrl)
