@@ -6,7 +6,7 @@ import PackageDescription
 
 let package = Package(
 	name: "NautilusTelemetry",
-	platforms: [.iOS("16.0"), .tvOS("16.0"), .macOS("13.0"), .watchOS("9.0")],
+	platforms: [.iOS("18.0"), .tvOS("18.0"), .macOS("15.0")],
 	products: [
 		// Products define the executables and libraries a package produces, and make them visible to other packages.
 		.library(
