@@ -46,6 +46,11 @@ final class NetworkMonitor {
 		pathMonitor.start(queue: pathMonitorQueue)
 	}
 
+	func stop() {
+		pathMonitor.cancel()
+		networkPath.withLock { $0 = nil }
+	}
+
 	#if os(iOS)
 	func radioAccessTechnologyDescription(_ technology: String) -> String {
 		radioAccessTechnologyMap[technology] ?? technology

@@ -7,6 +7,20 @@ import Testing
 
 @testable import NautilusTelemetry
 
+// MARK: - NetworkMonitorStartStopTests
+
+struct NetworkMonitorStartStopTests {
+
+	@Test
+	func `start and stop function`() async {
+		let monitor = NetworkMonitor()
+		monitor.start()
+		// Not going to write an async test for this
+		monitor.stop()
+		#expect(monitor.attributes["network.path.status"] == nil)
+	}
+}
+
 // MARK: - NWPathStatusTests
 
 struct NWPathStatusTests {
