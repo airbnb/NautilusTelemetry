@@ -6,31 +6,28 @@
 //
 
 import Foundation
-import XCTest
+import Testing
 
 @testable import NautilusTelemetry
 
-final class SpanTests: XCTestCase {
+@Suite
+struct SpanTests {
 
 	enum TestError: Error {
 		case failure
 	}
 
 	let tracer = Tracer()
-
 	let iterations = 100
 
 	let traceParentValueRegex_Sampling = /00-[a-f0-9]{32}-[a-f0-9]{16}-01/
 	let traceParentValueRegex_NotSampling = /00-[a-f0-9]{32}-[a-f0-9]{16}-00/
 
-	override func tearDown() {
-		tracer.flushRetiredSpans()
-	}
-
-	func testTraceId() {
+	@Test
+	func traceId() {
 		let traceId = Identifiers.generateTraceId()
-		XCTAssertEqual(traceId.count, 16)
-		XCTAssertNotEqual(traceId, Data(repeating: 0, count: 16))
+		#expect(traceId.count == 16)
+		#expect(traceId != Data(repeating: 0, count: 16))
 
 		let serial = DispatchQueue(label: "serial")
 		var set = Set<Data>()
@@ -40,13 +37,14 @@ final class SpanTests: XCTestCase {
 			_ = serial.sync { set.insert(traceId) }
 		}
 
-		XCTAssert(set.count == iterations) // check for duplicates
+		#expect(set.count == iterations)
 	}
 
-	func testSpanId() {
+	@Test
+	func spanId() {
 		let spanId = Identifiers.generateSpanId()
-		XCTAssertEqual(spanId.count, 8)
-		XCTAssertNotEqual(spanId, Data(repeating: 0, count: 8))
+		#expect(spanId.count == 8)
+		#expect(spanId != Data(repeating: 0, count: 8))
 
 		let serial = DispatchQueue(label: "serial")
 		var set = Set<Data>()
@@ -56,130 +54,119 @@ final class SpanTests: XCTestCase {
 			_ = serial.sync { set.insert(traceId) }
 		}
 
-		XCTAssert(set.count == iterations) // check for duplicates
+		#expect(set.count == iterations)
 	}
 
-	func testTrace() throws {
-		// we expect this test to run on main queue
-		dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-
+	@Test
+	func trace() throws {
 		try tracer.withSpan(name: "span1") {
-			XCTAssert(tracer.currentBaggage.span.parentId != nil)
+			#expect(tracer.currentBaggage.span.parentId != nil)
 			try span2Run()
 			tracer.currentSpan.addEvent(Span.Event(name: "event1"))
 		}
 
-		XCTAssert(tracer.retiredSpans.count == 2)
+		#expect(tracer.retiredSpans.count == 2)
 
 		let span2 = tracer.retiredSpans[0]
-		XCTAssert(span2.events?.count == 2)
-		XCTAssert(span2.status == .ok)
+		#expect(span2.events?.count == 2)
+		#expect(span2.status == .ok)
 
 		let traceParentHeader = span2.traceParentHeaderValue(sampled: true)
-		XCTAssertEqual(traceParentHeader.0, "traceparent")
-
-		XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: traceParentHeader.1) != nil)
+		#expect(traceParentHeader.0 == "traceparent")
+		#expect(try traceParentValueRegex_Sampling.wholeMatch(in: traceParentHeader.1) != nil)
 	}
 
-	func testTraceWithError() throws {
-		// we expect this test to run on main queue
-		dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-
+	@Test
+	func traceWithError() throws {
 		try tracer.withSpan(name: "span1") {
-			XCTAssert(tracer.currentBaggage.span.parentId != nil)
+			#expect(tracer.currentBaggage.span.parentId != nil)
 			try span2Run()
 			tracer.currentSpan.recordError(TestError.failure, includeBacktrace: true)
 			tracer.currentSpan.addEvent(Span.Event(name: "event1"))
 		}
 
-		XCTAssert(tracer.retiredSpans.count == 2)
+		#expect(tracer.retiredSpans.count == 2)
 
 		let span2 = tracer.retiredSpans[0]
-		XCTAssert(span2.events?.count == 2)
-		XCTAssert(span2.status == .ok)
+		#expect(span2.events?.count == 2)
+		#expect(span2.status == .ok)
 
 		let span1 = tracer.retiredSpans[1]
-		XCTAssertEqual(
-			span1.status,
-			.error(message: "failure")
-		)
+		#expect(span1.status == .error(message: "failure"))
 
-		let exceptionType = try XCTUnwrap(span1.events?[0].attributes?["exception.type"])
-		XCTAssertEqual(exceptionType, "NautilusTelemetryTests.SpanTests.TestError")
+		let exceptionType = try #require(span1.events?[0].attributes?["exception.type"] as? String)
+		#expect(exceptionType == "NautilusTelemetryTests.SpanTests.TestError")
 
 		let event = span1.events?[0]
-		let backtrace = try XCTUnwrap(event?.attributes?["exception.stacktrace"] as? String)
-
-		XCTAssert(backtrace.contains("testTraceWithError"))
+		let backtrace = try #require(event?.attributes?["exception.stacktrace"] as? String)
+		#expect(backtrace.contains("traceWithError"))
 
 		let traceParentHeader = span2.traceParentHeaderValue(sampled: false)
-		XCTAssertEqual(traceParentHeader.0, "traceparent")
-		XCTAssert(try traceParentValueRegex_NotSampling.wholeMatch(in: traceParentHeader.1) != nil)
+		#expect(traceParentHeader.0 == "traceparent")
+		#expect(try traceParentValueRegex_NotSampling.wholeMatch(in: traceParentHeader.1) != nil)
 	}
 
-	func testTraceparentHeader() throws {
-		let url = try makeURL("https://api.example.com/")
+	@Test
+	func traceparentHeader() throws {
+		let url = try TestUtils.makeURL("https://api.example.com/")
 		let span = tracer.startSpan(name: "test")
 
 		do {
 			var urlRequest = URLRequest(url: url)
 			span.addTraceHeadersIfSampling(&urlRequest, isSampling: true)
-			let header = try XCTUnwrap(urlRequest.value(forHTTPHeaderField: "traceparent"))
-			XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: header) != nil)
+			let header = try #require(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			#expect(try traceParentValueRegex_Sampling.wholeMatch(in: header) != nil)
 		}
 
 		do {
 			var urlRequest = URLRequest(url: url)
 			let span = tracer.startSpan(name: "test")
 			span.addTraceHeadersIfSampling(&urlRequest, isSampling: false)
-			XCTAssertNil(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			#expect(urlRequest.value(forHTTPHeaderField: "traceparent") == nil)
 		}
 
 		do {
 			var urlRequest = URLRequest(url: url)
 			span.addTraceHeadersUnconditionally(&urlRequest, isSampling: true)
-			let header = try XCTUnwrap(urlRequest.value(forHTTPHeaderField: "traceparent"))
-			XCTAssert(try traceParentValueRegex_Sampling.wholeMatch(in: header) != nil)
+			let header = try #require(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			#expect(try traceParentValueRegex_Sampling.wholeMatch(in: header) != nil)
 		}
 
 		do {
 			var urlRequest = URLRequest(url: url)
 			span.addTraceHeadersUnconditionally(&urlRequest, isSampling: false)
-			let header = try XCTUnwrap(urlRequest.value(forHTTPHeaderField: "traceparent"))
-			XCTAssert(try traceParentValueRegex_NotSampling.wholeMatch(in: header) != nil)
+			let header = try #require(urlRequest.value(forHTTPHeaderField: "traceparent"))
+			#expect(try traceParentValueRegex_NotSampling.wholeMatch(in: header) != nil)
 		}
 	}
 
-	func testThrowing() throws {
-		// we expect this test to run on main queue
-		dispatchPrecondition(condition: .onQueue(DispatchQueue.main))
-
-		do {
+	@Test
+	func throwingSpan() throws {
+		#expect(throws: TestError.self) {
 			try tracer.withSpan(name: "span1") {
 				throw TestError.failure
 			}
-		} catch { }
-
-		XCTAssert(tracer.retiredSpans.count == 1)
-
-		let span1 = tracer.retiredSpans[0]
-		XCTAssert(span1.status != .ok)
-	}
-
-	#if compiler(>=5.6.0) && canImport(_Concurrency)
-	func testAsync() async throws {
-		try await tracer.withSpan(name: "span1") {
-			XCTAssert(tracer.currentBaggage.span.parentId != nil)
-			try await span2RunAsync()
 		}
 
-		XCTAssert(tracer.retiredSpans.count == 2)
+		#expect(tracer.retiredSpans.count == 1)
+
+		let span1 = tracer.retiredSpans[0]
+		#expect(span1.status != .ok)
+	}
+
+	@Test
+	func asyncSpan() async throws {
+		try await tracer.withSpan(name: "span1") {
+			#expect(tracer.currentBaggage.span.parentId != nil)
+			try span2Run()
+		}
+
+		#expect(tracer.retiredSpans.count == 2)
 
 		let span2 = tracer.retiredSpans[0]
-		XCTAssert(span2.events?.count == 2)
-		XCTAssert(span2.status == .ok)
+		#expect(span2.events?.count == 2)
+		#expect(span2.status == .ok)
 	}
-	#endif
 
 	func span2Run() throws {
 		var ranSpan = false
@@ -191,77 +178,74 @@ final class SpanTests: XCTestCase {
 			span.status = .ok
 			ranSpan = true
 		}
-
-		XCTAssert(ranSpan)
+		#expect(ranSpan)
 	}
 
-	func span2RunAsync() async throws {
-		var ranSpan = false
-		tracer.withSpan(name: "span2async") {
-			let span = tracer.currentBaggage.span
-			span.addEvent("event1")
-			Thread.sleep(forTimeInterval: 0.1)
-			span.addEvent("event2")
-			span.status = .ok
-			ranSpan = true
+	@Test
+	func memoryLeaks() {
+		weak var weakSpan1: Span?
+		weak var weakSpan2: Span?
+
+		autoreleasepool {
+			let span1 = tracer.startSpan(name: "span1")
+			weakSpan1 = span1
+
+			tracer.withSpan(name: "span2") {
+				let span2 = tracer.currentBaggage.span
+				weakSpan2 = span2
+				span2.addEvent("event1")
+				Thread.sleep(forTimeInterval: 0.1)
+				span2.addEvent("event2")
+				span2.status = .ok
+			}
+
+			tracer.flushRetiredSpans()
 		}
 
-		XCTAssert(ranSpan)
+		#expect(weakSpan1 == nil)
+		#expect(weakSpan2 == nil)
 	}
 
-	func testForMemoryLeaks() throws {
-		let span1 = tracer.startSpan(name: "span1")
-		trackForMemoryLeak(instance: span1)
-
-		tracer.withSpan(name: "span2") {
-			let span2 = tracer.currentBaggage.span
-			span2.addEvent("event1")
-			Thread.sleep(forTimeInterval: 0.1)
-			span2.addEvent("event2")
-			span2.status = .ok
-
-			trackForMemoryLeak(instance: span2)
-		}
-
-		tracer.flushRetiredSpans() // make sure retired spans don't show up as leaks
-	}
-
-	func test_recordNSError() throws {
+	@Test
+	func recordNSError() throws {
 		let span = tracer.startSpan(name: "errorSpan")
 		let error = NSError(domain: "VeryBadError", code: -42, userInfo: [NSLocalizedDescriptionKey: "NSFailed"])
 		span.recordError(error)
 
-		let exceptionEvent = try XCTUnwrap(span.events?.first)
-		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
-		XCTAssertEqual(span.status, .error(message: "NSFailed"))
-		XCTAssertEqual(exceptionAttributes["exception.type"], "NSError.VeryBadError.-42")
-		XCTAssertEqual(exceptionAttributes["exception.message"], "NSFailed")
+		let exceptionEvent = try #require(span.events?.first)
+		let exceptionAttributes = try #require(exceptionEvent.attributes)
+		#expect(span.status == .error(message: "NSFailed"))
+		#expect(exceptionAttributes["exception.type"] as? String == "NSError.VeryBadError.-42")
+		#expect(exceptionAttributes["exception.message"] as? String == "NSFailed")
 	}
 
-	func test_recordError() throws {
+	@Test
+	func recordError() throws {
 		let error = TestError.failure
 		let span = tracer.startSpan(name: "errorSpan")
 		span.recordError(error)
 
-		let exceptionEvent = try XCTUnwrap(span.events?.first)
-		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
-		XCTAssertEqual(span.status, .error(message: "failure"))
-		XCTAssertEqual(exceptionAttributes["exception.type"], "NautilusTelemetryTests.SpanTests.TestError")
-		XCTAssertEqual(exceptionAttributes["exception.message"], "failure")
+		let exceptionEvent = try #require(span.events?.first)
+		let exceptionAttributes = try #require(exceptionEvent.attributes)
+		#expect(span.status == .error(message: "failure"))
+		#expect(exceptionAttributes["exception.type"] as? String == "NautilusTelemetryTests.SpanTests.TestError")
+		#expect(exceptionAttributes["exception.message"] as? String == "failure")
 	}
 
-	func test_recordErrorWithMessage() throws {
+	@Test
+	func recordErrorWithMessage() throws {
 		let span = tracer.startSpan(name: "errorSpan")
 		span.recordError(withType: "custom", message: "custom error message")
 
-		let exceptionEvent = try XCTUnwrap(span.events?.first)
-		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
-		XCTAssertEqual(span.status, .error(message: "custom error message"))
-		XCTAssertEqual(exceptionAttributes["exception.type"], "custom")
-		XCTAssertEqual(exceptionAttributes["exception.message"], "custom error message")
+		let exceptionEvent = try #require(span.events?.first)
+		let exceptionAttributes = try #require(exceptionEvent.attributes)
+		#expect(span.status == .error(message: "custom error message"))
+		#expect(exceptionAttributes["exception.type"] as? String == "custom")
+		#expect(exceptionAttributes["exception.message"] as? String == "custom error message")
 	}
 
-	func test_concurrentAddLinks() throws {
+	@Test
+	func concurrentAddLinks() {
 		let span = tracer.startSpan(name: "concurrentAddLinks")
 
 		DispatchQueue.concurrentPerform(iterations: 100) { _ in
@@ -270,36 +254,37 @@ final class SpanTests: XCTestCase {
 		}
 	}
 
-	func testSpanIsRootDefaultValue() {
+	@Test
+	func spanIsRootDefaultValue() {
 		let traceId = Identifiers.generateTraceId()
 		let span = Span(name: "test", kind: .internal, traceId: traceId, parentId: nil)
-
-		XCTAssertFalse(span.isRoot)
+		#expect(span.isRoot == false)
 	}
 
-	func testSpanIsRootExplicitlySetToTrue() {
+	@Test
+	func spanIsRootExplicitlySetToTrue() {
 		let traceId = Identifiers.generateTraceId()
 		let span = Span(name: "test", kind: .internal, traceId: traceId, parentId: nil, isRoot: true)
-
-		XCTAssertTrue(span.isRoot)
+		#expect(span.isRoot == true)
 	}
 
-	func testSpanIsRootExplicitlySetToFalse() {
+	@Test
+	func spanIsRootExplicitlySetToFalse() {
 		let traceId = Identifiers.generateTraceId()
 		let span = Span(name: "test", kind: .internal, traceId: traceId, parentId: nil, isRoot: false)
-
-		XCTAssertFalse(span.isRoot)
+		#expect(span.isRoot == false)
 	}
 
-	func testNonRootSpanHasIsRootFalse() {
+	@Test
+	func nonRootSpanHasIsRootFalse() {
 		let traceId = Identifiers.generateTraceId()
 		let parentId = Identifiers.generateSpanId()
 		let span = Span(name: "child", kind: .internal, traceId: traceId, parentId: parentId)
-
-		XCTAssertFalse(span.isRoot)
+		#expect(span.isRoot == false)
 	}
 
-	func testOverlapsInterval() {
+	@Test
+	func overlapsInterval() {
 		let traceId = Identifiers.generateTraceId()
 		let t = ContinuousClock.now
 
@@ -310,50 +295,59 @@ final class SpanTests: XCTestCase {
 		let span = makeSpan(start: .seconds(2), end: .seconds(4))
 
 		// Overlapping cases
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(1), t + .seconds(5)), "interval encompasses span")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(3), t + .seconds(3)), "span encompasses interval")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(1), t + .seconds(3)), "overlap at start")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(3), t + .seconds(5)), "overlap at end")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(2), t + .seconds(4)), "exact match")
-		XCTAssertTrue(span.overlapsInterval(t + .seconds(4), t + .seconds(5)), "shared endpoint")
+		#expect(span.overlapsInterval(t + .seconds(1), t + .seconds(5)), "interval encompasses span")
+		#expect(span.overlapsInterval(t + .seconds(3), t + .seconds(3)), "span encompasses interval")
+		#expect(span.overlapsInterval(t + .seconds(1), t + .seconds(3)), "overlap at start")
+		#expect(span.overlapsInterval(t + .seconds(3), t + .seconds(5)), "overlap at end")
+		#expect(span.overlapsInterval(t + .seconds(2), t + .seconds(4)), "exact match")
+		#expect(span.overlapsInterval(t + .seconds(4), t + .seconds(5)), "shared endpoint")
 
 		// Non-overlapping cases
-		XCTAssertFalse(span.overlapsInterval(t + .seconds(0), t + .seconds(1)), "entirely before")
-		XCTAssertFalse(span.overlapsInterval(t + .seconds(5), t + .seconds(6)), "entirely after")
+		#expect(!span.overlapsInterval(t + .seconds(0), t + .seconds(1)), "entirely before")
+		#expect(!span.overlapsInterval(t + .seconds(5), t + .seconds(6)), "entirely after")
 	}
 
-	func testSpanSubscript() {
+	@Test
+	func spanSubscript() {
 		let span = tracer.startSpan(name: "test")
 		span["key1"] = "value1"
-		XCTAssertEqual(span["key1"], "value1")
+		#expect(span["key1"] as? String == "value1")
 	}
 
-	func test_adjust() {
+	@Test
+	func sampleRate() {
+		let traceId = Identifiers.generateTraceId()
+		#expect(Span(name: "test", traceId: traceId, parentId: nil).sampleRate == nil)
+		#expect(Span(name: "test", traceId: traceId, parentId: nil, sampleRate: 50.0).sampleRate == 50.0)
+	}
+
+	@Test
+	func adjust() {
 		let traceId = Identifiers.generateTraceId()
 		let t = ContinuousClock.now
 
 		// start only
 		let span1 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
 		span1.adjust(start: .seconds(2))
-		XCTAssertEqual(span1.startTime, t + .seconds(2))
-		XCTAssertEqual(span1.endTime, t + .seconds(10))
+		#expect(span1.startTime == t + .seconds(2))
+		#expect(span1.endTime == t + .seconds(10))
 
 		// end only
 		let span2 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
 		span2.adjust(end: .seconds(3))
-		XCTAssertEqual(span2.startTime, t)
-		XCTAssertEqual(span2.endTime, t + .seconds(13))
+		#expect(span2.startTime == t)
+		#expect(span2.endTime == t + .seconds(13))
 
 		// both start and end
 		let span3 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
 		span3.adjust(start: .seconds(-1), end: .seconds(-2))
-		XCTAssertEqual(span3.startTime, t - .seconds(1))
-		XCTAssertEqual(span3.endTime, t + .seconds(8))
+		#expect(span3.startTime == t - .seconds(1))
+		#expect(span3.endTime == t + .seconds(8))
 
 		// nil endTime is unaffected
 		let span4 = Span(name: "test", startTime: t, traceId: traceId, parentId: nil)
 		span4.adjust(start: .seconds(5), end: .seconds(5))
-		XCTAssertEqual(span4.startTime, t + .seconds(5))
-		XCTAssertNil(span4.endTime)
+		#expect(span4.startTime == t + .seconds(5))
+		#expect(span4.endTime == nil)
 	}
 }
