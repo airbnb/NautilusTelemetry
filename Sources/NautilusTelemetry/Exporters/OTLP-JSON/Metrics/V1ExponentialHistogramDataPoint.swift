@@ -20,13 +20,13 @@ extension OTLP {
 		/** TimeUnixNano is required, see the detailed comments above Metric.  Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970. */
 		var timeUnixNano: String?
 		/** count is the number of values in the population. Must be non-negative. This value must be equal to the sum of the \"bucket_counts\" values in the positive and negative Buckets plus the \"zero_count\" field. */
-		var count: String?
+		var count: UInt64?
 		/** sum of the values in the population. If count is zero then this field must be zero.  Note: Sum should only be filled out when measuring non-negative discrete events, and is assumed to be monotonic over the values of these events. Negative events *can* be recorded, but sum should not be filled out when doing so.  This is specifically to enforce compatibility w/ OpenMetrics, see: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#histogram */
 		var sum: Double?
 		/** base = (2^(2^-scale))  The histogram bucket identified by `index`, a signed integer, contains values that are greater than (base^index) and less than or equal to (base^(index+1)).  The positive and negative ranges of the histogram are expressed separately.  Negative values are mapped by their absolute value into the negative range using the same scale as the positive range.  scale is not restricted by the protocol, as the permissible values depend on the range of the data. */
 		var scale: Int?
 		/** zero_count is the count of values that are either exactly zero or within the region considered zero by the instrumentation at the tolerated degree of precision.  This bucket stores values that cannot be expressed using the standard exponential formula as well as values that have been rounded to zero.  Implementations MAY consider the zero bucket to have probability mass equal to (zero_count / count). */
-		var zeroCount: String?
+		var zeroCount: UInt64?
 		var positive: ExponentialHistogramDataPointBuckets?
 		var negative: ExponentialHistogramDataPointBuckets?
 		/** Flags that apply to this specific data point.  See DataPointFlags for the available flags and their meaning. */
@@ -39,7 +39,7 @@ extension OTLP {
 		/** ZeroThreshold may be optionally set to convey the width of the zero region. Where the zero region is defined as the closed interval [-ZeroThreshold, ZeroThreshold]. When ZeroThreshold is 0, zero count bucket stores values that cannot be expressed using the standard exponential formula as well as values that have been rounded to zero. */
 		var zeroThreshold: Double?
 
-		init(attributes: [V1KeyValue]? = nil, startTimeUnixNano: String? = nil, timeUnixNano: String? = nil, count: String? = nil, sum: Double? = nil, scale: Int? = nil, zeroCount: String? = nil, positive: ExponentialHistogramDataPointBuckets? = nil, negative: ExponentialHistogramDataPointBuckets? = nil, flags: Int64? = nil, exemplars: [V1Exemplar]? = nil, min: Double? = nil, max: Double? = nil, zeroThreshold: Double? = nil) {
+		init(attributes: [V1KeyValue]? = nil, startTimeUnixNano: String? = nil, timeUnixNano: String? = nil, count: UInt64? = nil, sum: Double? = nil, scale: Int? = nil, zeroCount: UInt64? = nil, positive: ExponentialHistogramDataPointBuckets? = nil, negative: ExponentialHistogramDataPointBuckets? = nil, flags: Int64? = nil, exemplars: [V1Exemplar]? = nil, min: Double? = nil, max: Double? = nil, zeroThreshold: Double? = nil) {
 			self.attributes = attributes
 			self.startTimeUnixNano = startTimeUnixNano
 			self.timeUnixNano = timeUnixNano

@@ -173,6 +173,93 @@ final class MetricExporterTests: XCTestCase {
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
 
+
+	func testExponentialHistogram() throws {
+		let msUnit = Unit(symbol: "ms")
+		let histogram = ExponentialHistogram<Double>(
+			name: "LatencyHistogram",
+			unit: msUnit,
+			description: "Request latency sampled from a normal distribution"
+		)
+
+		// Normal distribution via Box-Muller
+		// then clamp to [0, 100] ms. Mean 50, stddev 15.
+		var rng = SystemRandomNumberGenerator()
+		let mean = 50.0
+		let stdDev = 15.0
+		let sampleCount = 1000
+
+		var samples = [Double]()
+		samples.reserveCapacity(sampleCount)
+		for _ in 0..<sampleCount {
+			let u1 = max(Double.leastNormalMagnitude, Double.random(in: 0.0..<1.0, using: &rng))
+			let u2 = Double.random(in: 0.0..<1.0, using: &rng)
+			let z = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+			let value = max(0.0, min(100.0, mean + stdDev * z))
+			samples.append(value)
+			histogram.record(value)
+		}
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		let snapshot = histogram.snapshotAndReset()
+		let exportableInstrument = try XCTUnwrap(snapshot as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
+
+		XCTAssertEqual(metric.name, "LatencyHistogram")
+		XCTAssertEqual(metric.unit, "ms")
+		XCTAssertNil(metric.histogram)
+
+		let expHist = try XCTUnwrap(metric.exponentialHistogram)
+		XCTAssertEqual(expHist.aggregationTemporality, .delta)
+
+		let dp = try XCTUnwrap(expHist.dataPoints?.first)
+		XCTAssertEqual(dp.count, UInt64(sampleCount))
+
+		let expectedSum = samples.reduce(0.0, +)
+		XCTAssertEqual(try XCTUnwrap(dp.sum), expectedSum, accuracy: 1e-6)
+		XCTAssertEqual(try XCTUnwrap(dp.min), samples.min())
+		XCTAssertEqual(try XCTUnwrap(dp.max), samples.max())
+
+		let zeroCount = dp.zeroCount ?? 0
+		let positiveCount = dp.positive?.bucketCounts?.reduce(0, +) ?? 0
+		let negativeCount = dp.negative?.bucketCounts?.reduce(0, +) ?? 0
+		XCTAssertEqual(positiveCount + negativeCount + zeroCount, UInt64(sampleCount))
+
+		// Clamped to [0, 100] so there should be no negative buckets.
+		XCTAssertEqual(negativeCount, 0)
+
+		// Buckets must stay within the configured window.
+		let positiveBuckets = try XCTUnwrap(dp.positive?.bucketCounts)
+		XCTAssertLessThanOrEqual(positiveBuckets.count, histogram.bucketCount)
+
+		// The chosen scale should be within the spec range.
+		let scale = try XCTUnwrap(dp.scale)
+		XCTAssertGreaterThanOrEqual(scale, ExponentialHistogramUtils.exponentialHistogramMinScale)
+		XCTAssertLessThanOrEqual(scale, ExponentialHistogramUtils.exponentialHistogramMaxScale)
+
+		// JSON should encode successfully and include the exponentialHistogram payload.
+		let json = try exporter.encodeJSON(metric)
+		let jsonString = try XCTUnwrap(String(data: json, encoding: .utf8))
+		XCTAssertTrue(jsonString.contains("\"exponentialHistogram\""))
+		XCTAssertTrue(jsonString.contains("\"unit\":\"ms\""))
+
+		guard testWithLocalCollector || testWithRemoteCollector else { return }
+
+		let additionalAttributes = ["telescope_tenant_id": "native"]
+
+		let requestJSON = try exporter.exportOTLPToJSON(instruments: [snapshot], additionalAttributes: additionalAttributes)
+
+		if testWithRemoteCollector {
+			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: requestJSON, test: self)
+		}
+
+		if testWithLocalCollector {
+			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: requestJSON, test: self)
+		}
+	}
+
 	func testOTLPExporterGaugeMetric() throws {
 		guard testWithLocalCollector || testWithRemoteCollector else {
 			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
