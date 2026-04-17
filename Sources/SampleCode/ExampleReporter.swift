@@ -48,14 +48,13 @@ public class ExampleReporter: NautilusTelemetryReporter {
 	}
 
 	public func reportSpans(_ spans: [Span]) {
-		guard Self.samplingEnabled else {
-			return
-		}
+		let filtered = sampledSpans(spans)
+		guard !filtered.isEmpty else { return }
 
 		let additionalAttributes = ["sample": "value"]
 		let exporter = Exporter(timeReference: timeReference)
 
-		if let jsonPayload = try? exporter.exportOTLPToJSON(spans: spans, additionalAttributes: additionalAttributes) {
+		if let jsonPayload = try? exporter.exportOTLPToJSON(spans: filtered, additionalAttributes: additionalAttributes) {
 			try? dispatchPayload(jsonPayload: jsonPayload, url: traceEndpoint)
 		}
 	}
@@ -88,7 +87,8 @@ public class ExampleReporter: NautilusTelemetryReporter {
 		return "\(bundleIdentifier)/\(bundleVersion)"
 	}()
 
-	static let sampler = StableGuidSampler(sampleRate: 1.0, seed: Data("OpenTelemetry".utf8), guid: sessionGUID)
+	static let samplerSeed = Data("OpenTelemetry".utf8)
+	static let sampler = StableGuidSampler(sampleRate: 1.0, seed: samplerSeed, guid: sessionGUID)
 
 	static var sessionGUID: Data {
 		lock.withLock {
@@ -121,6 +121,16 @@ public class ExampleReporter: NautilusTelemetryReporter {
 	static func resetSessionGUID() {
 		lock.withLock {
 			_sessionGUID = nil
+		}
+	}
+
+	/// Filters spans based on their sample rate override, falling back to `Self.samplingEnabled` when unset.
+	func sampledSpans(_ spans: [Span]) -> [Span] {
+		spans.filter { span in
+			if let sampleRate = span.sampleRate {
+				return StableGuidSampler(sampleRate: sampleRate, seed: Self.samplerSeed, guid: Self.sessionGUID).shouldSample
+			}
+			return Self.samplingEnabled
 		}
 	}
 
