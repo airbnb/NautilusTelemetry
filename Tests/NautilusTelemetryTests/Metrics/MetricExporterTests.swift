@@ -173,7 +173,6 @@ final class MetricExporterTests: XCTestCase {
 		XCTAssertEqual(normalizedJsonString, expectedOutput)
 	}
 
-
 	func testExponentialHistogram() throws {
 		let msUnit = Unit(symbol: "ms")
 		let histogram = ExponentialHistogram<Double>(
@@ -183,22 +182,25 @@ final class MetricExporterTests: XCTestCase {
 		)
 
 		// Normal distribution via Box-Muller
-		// then clamp to [0, 100] ms. Mean 50, stddev 15.
-		var rng = SystemRandomNumberGenerator()
-		let mean = 50.0
-		let stdDev = 15.0
+		let mode = Bool.random()
+		let maxValue = 100000.0
+		let mean = mode ? 150.0 : 300.0 // Fake bimodal distribution
+		let stdDev = 50.0
 		let sampleCount = 1000
 
 		var samples = [Double]()
 		samples.reserveCapacity(sampleCount)
 		for _ in 0..<sampleCount {
-			let u1 = max(Double.leastNormalMagnitude, Double.random(in: 0.0..<1.0, using: &rng))
-			let u2 = Double.random(in: 0.0..<1.0, using: &rng)
+			let u1 = max(Double.leastNormalMagnitude, Double.random(in: 0.0..<1.0))
+			let u2 = Double.random(in: 0.0..<1.0)
 			let z = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
-			let value = max(0.0, min(100.0, mean + stdDev * z))
+			let value = max(0.0, min(maxValue, mean + stdDev * z))
 			samples.append(value)
 			histogram.record(value)
 		}
+
+		// Make end time differ
+		Thread.sleep(forTimeInterval: 0.1)
 
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
@@ -247,7 +249,8 @@ final class MetricExporterTests: XCTestCase {
 
 		guard testWithLocalCollector || testWithRemoteCollector else { return }
 
-		let additionalAttributes = ["telescope_tenant_id": "native"]
+		// If the collector requires tenant ID or other metadata, can be configured here.
+		let additionalAttributes = [String: String]()
 
 		let requestJSON = try exporter.exportOTLPToJSON(instruments: [snapshot], additionalAttributes: additionalAttributes)
 
@@ -264,8 +267,6 @@ final class MetricExporterTests: XCTestCase {
 		guard testWithLocalCollector || testWithRemoteCollector else {
 			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
 		}
-
-		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 
 		let timeReference = TimeReference(serverOffset: 0.0)
 
@@ -330,8 +331,6 @@ final class MetricExporterTests: XCTestCase {
 		guard testWithLocalCollector || testWithRemoteCollector else {
 			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
 		}
-
-		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
 
 		let timeReference = TimeReference(serverOffset: 0.0)
 

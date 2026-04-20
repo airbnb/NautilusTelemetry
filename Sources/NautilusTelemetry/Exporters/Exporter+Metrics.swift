@@ -290,7 +290,6 @@ extension Exporter {
 		let values = histogram.values.values
 		var dataPoints = [OTLP.V1ExponentialHistogramDataPoint]()
 
-
 		for key in values.keys {
 			guard let value = values[key] else {
 				continue
