@@ -253,7 +253,7 @@ extension Exporter {
 			let bucketCounts = convertToOTLP(bucketCounts: value.data)
 			let sum = asDouble(value.sum)
 
-			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
+			let timeUnixNano = convertToOTLP(time: histogram.endTime ?? ContinuousClock.now)
 
 			let dataPoint = OTLP.V1HistogramDataPoint(
 				attributes: attributes,
@@ -298,7 +298,7 @@ extension Exporter {
 
 			let attributes = convertToOTLP(attributes: key)
 			let startTimeUnixNano = convertToOTLP(time: histogram.startTime)
-			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
+			let timeUnixNano = convertToOTLP(time: histogram.endTime ?? ContinuousClock.now)
 
 			let doubleValues = value.recordedValues.compactMap { asDouble($0) }
 			let mapped = ExponentialHistogramUtils.mapToExponentialBuckets(
