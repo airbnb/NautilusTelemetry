@@ -250,9 +250,49 @@ final class MetricExporterTests: XCTestCase {
 		guard testWithLocalCollector || testWithRemoteCollector else { return }
 
 		// If the collector requires tenant ID or other metadata, can be configured here.
-		let additionalAttributes = [String: String]()
+		let additionalAttributes = try TestUtils.additionalAttributes
 
 		let requestJSON = try exporter.exportOTLPToJSON(instruments: [snapshot], additionalAttributes: additionalAttributes)
+
+		if testWithRemoteCollector {
+			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: requestJSON, test: self)
+		}
+
+		if testWithLocalCollector {
+			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: requestJSON, test: self)
+		}
+	}
+
+	func testTracerMetrics() throws {
+		let tracer = InstrumentationSystem.tracer
+		let timingRange = 0...1.0
+
+		let span = tracer.startSpan(name: "testSpan")
+		let counter = tracer.reportAsCounterMetric(span: span)
+		let histogram = tracer.reportAsDurationHistogramMetric(span: span)
+
+		// Use the adjustment API so we don't have to actually wait
+		span.adjust(start: .zero, end: Duration.seconds(Double.random(in: timingRange)))
+
+		span.end()
+
+		for _ in 0..<1000 {
+			let span = tracer.startSpan(name: "testSpan")
+			let counter2 = tracer.reportAsCounterMetric(span: span)
+			XCTAssertIdentical(counter, counter2)
+			let histogram2 = tracer.reportAsDurationHistogramMetric(span: span)
+			XCTAssertIdentical(histogram, histogram2)
+			span.adjust(start: .zero, end: Duration.seconds(Double.random(in: timingRange)))
+			span.end()
+		}
+
+		// If the collector requires tenant ID or other metadata, can be configured here.
+		let additionalAttributes = try TestUtils.additionalAttributes
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		let requestJSON = try exporter.exportOTLPToJSON(instruments: [counter, histogram], additionalAttributes: additionalAttributes)
 
 		if testWithRemoteCollector {
 			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: requestJSON, test: self)

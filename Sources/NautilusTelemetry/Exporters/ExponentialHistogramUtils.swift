@@ -4,6 +4,9 @@
 import Foundation
 
 enum ExponentialHistogramUtils {
+
+	// MARK: Internal
+
 	/// Result of bucketizing recorded values into the OTLP exponential histogram shape.
 	struct ExponentialHistogramMapping {
 		let scale: Int
@@ -58,8 +61,8 @@ enum ExponentialHistogramUtils {
 		)
 
 		let scaleFactor = scaleMultiplier(scale: scale)
-		let positive = makeBuckets(magnitudes: positiveMagnitudes, scale: scale, scaleFactor: scaleFactor, maxBuckets: maxBuckets)
-		let negative = makeBuckets(magnitudes: negativeMagnitudes, scale: scale, scaleFactor: scaleFactor, maxBuckets: maxBuckets)
+		let positive = makeBuckets(magnitudes: positiveMagnitudes, scaleFactor: scaleFactor, maxBuckets: maxBuckets)
+		let negative = makeBuckets(magnitudes: negativeMagnitudes, scaleFactor: scaleFactor, maxBuckets: maxBuckets)
 
 		return ExponentialHistogramMapping(
 			scale: scale,
@@ -86,7 +89,7 @@ enum ExponentialHistogramUtils {
 		//   At scale s, bucket indices = ceil(log2(v) * 2^s).
 		//   The number of buckets needed = floor(span * 2^s) + 1.
 		//   We need: span * 2^s + 1 <= bucketCount  =>  2^s <= (bucketCount - 1) / span
-		//   =>  s <= log2((bucketCount - 1) / span)
+		//   => s <= log2((bucketCount - 1) / span)
 		//
 		// When all values are identical (span == 0), every scale fits; return maxScale.
 		let scale: Int
@@ -97,8 +100,7 @@ enum ExponentialHistogramUtils {
 			scale = min(maxScale, max(minScale, Int(floor(maxScaleDouble))))
 		}
 
-		// Verify the int-cast result (rounding in log2 could put us one step over). This is at most
-		// one check — not a loop.
+		// Verify the int-cast result (rounding in log2 could put us one step over).
 		if
 			rangeFits(positiveMagnitudes, scale: scale, bucketCount: bucketCount),
 			rangeFits(negativeMagnitudes, scale: scale, bucketCount: bucketCount)
@@ -121,11 +123,6 @@ enum ExponentialHistogramUtils {
 			if idx > maxIndex { maxIndex = idx }
 		}
 
-		// Protobuf restricts indices to signed 32-bit range.
-		if minIndex < Int(Int32.min) || maxIndex > Int(Int32.max) {
-			return false
-		}
-
 		return (maxIndex - minIndex + 1) <= bucketCount
 	}
 
@@ -133,7 +130,6 @@ enum ExponentialHistogramUtils {
 	/// `scaleFactor` must equal `scaleMultiplier(scale:)` — passed in to avoid recomputing it.
 	static func makeBuckets(
 		magnitudes: [Double],
-		scale: Int,
 		scaleFactor: Double,
 		maxBuckets: Int
 	) -> OTLP.ExponentialHistogramDataPointBuckets {
@@ -170,7 +166,7 @@ enum ExponentialHistogramUtils {
 		bucketIndex(value: value, scaleFactor: scaleMultiplier(scale: scale))
 	}
 
-	// MARK: - Private
+	// MARK: Private
 
 	/// Returns `2^scale` as a `Double`, used to convert log2 values into bucket indices.
 	/// Precompute this once per pass rather than recomputing it for every value.

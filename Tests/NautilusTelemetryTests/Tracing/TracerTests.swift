@@ -209,4 +209,18 @@ final class TracerTests: XCTestCase {
 		XCTAssertEqual(span.events?.first?.name, "exception")
 	}
 
+	func testMetricName() {
+		let span = tracer.startSpan(name: "op")
+		let fileID = "MyModule/Path/File.swift"
+
+		XCTAssertEqual(
+			tracer.metricName(span: span, namingConvention: .modulePrefix, fileID: fileID, suffix: "_counter"),
+			"MyModule_op_counter"
+		)
+		XCTAssertEqual(
+			tracer.metricName(span: span, namingConvention: .raw, fileID: fileID, suffix: "_histogram"),
+			"op_histogram"
+		)
+	}
+
 }

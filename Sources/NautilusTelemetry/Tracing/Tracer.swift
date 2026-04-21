@@ -37,11 +37,6 @@ public final class Tracer {
 		case always
 	}
 
-	public enum MetricNamingConvention {
-		case modulePrefix
-		case raw
-	}
-
 	public static let defaultFlushInterval: TimeInterval = 60
 	public static let defaultIdleInterval: TimeInterval = 10
 
@@ -240,22 +235,6 @@ public final class Tracer {
 		}
 	}
 
-	public func startReportingAsCounterMetric(
-		span _: Span,
-		namingConvention _: MetricNamingConvention,
-		fileID _: String = #fileID
-	) -> Counter<Int> {
-		fatalError("not implemented")
-	}
-
-	public func reportAsDurationHistogram(
-		span _: Span,
-		namingConvention _: MetricNamingConvention,
-		fileID _: String = #fileID
-	) -> Histogram<Int> {
-		fatalError("not implemented")
-	}
-
 	// MARK: Internal
 
 	let lock = OSAllocatedUnfairLock()
@@ -266,6 +245,10 @@ public final class Tracer {
 	/// Optional to avoid initialization order issue
 	var flushTimer: FlushTimer? = nil
 	var idleTimer: FlushTimer? = nil
+
+	// Cached metrics
+	var cachedDurationHistograms = [String: Weak<ExponentialHistogram<Int>>]()
+	var cachedCounters = [String: Weak<Counter<Int>>]()
 
 	var currentBaggage: Baggage {
 		if let baggage = Baggage.currentBaggageTaskLocal {
@@ -288,18 +271,6 @@ public final class Tracer {
 		}
 	}
 
-	func metricName(span: Span, namingConvention: MetricNamingConvention, fileID: String = #fileID) -> String {
-		switch namingConvention {
-		case .modulePrefix:
-			// Would like to have #module to avoid parsing cost. Alas!
-			let moduleName = String(fileID.prefix(while: { $0 != "/" }))
-			return moduleName + "." + span.name
-
-		case .raw:
-			return span.name
-		}
-	}
-
 	func retire(span: Span) {
 		lock.withLock {
 			retiredSpans.append(span)
@@ -310,6 +281,9 @@ public final class Tracer {
 	}
 
 	func flushRetiredSpans() {
+		// These are long-lived in normal usage, but clean up on flush for completeness.
+		purgeStaleCacheEntries()
+
 		let spansToReport: [Span] = lock.withLock {
 			// copy and empty the array.
 			let spans = retiredSpans
@@ -391,5 +365,13 @@ public final class Tracer {
 
 	/// Must be accessed with lock
 	private var _root: Span?
+
+	/// Removes entries whose weak references have been deallocated.
+	private func purgeStaleCacheEntries() {
+		lock.withLock {
+			cachedDurationHistograms = cachedDurationHistograms.filter { $0.value.value != nil }
+			cachedCounters = cachedCounters.filter { $0.value.value != nil }
+		}
+	}
 
 }
