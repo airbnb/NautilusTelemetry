@@ -234,12 +234,12 @@ final class MetricExporterTests: XCTestCase {
 
 		// Buckets must stay within the configured window.
 		let positiveBuckets = try XCTUnwrap(dp.positive?.bucketCounts)
-		XCTAssertLessThanOrEqual(positiveBuckets.count, histogram.bucketCount)
+		XCTAssertLessThanOrEqual(positiveBuckets.count, histogram.maxBuckets)
 
 		// The chosen scale should be within the spec range.
 		let scale = try XCTUnwrap(dp.scale)
-		XCTAssertGreaterThanOrEqual(scale, ExponentialHistogramUtils.exponentialHistogramMinScale)
-		XCTAssertLessThanOrEqual(scale, ExponentialHistogramUtils.exponentialHistogramMaxScale)
+		XCTAssertGreaterThanOrEqual(scale, ExponentialHistogramUtils.minScale)
+		XCTAssertLessThanOrEqual(scale, ExponentialHistogramUtils.maxScale)
 
 		// JSON should encode successfully and include the exponentialHistogram payload.
 		let json = try exporter.encodeJSON(metric)

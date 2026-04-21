@@ -14,26 +14,26 @@ enum ExponentialHistogramUtils {
 
 	/// Minimum and maximum scales permitted by the spec.
 	/// https://opentelemetry.io/docs/specs/otel/metrics/data-model/#all-scales-use-the-logarithm-function
-	static let exponentialHistogramMinScale = -10
-	static let exponentialHistogramMaxScale = 20
+	static let minScale = -10
+	static let maxScale = 20
 
 	/// Default number of buckets used per positive/negative range when exporting an `ExponentialHistogram`.
 	/// The scale is chosen so that all recorded values fit within this count.
-	static let defaultExponentialHistogramBucketCount = 32
+	static let defaultMaxBucketCount = 64
 
 	/// Bucketize a list of raw values into OTLP exponential histogram buckets.
 	/// https://opentelemetry.io/docs/specs/otel/metrics/data-model/#exponentialhistogram
 
-	/// Chooses the highest `scale` in `[exponentialHistogramMinScale, exponentialHistogramMaxScale]`
-	/// such that every non-zero value's bucket index fits within `bucketCount` entries
-	/// (measured separately per sign). Higher scales give finer resolution but smaller dynamic range.
+	/// Chooses the highest `scale` in `[minScale, maxScale]`
+	/// such that every non-zero value's bucket index fits within `maxBuckets` entries
+	/// (measured separately for positive and negative). Higher scales give finer resolution but smaller dynamic range.
 	///
 	/// - Parameters:
 	///   - values: raw recorded values.
-	///   - bucketCount: maximum number of contiguous buckets permitted per sign.
+	///   - maxBuckets: maximum number of contiguous buckets permitted for positive and negative separately.
 	/// - Returns: scale, zero count, and positive/negative buckets ready for OTLP encoding.
-	static func mapToExponentialBuckets(values: [Double], bucketCount: Int) -> ExponentialHistogramMapping {
-		precondition(bucketCount > 0, "bucketCount must be positive")
+	static func mapToExponentialBuckets(values: [Double], maxBuckets: Int) -> ExponentialHistogramMapping {
+		assert(maxBuckets > 0, "maxBuckets must be greater than zero")
 
 		var zeroCount: UInt64 = 0
 		var positiveMagnitudes = [Double]()
@@ -54,11 +54,12 @@ enum ExponentialHistogramUtils {
 		let scale = chooseScale(
 			positiveMagnitudes: positiveMagnitudes,
 			negativeMagnitudes: negativeMagnitudes,
-			bucketCount: bucketCount
+			bucketCount: maxBuckets
 		)
 
-		let positive = makeBuckets(magnitudes: positiveMagnitudes, scale: scale, bucketCount: bucketCount)
-		let negative = makeBuckets(magnitudes: negativeMagnitudes, scale: scale, bucketCount: bucketCount)
+		let scaleFactor = scaleMultiplier(scale: scale)
+		let positive = makeBuckets(magnitudes: positiveMagnitudes, scale: scale, scaleFactor: scaleFactor, maxBuckets: maxBuckets)
+		let negative = makeBuckets(magnitudes: negativeMagnitudes, scale: scale, scaleFactor: scaleFactor, maxBuckets: maxBuckets)
 
 		return ExponentialHistogramMapping(
 			scale: scale,
@@ -76,28 +77,46 @@ enum ExponentialHistogramUtils {
 			return 0
 		}
 
-		// Walk down from the max scale and stop at the first scale where both ranges fit.
-		// Range fits at a higher scale if it fits at a lower one (indices scale by 2 each step down),
-		// so this is monotonic and a linear walk is cheap (31 iterations worst case).
-		for scale in stride(from: exponentialHistogramMaxScale, through: exponentialHistogramMinScale, by: -1) {
-			if
-				rangeFits(positiveMagnitudes, scale: scale, bucketCount: bucketCount),
-				rangeFits(negativeMagnitudes, scale: scale, bucketCount: bucketCount)
-			{
-				return scale
-			}
+		// Compute the log2 span of each side in one pass (no per-scale rescanning).
+		let positiveSpan = log2Span(magnitudes: positiveMagnitudes)
+		let negativeSpan = log2Span(magnitudes: negativeMagnitudes)
+		let maxSpan = max(positiveSpan, negativeSpan)
+
+		// Derive the maximum scale analytically:
+		//   At scale s, bucket indices = ceil(log2(v) * 2^s).
+		//   The number of buckets needed = floor(span * 2^s) + 1.
+		//   We need: span * 2^s + 1 <= bucketCount  =>  2^s <= (bucketCount - 1) / span
+		//   =>  s <= log2((bucketCount - 1) / span)
+		//
+		// When all values are identical (span == 0), every scale fits; return maxScale.
+		let scale: Int
+		if maxSpan == 0 {
+			scale = maxScale
+		} else {
+			let maxScaleDouble = log2(Double(bucketCount) / maxSpan)
+			scale = min(maxScale, max(minScale, Int(floor(maxScaleDouble))))
 		}
-		return exponentialHistogramMinScale
+
+		// Verify the int-cast result (rounding in log2 could put us one step over). This is at most
+		// one check — not a loop.
+		if
+			rangeFits(positiveMagnitudes, scale: scale, bucketCount: bucketCount),
+			rangeFits(negativeMagnitudes, scale: scale, bucketCount: bucketCount)
+		{
+			return scale
+		}
+		return max(minScale, scale - 1)
 	}
 
 	/// True if the indices produced by `scale` for the given positive magnitudes span at most `bucketCount` buckets.
 	static func rangeFits(_ magnitudes: [Double], scale: Int, bucketCount: Int) -> Bool {
 		guard !magnitudes.isEmpty else { return true }
 
+		let sf = scaleMultiplier(scale: scale)
 		var minIndex = Int.max
 		var maxIndex = Int.min
 		for m in magnitudes {
-			let idx = bucketIndex(value: m, scale: scale)
+			let idx = bucketIndex(value: m, scaleFactor: sf)
 			if idx < minIndex { minIndex = idx }
 			if idx > maxIndex { maxIndex = idx }
 		}
@@ -111,28 +130,33 @@ enum ExponentialHistogramUtils {
 	}
 
 	/// Build a contiguous run of buckets covering all magnitudes at the given scale.
-	static func makeBuckets(magnitudes: [Double], scale: Int, bucketCount: Int) -> OTLP.ExponentialHistogramDataPointBuckets {
+	/// `scaleFactor` must equal `scaleMultiplier(scale:)` — passed in to avoid recomputing it.
+	static func makeBuckets(
+		magnitudes: [Double],
+		scale: Int,
+		scaleFactor: Double,
+		maxBuckets: Int
+	) -> OTLP.ExponentialHistogramDataPointBuckets {
 		guard !magnitudes.isEmpty else {
 			return OTLP.ExponentialHistogramDataPointBuckets()
 		}
 
+		// First pass: find index range without allocating an intermediate array.
 		var minIndex = Int.max
 		var maxIndex = Int.min
-		var indices = [Int]()
-		indices.reserveCapacity(magnitudes.count)
-
 		for m in magnitudes {
-			let idx = bucketIndex(value: m, scale: scale)
-			indices.append(idx)
+			let idx = bucketIndex(value: m, scaleFactor: scaleFactor)
 			if idx < minIndex { minIndex = idx }
 			if idx > maxIndex { maxIndex = idx }
 		}
 
 		let span = maxIndex - minIndex + 1
-		let width = min(span, bucketCount)
+		let width = min(span, maxBuckets)
 		var counts = [UInt64](repeating: 0, count: width)
-		for idx in indices {
-			let slot = min(max(idx - minIndex, 0), width - 1)
+
+		// Second pass: fill counts directly — no intermediate indices array.
+		for m in magnitudes {
+			let slot = min(max(bucketIndex(value: m, scaleFactor: scaleFactor) - minIndex, 0), width - 1)
 			counts[slot] += 1
 		}
 
@@ -143,19 +167,42 @@ enum ExponentialHistogramUtils {
 	/// Bucket `i` covers `(base^i, base^(i+1)]` where `base = 2^(2^-scale)`.
 	/// Implemented via the logarithm form `ceil(log2(v) * 2^scale) - 1`, which handles all scales.
 	static func bucketIndex(value: Double, scale: Int) -> Int {
-		// Caller guarantees value > 0 and finite.
-		let log2Value = log2(value)
-		let scaleFactor =
-			if scale >= 0 {
-				Double(Int64(1) << scale)
-			} else {
-				1.0 / Double(Int64(1) << -scale)
-			}
-		let scaled = log2Value * scaleFactor
+		bucketIndex(value: value, scaleFactor: scaleMultiplier(scale: scale))
+	}
+
+	// MARK: - Private
+
+	/// Returns `2^scale` as a `Double`, used to convert log2 values into bucket indices.
+	/// Precompute this once per pass rather than recomputing it for every value.
+	private static func scaleMultiplier(scale: Int) -> Double {
+		if scale >= 0 {
+			Double(Int64(1) << scale)
+		} else {
+			1.0 / Double(Int64(1) << -scale)
+		}
+	}
+
+	/// Bucket index given a precomputed scale multiplier. Caller guarantees value > 0 and finite.
+	private static func bucketIndex(value: Double, scaleFactor: Double) -> Int {
+		let scaled = log2(value) * scaleFactor
 		let ceiled = ceil(scaled)
 		// Exact powers of `base` should fall in the bucket *below* (upper-bound inclusive).
 		// `ceil(x) - 1` handles this because for an exact power scaled lands on an integer.
 		return Int(ceiled) - 1
+	}
+
+	/// Returns the span of `log2(max) - log2(min)` across the magnitudes in a single pass.
+	/// Returns 0 for empty or single-value inputs.
+	private static func log2Span(magnitudes: [Double]) -> Double {
+		guard !magnitudes.isEmpty else { return 0 }
+		var minLog2 = Double.infinity
+		var maxLog2 = -Double.infinity
+		for m in magnitudes {
+			let l = log2(m)
+			if l < minLog2 { minLog2 = l }
+			if l > maxLog2 { maxLog2 = l }
+		}
+		return maxLog2 - minLog2
 	}
 
 }

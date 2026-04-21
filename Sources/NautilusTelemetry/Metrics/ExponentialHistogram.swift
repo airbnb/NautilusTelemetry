@@ -26,12 +26,12 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 		name: String,
 		unit: Unit?,
 		description: String?,
-		bucketCount: Int = ExponentialHistogramUtils.defaultExponentialHistogramBucketCount
+		maxBuckets: Int = ExponentialHistogramUtils.defaultMaxBucketCount
 	) {
 		self.name = name
 		self.unit = unit
 		self.description = description
-		self.bucketCount = bucketCount
+		self.maxBuckets = maxBuckets
 		values = ExponentialHistogramValues<T>()
 	}
 
@@ -40,7 +40,7 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 	public let name: String
 	public let unit: Unit?
 	public let description: String?
-	public let bucketCount: Int
+	public let maxBuckets: Int
 	public private(set) var startTime = ContinuousClock.now
 	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public var aggregationTemporality = AggregationTemporality.delta

@@ -302,7 +302,7 @@ extension Exporter {
 			let doubleValues = value.recordedValues.compactMap { asDouble($0) }
 			let mapped = ExponentialHistogramUtils.mapToExponentialBuckets(
 				values: doubleValues,
-				bucketCount: histogram.bucketCount
+				maxBuckets: histogram.maxBuckets
 			)
 
 			#if DEBUG

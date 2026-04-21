@@ -46,7 +46,7 @@ final class ExponentialHistogramTests: XCTestCase {
 			negativeMagnitudes: [],
 			bucketCount: 160
 		)
-		XCTAssertEqual(scale, ExponentialHistogramUtils.exponentialHistogramMaxScale)
+		XCTAssertEqual(scale, ExponentialHistogramUtils.maxScale)
 	}
 
 	func testChooseScaleFitsWideRange() {
@@ -61,7 +61,7 @@ final class ExponentialHistogramTests: XCTestCase {
 		XCTAssertTrue(scale >= 0, "should pick a non-negative scale for this range")
 		XCTAssertTrue(ExponentialHistogramUtils.rangeFits(values, scale: scale, bucketCount: 160))
 		// And scale+1 should not fit (it's the maximum).
-		if scale < ExponentialHistogramUtils.exponentialHistogramMaxScale {
+		if scale < ExponentialHistogramUtils.maxScale {
 			XCTAssertFalse(ExponentialHistogramUtils.rangeFits(values, scale: scale + 1, bucketCount: 160))
 		}
 	}
@@ -88,7 +88,7 @@ final class ExponentialHistogramTests: XCTestCase {
 	func testMapPositiveValues() {
 		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(
 			values: [1.5, 1.5, 3.0, 3.0, 3.0],
-			bucketCount: 160
+			maxBuckets: 160
 		)
 
 		XCTAssertEqual(mapping.zeroCount, 0)
@@ -109,7 +109,7 @@ final class ExponentialHistogramTests: XCTestCase {
 	func testMapNegativeValuesAndZeros() {
 		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(
 			values: [-1.5, -3.0, 0.0, 0.0],
-			bucketCount: 160
+			maxBuckets: 160
 		)
 
 		XCTAssertEqual(mapping.zeroCount, 2)
@@ -122,7 +122,7 @@ final class ExponentialHistogramTests: XCTestCase {
 
 	func testMapRoundTripCountConservation() {
 		let values: [Double] = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 0.0, -1.0, -2.0]
-		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: values, bucketCount: 160)
+		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: values, maxBuckets: 160)
 
 		let positiveSum = mapping.positive.bucketCounts?.reduce(0, +) ?? 0
 		let negativeSum = mapping.negative.bucketCounts?.reduce(0, +) ?? 0
@@ -130,16 +130,16 @@ final class ExponentialHistogramTests: XCTestCase {
 	}
 
 	func testMapEmpty() {
-		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [], bucketCount: 160)
+		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [], maxBuckets: 160)
 		XCTAssertEqual(mapping.zeroCount, 0)
 		XCTAssertNil(mapping.positive.bucketCounts)
 		XCTAssertNil(mapping.negative.bucketCounts)
 	}
 
 	func testMapSingleValueMaxScale() {
-		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [42.0], bucketCount: 160)
+		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [42.0], maxBuckets: 160)
 		// Single value always fits at max scale.
-		XCTAssertEqual(mapping.scale, ExponentialHistogramUtils.exponentialHistogramMaxScale)
+		XCTAssertEqual(mapping.scale, ExponentialHistogramUtils.maxScale)
 		XCTAssertEqual(mapping.positive.bucketCounts, [1])
 	}
 
@@ -194,7 +194,7 @@ final class ExponentialHistogramTests: XCTestCase {
 		let counts = try XCTUnwrap(positive.bucketCounts)
 		XCTAssertEqual(counts.reduce(0, +), 6)
 		// Indices must fit in the fixed bucket window.
-		XCTAssertLessThanOrEqual(counts.count, ExponentialHistogramUtils.defaultExponentialHistogramBucketCount)
+		XCTAssertLessThanOrEqual(counts.count, ExponentialHistogramUtils.defaultMaxBucketCount)
 	}
 
 	func testExportHandlesMixedSigns() throws {
