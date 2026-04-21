@@ -213,14 +213,21 @@ final class TracerTests: XCTestCase {
 		let span = tracer.startSpan(name: "op")
 		let fileID = "MyModule/Path/File.swift"
 
-		XCTAssertEqual(
-			tracer.metricName(span: span, namingConvention: .modulePrefix, fileID: fileID, suffix: "_counter"),
-			"MyModule_op_counter"
+		let prefixed: String = tracer.metricName(
+			span: span,
+			namingConvention: .modulePrefix,
+			fileID: fileID,
+			suffix: "_counter"
 		)
-		XCTAssertEqual(
-			tracer.metricName(span: span, namingConvention: .raw, fileID: fileID, suffix: "_histogram"),
-			"op_histogram"
+		XCTAssertEqual(prefixed, "MyModule_op_counter")
+
+		let raw: String = tracer.metricName(
+			span: span,
+			namingConvention: .raw,
+			fileID: fileID,
+			suffix: "_histogram"
 		)
+		XCTAssertEqual(raw, "op_histogram")
 	}
 
 }

@@ -90,7 +90,7 @@ extension Tracer {
 		switch namingConvention {
 		case .modulePrefix:
 			// Would like to have #module to avoid parsing cost. Alas!
-			let moduleName = fileID.prefix(while: { $0 != "/" })
+			let moduleName = String(fileID.prefix(while: { $0 != "/" }))
 			return moduleName + "_" + span.name + suffix
 
 		case .raw:
