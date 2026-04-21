@@ -38,9 +38,41 @@ struct TimeReferenceTests {
 		let elapsed = time2 - time1
 		let elapsedInverse = time1 - time2
 
-		#expect(elapsed.asNanoseconds == -elapsedInverse.asNanoseconds)
+		#expect(elapsed.asMilliseconds == -elapsedInverse.asMilliseconds)
 
 		// Can't really assert exact timings without making the test flakey
+	}
+
+	@Test("Nanosecond rounding")
+	func nanosecondsRounding() {
+		// Exact nanoseconds.
+		#expect(Duration.nanoseconds(0).asNanoseconds == 0)
+		#expect(Duration.nanoseconds(5).asNanoseconds == 5)
+		#expect(Duration.nanoseconds(-5).asNanoseconds == -5)
+
+		// Just below the half-ns threshold (499_999_999 as) — truncates.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 499_999_999).asNanoseconds == 1_000_000_000)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -499_999_999).asNanoseconds == -1_000_000_000)
+
+		// Exactly at the half-ns threshold (500_000_000 as) — rounds away from zero.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 500_000_000).asNanoseconds == 1_000_000_001)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -500_000_000).asNanoseconds == -1_000_000_001)
+	}
+
+	@Test("Millisecond rounding")
+	func millisecondsRounding() {
+		// Exact milliseconds.
+		#expect(Duration.milliseconds(0).asMilliseconds == 0)
+		#expect(Duration.milliseconds(5).asMilliseconds == 5)
+		#expect(Duration.milliseconds(-5).asMilliseconds == -5)
+
+		// Just below the half-ms threshold (499_999_999_999_999 as) — truncates.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 499_999_999_999_999).asMilliseconds == 1000)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -499_999_999_999_999).asMilliseconds == -1000)
+
+		// Exactly at the half-ms threshold (500_000_000_000_000 as) — rounds away from zero.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 500_000_000_000_000).asMilliseconds == 1001)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -500_000_000_000_000).asMilliseconds == -1001)
 	}
 
 	#if os(macOS)

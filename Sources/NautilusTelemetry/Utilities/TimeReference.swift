@@ -53,9 +53,29 @@ public struct TimeReference {
 
 /// Will overflow for very large durations, and are permitted to be negative.
 extension Duration {
-	/// Convert to truncated integer nanoseconds.
+	/// Duration as a whole number of nanoseconds, rounded half-away-from-zero.
 	/// Will overflow above ≈292 year duration.
 	var asNanoseconds: Int64 {
-		(components.seconds &* 1_000_000_000) + (components.attoseconds / 1_000_000_000)
+		let attosecondsPerNs: Int128 = 1_000_000_000 // 10^9
+		let halfNs: Int128 = 500_000_000 // 5 × 10^8
+		let attos = attoseconds
+		let subNs = attos % attosecondsPerNs
+		let ns = attos / attosecondsPerNs + (subNs >= halfNs ? 1 : subNs <= -halfNs ? -1 : 0)
+		return Int64(ns)
+	}
+
+	/// Duration as a whole number of milliseconds, rounded half-away-from-zero.
+	///
+	/// Uses `Duration.attoseconds` (Int128) directly, avoiding any precision loss from
+	/// intermediate truncation. The sub-millisecond remainder shares the sign of the
+	/// duration, so the half-ms threshold check needs no sign adjustment.
+	/// Will overflow above 292 million years.
+	var asMilliseconds: Int64 {
+		let attosecondsPerMs: Int128 = 1_000_000_000_000_000 // 10^15
+		let halfMs: Int128 = 500_000_000_000_000 // 5 × 10^14
+		let attos = attoseconds
+		let subMs = attos % attosecondsPerMs
+		let ms = attos / attosecondsPerMs + (subMs >= halfMs ? 1 : subMs <= -halfMs ? -1 : 0)
+		return Int64(ms)
 	}
 }
