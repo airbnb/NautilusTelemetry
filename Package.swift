@@ -46,6 +46,14 @@ let package = Package(
 				.enableUpcomingFeature("BareSlashRegexLiterals"),
 			]
 		),
+		.testTarget(
+			name: "NautilusTelemetryPerformanceTests",
+			dependencies: ["NautilusTelemetry"],
+			swiftSettings: [
+				.enableUpcomingFeature("BareSlashRegexLiterals"),
+				.unsafeFlags(["-O"]),
+			]
+		),
 		.target(
 			name: "SampleCode",
 			dependencies: ["NautilusTelemetry"]
