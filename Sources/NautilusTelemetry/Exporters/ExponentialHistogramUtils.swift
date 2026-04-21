@@ -81,15 +81,15 @@ enum ExponentialHistogramUtils {
 		}
 
 		// Compute the log2 span of each side in one pass (no per-scale rescanning).
-		let positiveSpan = log2Span(magnitudes: positiveMagnitudes)
-		let negativeSpan = log2Span(magnitudes: negativeMagnitudes)
-		let maxSpan = max(positiveSpan, negativeSpan)
+		let positive = log2Extent(magnitudes: positiveMagnitudes)
+		let negative = log2Extent(magnitudes: negativeMagnitudes)
+		let maxSpan = max(positive.span, negative.span)
 
 		// Derive the maximum scale analytically:
-		//   At scale s, bucket indices = ceil(log2(v) * 2^s).
-		//   The number of buckets needed = floor(span * 2^s) + 1.
-		//   We need: span * 2^s + 1 <= bucketCount  =>  2^s <= (bucketCount - 1) / span
-		//   => s <= log2((bucketCount - 1) / span)
+		//   At scale s, bucket indices = ceil(log2(v) * 2^s) - 1.
+		//   Number of buckets needed = ceil(log2(max)*2^s) - ceil(log2(min)*2^s) + 1.
+		//   Upper bound: <= ceil(span * 2^s) + 1 <= span * 2^s + 2.
+		//   We need: span * 2^s + 2 <= bucketCount  =>  s <= log2((bucketCount - 2) / span).
 		//
 		// When all values are identical (span == 0), every scale fits; return maxScale.
 		let scale: Int
@@ -100,29 +100,30 @@ enum ExponentialHistogramUtils {
 			scale = min(maxScale, max(minScale, Int(floor(maxScaleDouble))))
 		}
 
-		// Verify the int-cast result (rounding in log2 could put us one step over).
-		if
-			rangeFits(positiveMagnitudes, scale: scale, bucketCount: bucketCount),
-			rangeFits(negativeMagnitudes, scale: scale, bucketCount: bucketCount)
+		// Verify in O(1) from the precomputed log2 extents (rounding in the initial log2 could
+		// put us one step over). Re-check using the same `ceil` mapping used by `bucketIndex`.
+		if rangeFits(positive, scale: scale, bucketCount: bucketCount),
+			rangeFits(negative, scale: scale, bucketCount: bucketCount)
 		{
 			return scale
 		}
 		return max(minScale, scale - 1)
 	}
 
-	/// True if the indices produced by `scale` for the given positive magnitudes span at most `bucketCount` buckets.
-	static func rangeFits(_ magnitudes: [Double], scale: Int, bucketCount: Int) -> Bool {
-		guard !magnitudes.isEmpty else { return true }
+	/// Min/max `log2` of a set of magnitudes and their span. Empty set yields zero span.
+	private struct Log2Extent {
+		let minLog2: Double
+		let maxLog2: Double
+		let isEmpty: Bool
+		var span: Double { isEmpty ? 0 : maxLog2 - minLog2 }
+	}
 
+	/// True if the bucket indices produced by `scale` for the given log2 extent fit in `bucketCount` buckets.
+	private static func rangeFits(_ extent: Log2Extent, scale: Int, bucketCount: Int) -> Bool {
+		guard !extent.isEmpty else { return true }
 		let sf = scaleMultiplier(scale: scale)
-		var minIndex = Int.max
-		var maxIndex = Int.min
-		for m in magnitudes {
-			let idx = bucketIndex(value: m, scaleFactor: sf)
-			if idx < minIndex { minIndex = idx }
-			if idx > maxIndex { maxIndex = idx }
-		}
-
+		let minIndex = Int(ceil(extent.minLog2 * sf)) - 1
+		let maxIndex = Int(ceil(extent.maxLog2 * sf)) - 1
 		return (maxIndex - minIndex + 1) <= bucketCount
 	}
 
@@ -187,10 +188,11 @@ enum ExponentialHistogramUtils {
 		return Int(ceiled) - 1
 	}
 
-	/// Returns the span of `log2(max) - log2(min)` across the magnitudes in a single pass.
-	/// Returns 0 for empty or single-value inputs.
-	private static func log2Span(magnitudes: [Double]) -> Double {
-		guard !magnitudes.isEmpty else { return 0 }
+	/// Returns the min/max `log2` across the magnitudes in a single pass.
+	private static func log2Extent(magnitudes: [Double]) -> Log2Extent {
+		guard !magnitudes.isEmpty else {
+			return Log2Extent(minLog2: 0, maxLog2: 0, isEmpty: true)
+		}
 		var minLog2 = Double.infinity
 		var maxLog2 = -Double.infinity
 		for m in magnitudes {
@@ -198,7 +200,7 @@ enum ExponentialHistogramUtils {
 			if l < minLog2 { minLog2 = l }
 			if l > maxLog2 { maxLog2 = l }
 		}
-		return maxLog2 - minLog2
+		return Log2Extent(minLog2: minLog2, maxLog2: maxLog2, isEmpty: false)
 	}
 
 }

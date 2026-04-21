@@ -12,7 +12,7 @@ import XCTest
 
 final class ExponentialHistogramPerformanceTests: XCTestCase {
 
-	/// ≈46µs/iteration on M4 Max MacBook Pro
+	/// ≈38µs/iteration on M4 Max MacBook Pro
 	func testMapToExponentialBucketsPerformance_large() {
 		let iterations = 1000
 		// Values spanning ~6 orders of magnitude to exercise scale selection and bucket mapping.

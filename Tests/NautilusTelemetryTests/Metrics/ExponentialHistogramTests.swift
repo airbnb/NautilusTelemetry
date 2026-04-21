@@ -59,10 +59,10 @@ final class ExponentialHistogramTests: XCTestCase {
 			bucketCount: 160
 		)
 		XCTAssertTrue(scale >= 0, "should pick a non-negative scale for this range")
-		XCTAssertTrue(ExponentialHistogramUtils.rangeFits(values, scale: scale, bucketCount: 160))
+		XCTAssertTrue(indexSpan(values, scale: scale) <= 160)
 		// And scale+1 should not fit (it's the maximum).
 		if scale < ExponentialHistogramUtils.maxScale {
-			XCTAssertFalse(ExponentialHistogramUtils.rangeFits(values, scale: scale + 1, bucketCount: 160))
+			XCTAssertGreaterThan(indexSpan(values, scale: scale + 1), 160)
 		}
 	}
 
@@ -79,8 +79,21 @@ final class ExponentialHistogramTests: XCTestCase {
 			negativeMagnitudes: [0.001, 1000.0],
 			bucketCount: 160
 		)
-		XCTAssertTrue(ExponentialHistogramUtils.rangeFits([3.0, 4.0], scale: scale, bucketCount: 160))
-		XCTAssertTrue(ExponentialHistogramUtils.rangeFits([0.001, 1000.0], scale: scale, bucketCount: 160))
+		XCTAssertTrue(indexSpan([3.0, 4.0], scale: scale) <= 160)
+		XCTAssertTrue(indexSpan([0.001, 1000.0], scale: scale) <= 160)
+	}
+
+	/// Count of contiguous buckets spanned by `magnitudes` at `scale`, computed from `bucketIndex`.
+	private func indexSpan(_ magnitudes: [Double], scale: Int) -> Int {
+		guard !magnitudes.isEmpty else { return 0 }
+		var minIdx = Int.max
+		var maxIdx = Int.min
+		for m in magnitudes {
+			let i = ExponentialHistogramUtils.bucketIndex(value: m, scale: scale)
+			if i < minIdx { minIdx = i }
+			if i > maxIdx { maxIdx = i }
+		}
+		return maxIdx - minIdx + 1
 	}
 
 	// MARK: - mapToExponentialBuckets
