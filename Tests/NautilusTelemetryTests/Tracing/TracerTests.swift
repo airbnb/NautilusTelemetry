@@ -1,26 +1,24 @@
 // Created by Ladd Van Tol on 8/25/25.
 // Copyright © 2025 Airbnb Inc. All rights reserved.
 
-import XCTest
+import Foundation
+import Testing
 @testable import NautilusTelemetry
 
-final class TracerTests: XCTestCase {
-	class TestReporter: NautilusTelemetryReporter {
+@Suite
+struct TracerTests {
+
+	final class TestReporter: NautilusTelemetryReporter {
 
 		// MARK: Lifecycle
 
-		init(
-			_ test: XCTestCase,
-			idleExpectation: XCTestExpectation
-		) {
-			self.test = test
-			self.idleExpectation = idleExpectation
+		init(onIdle: @escaping () -> Void) {
+			self.onIdle = onIdle
 		}
 
 		// MARK: Internal
 
-		let test: XCTestCase
-		let idleExpectation: XCTestExpectation
+		let onIdle: () -> Void
 
 		/// Shorten the idle timeout for the test
 		var idleTimeoutInterval: TimeInterval { 0.1 }
@@ -34,111 +32,122 @@ final class TracerTests: XCTestCase {
 		func idleTimeout() {
 			// Turn off the timer
 			InstrumentationSystem.tracer.flushTimer?.suspend()
-			idleExpectation.fulfill()
+			onIdle()
 		}
 	}
 
 	let tracer = Tracer()
 
-	func testBuildSpanSubtraceLinking() {
+	@Test
+	func buildSpanSubtraceLinking() {
 		let parent = tracer.startSpan(name: "parent")
 		let baggage = Baggage(span: parent, subTraceId: Identifiers.generateTraceId(), subtraceLinking: [.down, .up])
 
 		let child = tracer.buildSpan(name: "hello", kind: .client, attributes: nil, baggage: baggage)
-		XCTAssertEqual(child.links.count, 1)
-		XCTAssertEqual(child.links[0].relationship, .parent)
-		XCTAssertEqual(child.links[0].id, parent.id)
-		XCTAssertEqual(child.links[0].traceId, parent.traceId)
+		#expect(child.links.count == 1)
+		#expect(child.links[0].relationship == .parent)
+		#expect(child.links[0].id == parent.id)
+		#expect(child.links[0].traceId == parent.traceId)
 
-		XCTAssertEqual(parent.links.count, 1)
-		XCTAssertEqual(parent.links[0].relationship, .child)
-		XCTAssertEqual(parent.links[0].id, child.id)
-		XCTAssertEqual(parent.links[0].traceId, child.traceId)
+		#expect(parent.links.count == 1)
+		#expect(parent.links[0].relationship == .child)
+		#expect(parent.links[0].id == child.id)
+		#expect(parent.links[0].traceId == child.traceId)
 	}
 
-	func testFlushTrace() {
+	@Test
+	func flushTrace() {
 		let originalRoot = tracer.root
 		let originalTraceId = tracer.traceId
 
-		XCTAssertFalse(originalRoot.ended)
+		#expect(!originalRoot.ended)
 
 		let childSpan = tracer.startSpan(name: "test-child")
 		childSpan.end()
 
 		tracer.flushTrace()
 
-		XCTAssertTrue(originalRoot.ended)
+		#expect(originalRoot.ended)
 
 		let newRoot = tracer.root
-		XCTAssertNotIdentical(originalRoot, newRoot)
+		#expect(originalRoot !== newRoot)
 
 		let newTraceId = tracer.traceId
-		XCTAssertNotEqual(originalTraceId, newTraceId)
-		XCTAssertEqual(newRoot.traceId, newTraceId)
+		#expect(originalTraceId != newTraceId)
+		#expect(newRoot.traceId == newTraceId)
 
-		XCTAssertFalse(newRoot.ended)
+		#expect(!newRoot.ended)
 
-		XCTAssertEqual(tracer.retiredSpans.count, 0)
+		#expect(tracer.retiredSpans.count == 0)
 	}
 
-	func testIdleTimeout() {
+	@Test
+	func idleTimeout() async {
 		InstrumentationSystem.resetBootstrapForTests()
 
-		let expectation = expectation(description: "Idle received")
-		let reporter = TestReporter(self, idleExpectation: expectation)
-		InstrumentationSystem.bootstrap(reporter: reporter)
+		await confirmation("Idle received") { confirm in
+			let reporter = TestReporter(onIdle: { confirm() })
+			InstrumentationSystem.bootstrap(reporter: reporter)
 
-		let span = InstrumentationSystem.tracer.startSpan(name: "retire test")
-		span.end()
+			let span = InstrumentationSystem.tracer.startSpan(name: "retire test")
+			span.end()
 
-		waitForExpectations(timeout: 10)
+			// Wait for the idle callback (fires ~0.1s after span end).
+			try? await Task.sleep(for: .seconds(2))
+		}
+
 		InstrumentationSystem.resetBootstrapForTests()
 	}
 
-	func testTracerRootSpanIsRoot() {
+	@Test
+	func tracerRootSpanIsRoot() {
 		let tracer = Tracer()
 		let root = tracer.root
 
-		XCTAssertTrue(root.isRoot)
-		XCTAssertEqual(root.name, "root")
-		XCTAssertEqual(root.kind, .internal)
-		XCTAssertNil(root.parentId)
+		#expect(root.isRoot)
+		#expect(root.name == "root")
+		#expect(root.kind == .internal)
+		#expect(root.parentId == nil)
 	}
 
-	func testTracerRootSpanIsRootAfterFlush() {
+	@Test
+	func tracerRootSpanIsRootAfterFlush() {
 		let tracer = Tracer()
 		let originalRoot = tracer.root
 
-		XCTAssertTrue(originalRoot.isRoot)
+		#expect(originalRoot.isRoot)
 
 		tracer.flushTrace()
 
 		let newRoot = tracer.root
-		XCTAssertTrue(newRoot.isRoot)
-		XCTAssertNotIdentical(originalRoot, newRoot)
+		#expect(newRoot.isRoot)
+		#expect(originalRoot !== newRoot)
 	}
 
-	func testTracerChildSpanIsNotRoot() {
+	@Test
+	func tracerChildSpanIsNotRoot() {
 		let tracer = Tracer()
 		let childSpan = tracer.startSpan(name: "child")
 
-		XCTAssertFalse(childSpan.isRoot)
-		XCTAssertEqual(childSpan.parentId, tracer.root.id)
+		#expect(!childSpan.isRoot)
+		#expect(childSpan.parentId == tracer.root.id)
 	}
 
 	// MARK: - Baggage Attribute Propagation Tests
 
-	func testBaggageAttributesPropagateToSpan() {
+	@Test
+	func baggageAttributesPropagateToSpan() {
 		let parent = tracer.startSpan(name: "parent")
 		let baggage = Baggage(span: parent)
 		baggage["baggage.key"] = "baggage.value"
 
 		let child = tracer.buildSpan(name: "child", baggage: baggage)
 
-		XCTAssertEqual(child["baggage.key"], "baggage.value")
+		#expect(child["baggage.key"] as? String == "baggage.value")
 	}
 
-	func testSpanAttributesOverrideBaggageAttributes() {
+	@Test
+	func spanAttributesOverrideBaggageAttributes() {
 		let parent = tracer.startSpan(name: "parent")
 		let baggage = Baggage(span: parent)
 		baggage["shared.key"] = "from.baggage"
@@ -146,70 +155,70 @@ final class TracerTests: XCTestCase {
 		let spanAttributes: TelemetryAttributes = ["shared.key": "from.span"]
 		let child = tracer.buildSpan(name: "child", attributes: spanAttributes, baggage: baggage)
 
-		XCTAssertEqual(child["shared.key"], "from.span")
+		#expect(child["shared.key"] as? String == "from.span")
 	}
 
-	func testMergeAttributesBothNil() {
+	@Test
+	func mergeAttributesBothNil() {
 		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: nil)
-		XCTAssertNil(result)
+		#expect(result == nil)
 	}
 
-	func testMergeAttributesBaggageOnlyNil() {
+	@Test
+	func mergeAttributesBaggageOnlyNil() {
 		let spanAttributes: TelemetryAttributes = ["span.key": "span.value"]
 		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: spanAttributes)
 
-		XCTAssertEqual(result?["span.key"], "span.value")
+		#expect(result?["span.key"] as? String == "span.value")
 	}
 
-	func testMergeAttributesSpanOnlyNil() {
+	@Test
+	func mergeAttributesSpanOnlyNil() {
 		let baggageAttributes: TelemetryAttributes = ["baggage.key": "baggage.value"]
 		let result = tracer.mergeAttributes(baggageAttributes: baggageAttributes, spanAttributes: nil)
 
-		XCTAssertEqual(result?["baggage.key"], "baggage.value")
+		#expect(result?["baggage.key"] as? String == "baggage.value")
 	}
 
 	// MARK: - Error Propagation Tests
 
-	func testPropagateSpanRecordsErrorOnSpan() {
+	@Test
+	func propagateSpanRecordsErrorOnSpan() {
 		let span = tracer.startSpan(name: "test-span")
 
 		struct TestError: Error { }
 
-		do {
+		#expect(throws: TestError.self) {
 			try tracer.propagateParent(span) {
 				throw TestError()
 			}
-			XCTFail("Expected error to be thrown")
-		} catch {
-			// Expected
 		}
 
-		XCTAssertEqual(span.status, .error(message: "TestError()"))
-		XCTAssertEqual(span.events?.count, 1)
-		XCTAssertEqual(span.events?.first?.name, "exception")
+		#expect(span.status == .error(message: "TestError()"))
+		#expect(span.events?.count == 1)
+		#expect(span.events?.first?.name == "exception")
 	}
 
-	func testPropagateBaggageRecordsErrorOnSpan() {
+	@Test
+	func propagateBaggageRecordsErrorOnSpan() {
 		let span = tracer.startSpan(name: "test-span")
 		let baggage = Baggage(span: span)
 
 		struct TestError: Error { }
 
-		do {
+		#expect(throws: TestError.self) {
 			try tracer.propagateBaggage(baggage) {
 				throw TestError()
 			}
-			XCTFail("Expected error to be thrown")
-		} catch {
-			// Expected
 		}
 
-		XCTAssertEqual(span.status, .error(message: "TestError()"))
-		XCTAssertEqual(span.events?.count, 1)
-		XCTAssertEqual(span.events?.first?.name, "exception")
+		#expect(span.status == .error(message: "TestError()"))
+		#expect(span.events?.count == 1)
+		#expect(span.events?.first?.name == "exception")
 	}
 
-	func testMetricName() {
+	@Test
+	func metricName() {
 		let span = tracer.startSpan(name: "op")
 		let fileID = "MyModule/Path/File.swift"
 
@@ -219,7 +228,7 @@ final class TracerTests: XCTestCase {
 			fileID: fileID,
 			suffix: "_counter"
 		)
-		XCTAssertEqual(prefixed, "MyModule_op_counter")
+		#expect(prefixed == "MyModule_op_counter")
 
 		let raw: String = tracer.metricName(
 			span: span,
@@ -227,7 +236,7 @@ final class TracerTests: XCTestCase {
 			fileID: fileID,
 			suffix: "_histogram"
 		)
-		XCTAssertEqual(raw, "op_histogram")
+		#expect(raw == "op_histogram")
 	}
 
 }
