@@ -79,7 +79,10 @@ struct MetricExporterTests {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":100,"asInt":"100","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
@@ -101,7 +104,10 @@ struct MetricExporterTests {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
@@ -122,7 +128,10 @@ struct MetricExporterTests {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
@@ -143,7 +152,10 @@ struct MetricExporterTests {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
@@ -173,7 +185,10 @@ struct MetricExporterTests {
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":1,"dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#

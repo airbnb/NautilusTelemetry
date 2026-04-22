@@ -323,8 +323,8 @@ extension Exporter {
 				negative: mapped.negative,
 				flags: nil,
 				exemplars: nil, // no exemplar support
-				min: value.minValue.flatMap { asDouble($0) },
-				max: value.maxValue.flatMap { asDouble($0) },
+				min: value.range.flatMap { asDouble($0.lowerBound) },
+				max: value.range.flatMap { asDouble($0.upperBound) },
 				zeroThreshold: nil
 			)
 

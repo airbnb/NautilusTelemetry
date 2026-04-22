@@ -13,6 +13,8 @@ import Testing
 @Suite
 struct ExponentialHistogramTests {
 
+	// MARK: Internal
+
 	// MARK: - bucketIndex
 
 	/// At scale 0, base = 2. Bucket `i` covers (2^i, 2^(i+1)].
@@ -89,19 +91,6 @@ struct ExponentialHistogramTests {
 		)
 		#expect(indexSpan([3.0, 4.0], scale: scale) <= 160)
 		#expect(indexSpan([0.001, 1000.0], scale: scale) <= 160)
-	}
-
-	/// Count of contiguous buckets spanned by `magnitudes` at `scale`, computed from `bucketIndex`.
-	private func indexSpan(_ magnitudes: [Double], scale: Int) -> Int {
-		guard !magnitudes.isEmpty else { return 0 }
-		var minIdx = Int.max
-		var maxIdx = Int.min
-		for m in magnitudes {
-			let i = ExponentialHistogramUtils.bucketIndex(value: m, scale: scale)
-			if i < minIdx { minIdx = i }
-			if i > maxIdx { maxIdx = i }
-		}
-		return maxIdx - minIdx + 1
 	}
 
 	// MARK: - mapToExponentialBuckets
@@ -185,8 +174,7 @@ struct ExponentialHistogramTests {
 		let buckets = snapshot.values.values[[:]]
 		#expect(buckets?.count == 3)
 		#expect(buckets?.sum == 7.0)
-		#expect(buckets?.minValue == 1.0)
-		#expect(buckets?.maxValue == 4.0)
+		#expect(buckets?.range == 1.0...4.0)
 	}
 
 	@Test
@@ -270,4 +258,20 @@ struct ExponentialHistogramTests {
 		#expect(string.contains("\"scale\""))
 		#expect(string.contains("\"count\":2"))
 	}
+
+	// MARK: Private
+
+	/// Count of contiguous buckets spanned by `magnitudes` at `scale`, computed from `bucketIndex`.
+	private func indexSpan(_ magnitudes: [Double], scale: Int) -> Int {
+		guard !magnitudes.isEmpty else { return 0 }
+		var minIdx = Int.max
+		var maxIdx = Int.min
+		for m in magnitudes {
+			let i = ExponentialHistogramUtils.bucketIndex(value: m, scale: scale)
+			if i < minIdx { minIdx = i }
+			if i > maxIdx { maxIdx = i }
+		}
+		return maxIdx - minIdx + 1
+	}
+
 }

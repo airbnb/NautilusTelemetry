@@ -15,8 +15,7 @@ struct ExponentialHistogramBuckets<T: MetricNumeric> {
 
 	var count: UInt64 = 0
 	var sum: T = 0
-	var minValue: T? = nil
-	var maxValue: T? = nil
+	var range: ClosedRange<T>? = nil
 	var recordedValues = [T]()
 
 	var isEmpty: Bool { count == 0 }
@@ -26,16 +25,12 @@ struct ExponentialHistogramBuckets<T: MetricNumeric> {
 		count += 1
 		recordedValues.append(number)
 
-		if let currentMin = minValue {
-			if number < currentMin { minValue = number }
+		if let currentRange = range {
+			let lower = min(currentRange.lowerBound, number)
+			let upper = max(currentRange.upperBound, number)
+			range = lower...upper
 		} else {
-			minValue = number
-		}
-
-		if let currentMax = maxValue {
-			if number > currentMax { maxValue = number }
-		} else {
-			maxValue = number
+			range = number...number
 		}
 	}
 }

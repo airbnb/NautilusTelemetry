@@ -102,29 +102,13 @@ enum ExponentialHistogramUtils {
 
 		// Verify in O(1) from the precomputed log2 extents (rounding in the initial log2 could
 		// put us one step over). Re-check using the same `ceil` mapping used by `bucketIndex`.
-		if rangeFits(positive, scale: scale, bucketCount: bucketCount),
+		if
+			rangeFits(positive, scale: scale, bucketCount: bucketCount),
 			rangeFits(negative, scale: scale, bucketCount: bucketCount)
 		{
 			return scale
 		}
 		return max(minScale, scale - 1)
-	}
-
-	/// Min/max `log2` of a set of magnitudes and their span. Empty set yields zero span.
-	private struct Log2Extent {
-		let minLog2: Double
-		let maxLog2: Double
-		let isEmpty: Bool
-		var span: Double { isEmpty ? 0 : maxLog2 - minLog2 }
-	}
-
-	/// True if the bucket indices produced by `scale` for the given log2 extent fit in `bucketCount` buckets.
-	private static func rangeFits(_ extent: Log2Extent, scale: Int, bucketCount: Int) -> Bool {
-		guard !extent.isEmpty else { return true }
-		let sf = scaleMultiplier(scale: scale)
-		let minIndex = Int(ceil(extent.minLog2 * sf)) - 1
-		let maxIndex = Int(ceil(extent.maxLog2 * sf)) - 1
-		return (maxIndex - minIndex + 1) <= bucketCount
 	}
 
 	/// Build a contiguous run of buckets covering all magnitudes at the given scale.
@@ -168,6 +152,23 @@ enum ExponentialHistogramUtils {
 	}
 
 	// MARK: Private
+
+	/// Min/max `log2` of a set of magnitudes and their span. Empty set yields zero span.
+	private struct Log2Extent {
+		let minLog2: Double
+		let maxLog2: Double
+		let isEmpty: Bool
+		var span: Double { isEmpty ? 0 : maxLog2 - minLog2 }
+	}
+
+	/// True if the bucket indices produced by `scale` for the given log2 extent fit in `bucketCount` buckets.
+	private static func rangeFits(_ extent: Log2Extent, scale: Int, bucketCount: Int) -> Bool {
+		guard !extent.isEmpty else { return true }
+		let sf = scaleMultiplier(scale: scale)
+		let minIndex = Int(ceil(extent.minLog2 * sf)) - 1
+		let maxIndex = Int(ceil(extent.maxLog2 * sf)) - 1
+		return (maxIndex - minIndex + 1) <= bucketCount
+	}
 
 	/// Returns `2^scale` as a `Double`, used to convert log2 values into bucket indices.
 	/// Precompute this once per pass rather than recomputing it for every value.
