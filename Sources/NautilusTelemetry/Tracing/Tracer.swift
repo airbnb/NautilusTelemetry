@@ -246,6 +246,10 @@ public final class Tracer {
 	var flushTimer: FlushTimer? = nil
 	var idleTimer: FlushTimer? = nil
 
+	// Cached metrics
+	var cachedDurationHistograms = [String: Weak<ExponentialHistogram<Int>>]()
+	var cachedCounters = [String: Weak<Counter<Int>>]()
+
 	var currentBaggage: Baggage {
 		if let baggage = Baggage.currentBaggageTaskLocal {
 			baggage
@@ -277,6 +281,9 @@ public final class Tracer {
 	}
 
 	func flushRetiredSpans() {
+		// These are long-lived in normal usage, but clean up on flush for completeness.
+		purgeStaleCacheEntries()
+
 		let spansToReport: [Span] = lock.withLock {
 			// copy and empty the array.
 			let spans = retiredSpans
@@ -360,5 +367,13 @@ public final class Tracer {
 
 	/// Must be accessed with lock
 	private var _root: Span?
+
+	/// Removes entries whose weak references have been deallocated.
+	private func purgeStaleCacheEntries() {
+		lock.withLock {
+			cachedDurationHistograms = cachedDurationHistograms.filter { $0.value.value != nil }
+			cachedCounters = cachedCounters.filter { $0.value.value != nil }
+		}
+	}
 
 }

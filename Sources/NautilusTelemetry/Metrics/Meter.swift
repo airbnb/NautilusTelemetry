@@ -76,6 +76,16 @@ public final class Meter {
 		return instrument
 	}
 
+	public func createExponentialHistogram<T: MetricNumeric>(
+		name: String,
+		unit: Unit? = nil,
+		description: String? = nil
+	) -> ExponentialHistogram<T> {
+		let instrument = ExponentialHistogram<T>(name: name, unit: unit, description: description)
+		register(instrument)
+		return instrument
+	}
+
 	public func createObservableGauge<T: MetricNumeric>(
 		name: String,
 		unit: Unit? = nil,

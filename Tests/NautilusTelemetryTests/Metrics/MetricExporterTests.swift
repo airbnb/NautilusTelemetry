@@ -6,11 +6,12 @@
 //
 
 import Foundation
-import XCTest
+import Testing
 
 @testable import NautilusTelemetry
 
-final class MetricExporterTests: XCTestCase {
+@Suite
+struct MetricExporterTests {
 
 	let testWithRemoteCollector = TestUtils.testEnabled("testMetricsWithRemoteCollector")
 	let testWithLocalCollector = TestUtils.testEnabled("testWithLocalCollector")
@@ -21,17 +22,18 @@ final class MetricExporterTests: XCTestCase {
 	let redaction = ["startTimeUnixNano", "timeUnixNano"]
 	let unit = Unit(symbol: "bytes")
 
-	func testExportOTLPToJSON() throws {
+	@Test
+	func exportOTLPToJSON() throws {
 		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
 		counter.add(100)
 
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let json = try XCTUnwrap(exporter.exportOTLPToJSON(instruments: [counter], additionalAttributes: ["scenario": "test"]))
+		let json = try exporter.exportOTLPToJSON(instruments: [counter], additionalAttributes: ["scenario": "test"])
 
 		// redact the attribute list as well
-		let normalizedJsonString = try XCTUnwrap(try TestDataNormalization.normalizedJsonString(
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
 			data: json,
 			keyValuesToRedact: redaction + ["attributes"]
 		))
@@ -39,10 +41,11 @@ final class MetricExporterTests: XCTestCase {
 		let expectedOutput =
 			#"{"resourceMetrics":[{"resource":{"attributes":"***"},"scopeMetrics":[{"metrics":[{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":100,"asInt":"100","attributes":"***","startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}],"scope":{"name":"NautilusTelemetry","version":"1.0"}}]}]}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testCounter() throws {
+	@Test
+	func counter() throws {
 		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
 		counter.add(100)
 
@@ -52,7 +55,7 @@ final class MetricExporterTests: XCTestCase {
 		let metric = counter.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try XCTUnwrap(try TestDataNormalization.normalizedJsonString(
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
 			data: json,
 			keyValuesToRedact: redaction
 		))
@@ -60,10 +63,11 @@ final class MetricExporterTests: XCTestCase {
 		let expectedOutput =
 			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":100,"asInt":"100","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testUpDownCounter() throws {
+	@Test
+	func upDownCounter() throws {
 		let counter = UpDownCounter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
 
 		counter.add(100)
@@ -71,19 +75,23 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let exportableInstrument = try #require(counter.snapshotAndReset() as? ExportableInstrument)
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":100,"asInt":"100","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testObservableCounter() throws {
+	@Test
+	func observableCounter() throws {
 		let unit = Unit(symbol: "bytes")
 		let counter = ObservableCounter<Int>(name: "Test", unit: unit, description: "Test observable Counter") { counter in
 			counter.observe(500)
@@ -92,19 +100,23 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let exportableInstrument = try #require(counter.snapshotAndReset() as? ExportableInstrument)
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Test observable Counter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testObservableUpDownCounter() throws {
+	@Test
+	func observableUpDownCounter() throws {
 		let counter = ObservableUpDownCounter<Int>(name: "Test", unit: unit, description: "Test observable UpDownCounter") { counter in
 			counter.observe(500)
 		}
@@ -112,19 +124,23 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let exportableInstrument = try XCTUnwrap(counter.snapshotAndReset() as? ExportableInstrument)
+		let exportableInstrument = try #require(counter.snapshotAndReset() as? ExportableInstrument)
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Test observable UpDownCounter","name":"Test","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":false},"unit":"bytes"}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testObservableGauge() throws {
+	@Test
+	func observableGauge() throws {
 		let gauge = ObservableGauge<Int>(name: "Test", unit: unit, description: "Test observable gauge") { gauge in
 			gauge.observe(500)
 		}
@@ -132,19 +148,23 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let exportableInstrument = try XCTUnwrap(gauge.snapshotAndReset() as? ExportableInstrument)
+		let exportableInstrument = try #require(gauge.snapshotAndReset() as? ExportableInstrument)
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Test observable gauge","gauge":{"dataPoints":[{"asDouble":500,"asInt":"500","attributes":[],"startTimeUnixNano":"***","timeUnixNano":"***"}]},"name":"Test","unit":"bytes"}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testHistogram() throws {
+	@Test
+	func histogram() throws {
 		let bucketSize = 1024
 
 		let histogram = Histogram<Int>(
@@ -161,24 +181,157 @@ final class MetricExporterTests: XCTestCase {
 		let timeReference = TimeReference(serverOffset: 0)
 		let exporter = Exporter(timeReference: timeReference)
 
-		let exportableInstrument = try XCTUnwrap(histogram.snapshotAndReset() as? ExportableInstrument)
+		let exportableInstrument = try #require(histogram.snapshotAndReset() as? ExportableInstrument)
 		let metric = exportableInstrument.exportOTLP(exporter)
 		let json = try exporter.encodeJSON(metric)
 
-		let normalizedJsonString = try XCTUnwrap(TestDataNormalization.normalizedJsonString(data: json, keyValuesToRedact: redaction))
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
 
 		let expectedOutput =
 			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":1,"dataPoints":[{"attributes":[],"bucketCounts":["1","0","0","1","1"],"count":"3","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":20100,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
 
-		XCTAssertEqual(normalizedJsonString, expectedOutput)
+		#expect(normalizedJsonString == expectedOutput)
 	}
 
-	func testOTLPExporterGaugeMetric() throws {
-		guard testWithLocalCollector || testWithRemoteCollector else {
-			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
+	@Test
+	func exponentialHistogram() async throws {
+		let msUnit = Unit(symbol: "ms")
+		let histogram = ExponentialHistogram<Double>(
+			name: "LatencyHistogram",
+			unit: msUnit,
+			description: "Request latency sampled from a normal distribution"
+		)
+
+		// Normal distribution via Box-Muller
+		let mode = Bool.random()
+		let maxValue = 100000.0
+		let mean = mode ? 150.0 : 300.0 // Fake bimodal distribution
+		let stdDev = 50.0
+		let sampleCount = 1000
+
+		var samples = [Double]()
+		samples.reserveCapacity(sampleCount)
+		for _ in 0..<sampleCount {
+			let u1 = max(Double.leastNormalMagnitude, Double.random(in: 0.0..<1.0))
+			let u2 = Double.random(in: 0.0..<1.0)
+			let z = sqrt(-2.0 * log(u1)) * cos(2.0 * .pi * u2)
+			let value = max(0.0, min(maxValue, mean + stdDev * z))
+			samples.append(value)
+			histogram.record(value)
 		}
 
-		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
+		// Make end time differ
+		try await Task.sleep(for: .milliseconds(100))
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		let snapshot = histogram.snapshotAndReset()
+		let exportableInstrument = try #require(snapshot as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
+
+		#expect(metric.name == "LatencyHistogram")
+		#expect(metric.unit == "ms")
+		#expect(metric.histogram == nil)
+
+		let expHist = try #require(metric.exponentialHistogram)
+		#expect(expHist.aggregationTemporality == .delta)
+
+		let dp = try #require(expHist.dataPoints?.first)
+		#expect(dp.count == UInt64(sampleCount))
+
+		let expectedSum = samples.reduce(0.0, +)
+		let sum = try #require(dp.sum)
+		#expect(abs(sum - expectedSum) < 1e-6)
+		#expect(dp.min == samples.min())
+		#expect(dp.max == samples.max())
+
+		let zeroCount = dp.zeroCount ?? 0
+		let positiveCount = dp.positive?.bucketCounts?.reduce(0, +) ?? 0
+		let negativeCount = dp.negative?.bucketCounts?.reduce(0, +) ?? 0
+		#expect(positiveCount + negativeCount + zeroCount == UInt64(sampleCount))
+
+		// Clamped to [0, 100] so there should be no negative buckets.
+		#expect(negativeCount == 0)
+
+		// Buckets must stay within the configured window.
+		let positiveBuckets = try #require(dp.positive?.bucketCounts)
+		#expect(positiveBuckets.count <= histogram.maxBuckets)
+
+		// The chosen scale should be within the spec range.
+		let scale = try #require(dp.scale)
+		#expect(scale >= ExponentialHistogramUtils.minScale)
+		#expect(scale <= ExponentialHistogramUtils.maxScale)
+
+		// JSON should encode successfully and include the exponentialHistogram payload.
+		let json = try exporter.encodeJSON(metric)
+		let jsonString = try #require(String(data: json, encoding: .utf8))
+		#expect(jsonString.contains("\"exponentialHistogram\""))
+		#expect(jsonString.contains("\"unit\":\"ms\""))
+
+		guard testWithLocalCollector || testWithRemoteCollector else { return }
+
+		// If the collector requires tenant ID or other metadata, can be configured here.
+		let additionalAttributes = try TestUtils.additionalAttributes
+
+		let requestJSON = try exporter.exportOTLPToJSON(instruments: [snapshot], additionalAttributes: additionalAttributes)
+
+		if testWithRemoteCollector {
+			try await TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: requestJSON)
+		}
+
+		if testWithLocalCollector {
+			try await TestUtils.postJSON(url: TestUtils.makeURL("\(localEndpointBase)/v1/metrics"), json: requestJSON)
+		}
+	}
+
+	@Test
+	func tracerMetrics() async throws {
+		let tracer = InstrumentationSystem.tracer
+		let timingRange = 0...1.0
+
+		let span = tracer.startSpan(name: "testSpan")
+		let counter = tracer.reportAsCounterMetric(span: span)
+		let histogram = tracer.reportAsDurationHistogramMetric(span: span)
+
+		// Use the adjustment API so we don't have to actually wait
+		span.adjust(start: .zero, end: Duration.seconds(Double.random(in: timingRange)))
+
+		span.end()
+
+		for _ in 0..<1000 {
+			let span = tracer.startSpan(name: "testSpan")
+			let counter2 = tracer.reportAsCounterMetric(span: span)
+			#expect(counter === counter2)
+			let histogram2 = tracer.reportAsDurationHistogramMetric(span: span)
+			#expect(histogram === histogram2)
+			span.adjust(start: .zero, end: Duration.seconds(Double.random(in: timingRange)))
+			span.end()
+		}
+
+		// If the collector requires tenant ID or other metadata, can be configured here.
+		let additionalAttributes = try TestUtils.additionalAttributes
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		let requestJSON = try exporter.exportOTLPToJSON(instruments: [counter, histogram], additionalAttributes: additionalAttributes)
+
+		if testWithRemoteCollector {
+			try await TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: requestJSON)
+		}
+
+		if testWithLocalCollector {
+			try await TestUtils.postJSON(url: TestUtils.makeURL("\(localEndpointBase)/v1/metrics"), json: requestJSON)
+		}
+	}
+
+	@Test
+	func otlpExporterGaugeMetric() async throws {
+		guard testWithLocalCollector || testWithRemoteCollector else { return }
 
 		let timeReference = TimeReference(serverOffset: 0.0)
 
@@ -231,20 +384,17 @@ final class MetricExporterTests: XCTestCase {
 		let json = try TestUtils.encodeJSON(exportMetricsServiceRequest)
 
 		if testWithRemoteCollector {
-			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json, test: self)
+			try await TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json)
 		}
 
 		if testWithLocalCollector {
-			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: json, test: self)
+			try await TestUtils.postJSON(url: TestUtils.makeURL("\(localEndpointBase)/v1/metrics"), json: json)
 		}
 	}
 
-	func testOTLPExporterCounterMetric() throws {
-		guard testWithLocalCollector || testWithRemoteCollector else {
-			throw XCTSkip("testWithLocalCollector and testsWithRemoteCollector are false")
-		}
-
-		// HOO boy: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
+	@Test
+	func otlpExporterCounterMetric() async throws {
+		guard testWithLocalCollector || testWithRemoteCollector else { return }
 
 		let timeReference = TimeReference(serverOffset: 0.0)
 
@@ -293,11 +443,11 @@ final class MetricExporterTests: XCTestCase {
 		let json = try TestUtils.encodeJSON(exportMetricsServiceRequest)
 
 		if testWithRemoteCollector {
-			try TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json, test: self)
+			try await TestUtils.postJSON(url: TestUtils.endpoint(remoteMetricEndpointEnv), json: json)
 		}
 
 		if testWithLocalCollector {
-			try TestUtils.postJSON(url: try makeURL("\(localEndpointBase)/v1/metrics"), json: json, test: self)
+			try await TestUtils.postJSON(url: TestUtils.makeURL("\(localEndpointBase)/v1/metrics"), json: json)
 		}
 	}
 

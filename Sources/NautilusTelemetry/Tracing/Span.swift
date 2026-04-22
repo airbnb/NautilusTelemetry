@@ -66,7 +66,9 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		self.links = links
 		self.startTime = startTime
 		self.endTime = endTime
-		self.retireCallback = retireCallback
+		if let retireCallback {
+			retireCallbacks.append(retireCallback)
+		}
 		self.isRoot = isRoot
 		self.sampleRate = sampleRate
 
@@ -113,12 +115,22 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	}
 
 	public func end() {
-		assert(endTime == nil, "span \(name) was ended more than once")
-		endTime = ContinuousClock.now
+		let callbacks = lock.withLock {
+			assert(endTime == nil, "span \(name) was ended more than once")
 
-		if let retireCallback {
-			retireCallback(self)
-			self.retireCallback = nil
+			if let endTimeAdjustment {
+				endTime = ContinuousClock.now.advanced(by: endTimeAdjustment)
+			} else {
+				endTime = ContinuousClock.now
+			}
+
+			let callbacks = self.retireCallbacks
+			self.retireCallbacks.removeAll()
+			return callbacks
+		}
+
+		for callback in callbacks {
+			callback(self)
 		}
 	}
 
@@ -228,10 +240,15 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	/// Adjust start and/or end timestamps. This can be used for cases where the time is inferred from other sources, such as `ProcessDetails.timeSinceStart`.
 	/// - Parameters:
 	///   - start: duration to add to startTime. May be negative.
-	///   - end: duration to add to endTime. May be negative. If the span is not yet ended, endTime will remain nil.
+	///   - end: duration to add to endTime. May be negative. If the span is not yet ended, the adjustment will be applied once ended.
 	public func adjust(start: Duration = .seconds(0), end: Duration = .seconds(0)) {
 		startTime = startTime.advanced(by: start)
-		endTime = endTime?.advanced(by: end)
+
+		if let endTime {
+			self.endTime = endTime.advanced(by: end)
+		} else {
+			endTimeAdjustment = end
+		}
 	}
 
 	// MARK: Internal
@@ -246,7 +263,8 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	var status = Status
 		.unset // optimization -- we will omit status fields when unset: https://opentelemetry.io/docs/concepts/signals/traces/#span-status
 	var endTime: ContinuousClock.Instant?
-	var retireCallback: ((_: Span) -> Void)?
+	var endTimeAdjustment: Duration?
+	var retireCallbacks = [(_: Span) -> Void]()
 
 	/// Vend private attributes as a thread-safe copy
 	var attributes: TelemetryAttributes? {
@@ -293,6 +311,14 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 			if let threadName = Thread.current.name, threadName.count > 0 {
 				addAttribute("thread.name", threadName)
 			}
+		}
+	}
+
+	/// Adds an additional retire callback to enable metrics from spans.
+	/// - Parameter retireCallback: closure to be appended to retireCallbacks
+	func addRetireCallback(_ callback: @escaping (_: Span) -> Void) {
+		lock.withLock {
+			retireCallbacks.append(callback)
 		}
 	}
 

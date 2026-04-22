@@ -131,4 +131,40 @@ enum TestUtils {
 		task.resume()
 		test.wait(for: [completion], timeout: 30)
 	}
+
+	/// Swift Testing variant of `postJSON` that doesn't require an `XCTestCase`.
+	static func postJSON(url: URL, json: Data) async throws {
+		var urlRequest = URLRequest(url: url)
+
+		urlRequest.httpMethod = "POST"
+		urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+		urlRequest.setValue("\(json.count)", forHTTPHeaderField: "Content-Length")
+
+		let compressedJSON = try Compression.compressDeflate(data: json)
+		urlRequest.setValue("deflate", forHTTPHeaderField: "Content-Encoding")
+		urlRequest.httpBody = compressedJSON
+
+		guard let allHeaderFields = urlRequest.allHTTPHeaderFields else { throw UtilError.unexpectedNil }
+		let requestHeaders = formattedHeaders(allHeaderFields)
+
+		logger.debug("\(urlRequest.httpMethod?.description ?? "nil") \(url.path)\n\(requestHeaders)")
+
+		if let jsonString = String(data: json, encoding: .utf8) {
+			logger.debug("\(jsonString)")
+		}
+
+		let (data, response) = try await URLSession.shared.data(for: urlRequest)
+
+		if let response = response as? HTTPURLResponse {
+			let responseHeaders = formattedHeaders(response.allHeaderFields as! [String: String])
+			logger.debug("Response:\n\(responseHeaders)")
+			guard response.statusCode == 200 else {
+				throw UtilError.unexpectedNil
+			}
+		}
+
+		if let jsonString = String(data: data, encoding: .utf8) {
+			logger.debug("\(jsonString)")
+		}
+	}
 }

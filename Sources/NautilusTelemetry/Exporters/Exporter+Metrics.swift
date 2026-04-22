@@ -253,7 +253,7 @@ extension Exporter {
 			let bucketCounts = convertToOTLP(bucketCounts: value.data)
 			let sum = asDouble(value.sum)
 
-			let timeUnixNano = convertToOTLP(time: ContinuousClock.now)
+			let timeUnixNano = convertToOTLP(time: histogram.endTime ?? ContinuousClock.now)
 
 			let dataPoint = OTLP.V1HistogramDataPoint(
 				attributes: attributes,
@@ -282,6 +282,68 @@ extension Exporter {
 			sum: nil,
 			histogram: v1Histogram,
 			exponentialHistogram: nil,
+			summary: nil
+		)
+	}
+
+	func exportOTLP<T>(histogram: ExponentialHistogram<T>) -> OTLP.V1Metric {
+		let values = histogram.values.values
+		var dataPoints = [OTLP.V1ExponentialHistogramDataPoint]()
+
+		for key in values.keys {
+			guard let value = values[key] else {
+				continue
+			}
+
+			let attributes = convertToOTLP(attributes: key)
+			let startTimeUnixNano = convertToOTLP(time: histogram.startTime)
+			let timeUnixNano = convertToOTLP(time: histogram.endTime ?? ContinuousClock.now)
+
+			let doubleValues = value.recordedValues.compactMap { asDouble($0) }
+			let mapped = ExponentialHistogramUtils.mapToExponentialBuckets(
+				values: doubleValues,
+				maxBuckets: histogram.maxBuckets
+			)
+
+			#if DEBUG
+			let positiveBucketCount = mapped.positive.bucketCounts?.reduce(0, +) ?? 0
+			let negativeBucketCount = mapped.negative.bucketCounts?.reduce(0, +) ?? 0
+			assert(value.count == positiveBucketCount + negativeBucketCount + mapped.zeroCount)
+			#endif
+
+			let dataPoint = OTLP.V1ExponentialHistogramDataPoint(
+				attributes: attributes,
+				startTimeUnixNano: startTimeUnixNano,
+				timeUnixNano: timeUnixNano,
+				count: value.count,
+				sum: asDouble(value.sum),
+				scale: mapped.scale,
+				zeroCount: mapped.zeroCount,
+				positive: mapped.positive,
+				negative: mapped.negative,
+				flags: nil,
+				exemplars: nil, // no exemplar support
+				min: value.range.flatMap { asDouble($0.lowerBound) },
+				max: value.range.flatMap { asDouble($0.upperBound) },
+				zeroThreshold: nil
+			)
+
+			dataPoints.append(dataPoint)
+		}
+
+		let v1ExponentialHistogram = OTLP.V1ExponentialHistogram(
+			dataPoints: dataPoints,
+			aggregationTemporality: convertToOTLP(histogram.aggregationTemporality)
+		)
+
+		return OTLP.V1Metric(
+			name: histogram.name,
+			description: histogram.description,
+			unit: convertToOTLP(histogram.unit),
+			gauge: nil,
+			sum: nil,
+			histogram: nil,
+			exponentialHistogram: v1ExponentialHistogram,
 			summary: nil
 		)
 	}

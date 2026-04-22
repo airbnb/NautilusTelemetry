@@ -178,7 +178,11 @@ struct TracerTests {
 		let span = tracer.startSpan(name: "test-span")
 		struct TestError: Error { }
 
-		try? tracer.propagateParent(span) { throw TestError() }
+		#expect(throws: TestError.self) {
+			try tracer.propagateParent(span) {
+				throw TestError()
+			}
+		}
 
 		#expect(span.status == .error(message: "TestError()"))
 		#expect(span.events?.count == 1)
@@ -191,7 +195,11 @@ struct TracerTests {
 		let baggage = Baggage(span: span)
 		struct TestError: Error { }
 
-		try? tracer.propagateBaggage(baggage) { throw TestError() }
+		#expect(throws: TestError.self) {
+			try tracer.propagateBaggage(baggage) {
+				throw TestError()
+			}
+		}
 
 		#expect(span.status == .error(message: "TestError()"))
 		#expect(span.events?.count == 1)
@@ -213,6 +221,28 @@ struct TracerTests {
 		let baggage = Baggage(span: parent, subTraceId: Identifiers.generateTraceId())
 		let child = tracer.buildSpan(name: "child", baggage: baggage)
 		#expect(child.sampleRate == 75.0)
+	}
+
+	@Test
+	func metricName() {
+		let span = tracer.startSpan(name: "op")
+		let fileID = "MyModule/Path/File.swift"
+
+		let prefixed: String = tracer.metricName(
+			span: span,
+			namingConvention: .modulePrefix,
+			fileID: fileID,
+			suffix: "_counter"
+		)
+		#expect(prefixed == "MyModule_op_counter")
+
+		let raw: String = tracer.metricName(
+			span: span,
+			namingConvention: .raw,
+			fileID: fileID,
+			suffix: "_histogram"
+		)
+		#expect(raw == "op_histogram")
 	}
 
 }
