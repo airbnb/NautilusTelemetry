@@ -41,7 +41,7 @@ let package = Package(
 		),
 		.testTarget(
 			name: "NautilusTelemetryTests",
-			dependencies: ["NautilusTelemetry"],
+			dependencies: ["NautilusTelemetry", "SampleCode"],
 			swiftSettings: [
 				.enableUpcomingFeature("BareSlashRegexLiterals"),
 			]

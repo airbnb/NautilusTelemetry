@@ -54,7 +54,8 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		parentId: SpanId?,
 		links: [Link] = [Link](),
 		retireCallback: ((_: Span) -> Void)? = nil,
-		isRoot: Bool = false
+		isRoot: Bool = false,
+		sampleRate: Double? = nil
 	) {
 		self.name = name
 		self.kind = kind
@@ -69,6 +70,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 			retireCallbacks.append(retireCallback)
 		}
 		self.isRoot = isRoot
+		self.sampleRate = sampleRate
 
 		addDefaultAttributes()
 	}
@@ -102,6 +104,11 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	public let traceId: TraceId
 	public let id: SpanId
 	public let isRoot: Bool
+
+	/// Allows overriding the default sample rate for this span and its children.
+	/// Expressed as a percentage in the 0-100 range.
+	/// USE WITH CAUTION.
+	public var sampleRate: Double?
 
 	public var ended: Bool {
 		endTime != nil

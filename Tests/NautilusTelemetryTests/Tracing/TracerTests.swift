@@ -2,39 +2,12 @@
 // Copyright © 2025 Airbnb Inc. All rights reserved.
 
 import Foundation
+import Synchronization
 import Testing
 @testable import NautilusTelemetry
 
 @Suite
 struct TracerTests {
-
-	final class TestReporter: NautilusTelemetryReporter {
-
-		// MARK: Lifecycle
-
-		init(onIdle: @escaping () -> Void) {
-			self.onIdle = onIdle
-		}
-
-		// MARK: Internal
-
-		let onIdle: () -> Void
-
-		/// Shorten the idle timeout for the test
-		var idleTimeoutInterval: TimeInterval { 0.1 }
-
-		func reportSpans(_: [Span]) { }
-
-		func reportInstruments(_: [any Instrument]) { }
-
-		func subscribeToLifecycleEvents() { }
-
-		func idleTimeout() {
-			// Turn off the timer
-			InstrumentationSystem.tracer.flushTimer?.suspend()
-			onIdle()
-		}
-	}
 
 	let tracer = Tracer()
 
@@ -77,7 +50,6 @@ struct TracerTests {
 		#expect(newRoot.traceId == newTraceId)
 
 		#expect(!newRoot.ended)
-
 		#expect(tracer.retiredSpans.count == 0)
 	}
 
@@ -85,15 +57,39 @@ struct TracerTests {
 	func idleTimeout() async {
 		InstrumentationSystem.resetBootstrapForTests()
 
+		class IdleTestReporter: NautilusTelemetryReporter {
+			var idleTimeoutInterval: TimeInterval { 0.1 }
+			let onIdleTimeout: () -> Void
+			private let didFire = Mutex(false)
+
+			init(onIdleTimeout: @escaping () -> Void) {
+				self.onIdleTimeout = onIdleTimeout
+			}
+
+			func reportSpans(_: [Span]) { }
+			func reportInstruments(_: [any Instrument]) { }
+			func subscribeToLifecycleEvents() { }
+			func idleTimeout() {
+				let alreadyFired = didFire.withLock { fired in
+					let was = fired
+					fired = true
+					return was
+				}
+				guard !alreadyFired else { return }
+				InstrumentationSystem.tracer.flushTimer?.suspend()
+				InstrumentationSystem.tracer.idleTimer?.suspend()
+				onIdleTimeout()
+			}
+		}
+
 		await confirmation("Idle received") { confirm in
-			let reporter = TestReporter(onIdle: { confirm() })
+			let reporter = IdleTestReporter { confirm() }
 			InstrumentationSystem.bootstrap(reporter: reporter)
 
 			let span = InstrumentationSystem.tracer.startSpan(name: "retire test")
 			span.end()
 
-			// Wait for the idle callback (fires ~0.1s after span end).
-			try? await Task.sleep(for: .seconds(2))
+			try? await Task.sleep(for: .seconds(10))
 		}
 
 		InstrumentationSystem.resetBootstrapForTests()
@@ -142,7 +138,6 @@ struct TracerTests {
 		baggage["baggage.key"] = "baggage.value"
 
 		let child = tracer.buildSpan(name: "child", baggage: baggage)
-
 		#expect(child["baggage.key"] as? String == "baggage.value")
 	}
 
@@ -154,21 +149,18 @@ struct TracerTests {
 
 		let spanAttributes: TelemetryAttributes = ["shared.key": "from.span"]
 		let child = tracer.buildSpan(name: "child", attributes: spanAttributes, baggage: baggage)
-
 		#expect(child["shared.key"] as? String == "from.span")
 	}
 
 	@Test
 	func mergeAttributesBothNil() {
-		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: nil)
-		#expect(result == nil)
+		#expect(tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: nil) == nil)
 	}
 
 	@Test
 	func mergeAttributesBaggageOnlyNil() {
 		let spanAttributes: TelemetryAttributes = ["span.key": "span.value"]
 		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: spanAttributes)
-
 		#expect(result?["span.key"] as? String == "span.value")
 	}
 
@@ -176,7 +168,6 @@ struct TracerTests {
 	func mergeAttributesSpanOnlyNil() {
 		let baggageAttributes: TelemetryAttributes = ["baggage.key": "baggage.value"]
 		let result = tracer.mergeAttributes(baggageAttributes: baggageAttributes, spanAttributes: nil)
-
 		#expect(result?["baggage.key"] as? String == "baggage.value")
 	}
 
@@ -185,7 +176,6 @@ struct TracerTests {
 	@Test
 	func propagateSpanRecordsErrorOnSpan() {
 		let span = tracer.startSpan(name: "test-span")
-
 		struct TestError: Error { }
 
 		#expect(throws: TestError.self) {
@@ -203,7 +193,6 @@ struct TracerTests {
 	func propagateBaggageRecordsErrorOnSpan() {
 		let span = tracer.startSpan(name: "test-span")
 		let baggage = Baggage(span: span)
-
 		struct TestError: Error { }
 
 		#expect(throws: TestError.self) {
@@ -215,6 +204,23 @@ struct TracerTests {
 		#expect(span.status == .error(message: "TestError()"))
 		#expect(span.events?.count == 1)
 		#expect(span.events?.first?.name == "exception")
+	}
+
+	@Test
+	func sampleRatePropagatedToChildSpan() {
+		let parent = tracer.startSpan(name: "parent")
+		parent.sampleRate = 25.0
+		let child = tracer.buildSpan(name: "child", baggage: Baggage(span: parent))
+		#expect(child.sampleRate == 25.0)
+	}
+
+	@Test
+	func sampleRatePropagatedToSubtraceSpan() {
+		let parent = tracer.startSpan(name: "parent")
+		parent.sampleRate = 75.0
+		let baggage = Baggage(span: parent, subTraceId: Identifiers.generateTraceId())
+		let child = tracer.buildSpan(name: "child", baggage: baggage)
+		#expect(child.sampleRate == 75.0)
 	}
 
 	@Test

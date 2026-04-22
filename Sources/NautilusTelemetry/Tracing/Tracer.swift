@@ -324,7 +324,8 @@ public final class Tracer {
 				attributes: mergedAttributes,
 				traceId: subTraceId,
 				parentId: nil,
-				retireCallback: retire
+				retireCallback: retire,
+				sampleRate: resolvedBaggage.span.sampleRate
 			)
 
 			let parent = resolvedBaggage.span
@@ -344,7 +345,8 @@ public final class Tracer {
 				attributes: mergedAttributes,
 				traceId: resolvedBaggage.span.traceId,
 				parentId: resolvedBaggage.span.id,
-				retireCallback: retire
+				retireCallback: retire,
+				sampleRate: resolvedBaggage.span.sampleRate
 			)
 		}
 	}
