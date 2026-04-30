@@ -21,12 +21,14 @@ extension Tracer {
 	///   - span: the span to count. A metric name will be derived from the span name.
 	///   - namingConvention: determines how to derive the metric name
 	///   - fileID: fileID where the span was created, for module name determination.
+	///   - spanAttributeKeys: A set of attribute keys to collect from the span when it is ended. This set should be minimal to avoid metric cardinality explosion.
 	/// - Returns: the created counter.
 	@discardableResult
 	public func reportAsCounterMetric(
 		span: Span,
 		namingConvention: MetricNamingConvention = .modulePrefix,
-		fileID: String = #fileID
+		fileID: String = #fileID,
+		spanAttributeKeys: Set<String>? = nil
 	) -> Counter<Int> {
 		let name = metricName(span: span, namingConvention: namingConvention, fileID: fileID, suffix: "_counter")
 
@@ -41,9 +43,9 @@ extension Tracer {
 			return counter
 		}
 
-		span.addRetireCallback { [weak counter] _ in
+		span.addRetireCallback { [weak counter] span in
 			guard let counter else { return }
-			counter.add(1)
+			counter.add(1, attributes: Self.collectAttributes(span, spanAttributeKeys))
 		}
 
 		return counter
@@ -53,15 +55,17 @@ extension Tracer {
 	/// The histogram is strongly referenced through Meter's register, and a cached copy will be returned if the derived metric name matches.
 	/// Callers need only hold a reference to the histogram if they need to later unregister.
 	/// - Parameters:
-	///   - span: the span to count. A metric name will be derived from the span name.
+	///   - span: the span to measure. A metric name will be derived from the span name.
 	///   - namingConvention: determines how to derive the metric name
 	///   - fileID: fileID where the span was created, for module name determination.
+	///   - spanAttributeKeys: A set of attribute keys to collect from the span when it is ended. This set should be minimal to avoid metric cardinality explosion.
 	/// - Returns: the created histogram.
 	@discardableResult
 	public func reportAsDurationHistogramMetric(
 		span: Span,
 		namingConvention: MetricNamingConvention = .modulePrefix,
-		fileID: String = #fileID
+		fileID: String = #fileID,
+		spanAttributeKeys: Set<String>? = nil
 	) -> ExponentialHistogram<Int> {
 		let name = metricName(span: span, namingConvention: namingConvention, fileID: fileID, suffix: "_histogram")
 
@@ -78,13 +82,23 @@ extension Tracer {
 
 		span.addRetireCallback { [weak histogram] span in
 			guard let histogram, let elapsed = span.elapsed else { return }
-			histogram.record(Int(elapsed.asMilliseconds))
+			histogram.record(Int(elapsed.asMilliseconds), attributes: Self.collectAttributes(span, spanAttributeKeys))
 		}
 
 		return histogram
 	}
 
 	// MARK: Internal
+
+	/// Collect a set of named span attributes
+	/// - Parameters:
+	///   - span: The span
+	///   - spanAttributeKeys: The names of attributes to collect
+	/// - Returns: The matching attributes, or an empty dictionary if no keys were requested or none matched.
+	static func collectAttributes(_ span: Span, _ spanAttributeKeys: Set<String>?) -> TelemetryAttributes {
+		guard let spanAttributeKeys, !spanAttributeKeys.isEmpty else { return [:] }
+		return span.attributes?.filter { spanAttributeKeys.contains($0.key) } ?? [:]
+	}
 
 	func metricName(span: Span, namingConvention: MetricNamingConvention, fileID: String = #fileID, suffix: String) -> String {
 		switch namingConvention {
