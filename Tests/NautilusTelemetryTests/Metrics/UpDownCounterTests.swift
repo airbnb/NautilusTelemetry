@@ -271,7 +271,7 @@ final class UpDownCounterTests: XCTestCase {
 			let attributes: TelemetryAttributes = [
 				"service": i % 2 == 0 ? "api" : "web",
 				"operation": i % 3 == 0 ? "create" : "delete",
-				"index": i,
+				"index": AttributeValue(i),
 			]
 			// Mix positive and negative values
 			let value = i % 2 == 0 ? (i + 1) : -(i + 1)

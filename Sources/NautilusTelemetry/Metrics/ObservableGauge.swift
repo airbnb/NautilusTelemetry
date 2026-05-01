@@ -31,7 +31,7 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	public var isEmpty: Bool { false }
 
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLockUnchecked {
+		lock.withLock {
 			values.set(number, attributes: attributes)
 		}
 	}

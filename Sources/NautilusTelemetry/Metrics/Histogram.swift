@@ -42,7 +42,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 			return
 		}
 
-		lock.withLockUnchecked {
+		lock.withLock {
 			values.record(number, attributes: attributes)
 		}
 	}

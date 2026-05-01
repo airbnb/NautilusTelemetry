@@ -16,13 +16,13 @@ extension OTLP {
 
 		var stringValue: String?
 		var boolValue: Bool?
-		var intValue: (any FixedWidthInteger)?
+		var intValue: Int64?
 		var doubleValue: Double?
 		var arrayValue: V1ArrayValue?
 		var kvlistValue: V1KeyValueList?
 		var bytesValue: Data?
 
-		init(stringValue: String? = nil, boolValue: Bool? = nil, intValue: (any FixedWidthInteger)? = nil, doubleValue: Double? = nil, arrayValue: V1ArrayValue? = nil, kvlistValue: V1KeyValueList? = nil, bytesValue: Data? = nil) {
+		init(stringValue: String? = nil, boolValue: Bool? = nil, intValue: Int64? = nil, doubleValue: Double? = nil, arrayValue: V1ArrayValue? = nil, kvlistValue: V1KeyValueList? = nil, bytesValue: Data? = nil) {
 			self.stringValue = stringValue
 			self.boolValue = boolValue
 			self.intValue = intValue
@@ -42,25 +42,23 @@ extension OTLP {
 			case bytesValue
 		}
 
-		// Encodable protocol methods
-		static let preciseIntegerRangeInJSONNumbers = -(1 << 53)...(1 << 53)
+		/// IEEE 754 `Double` can represent every integer in `[-2^53, 2^53]` exactly.
+		/// Values in this range encode as JSON numbers; outside, ProtoJSON spec requires
+		/// a JSON string. https://protobuf.dev/programming-guides/json/
+		static let preciseIntegerRangeInJSONNumbers: ClosedRange<Int64> = -(1 << 53)...(1 << 53)
 
 		func encode(to encoder: Encoder) throws {
 			var container = encoder.container(keyedBy: CodingKeys.self)
 			try container.encodeIfPresent(stringValue, forKey: .stringValue)
 			try container.encodeIfPresent(boolValue, forKey: .boolValue)
-			// ProtoJSON allows either JSON string or JSON number for integer values
-			// We know that IEEE Double Floats can accurately represent integers
-			// in the range (-2^53,2^53), so optimize this encoding
-			// https://protobuf.dev/programming-guides/json/
 
-			// Int is 64 bit in all environments we care about
-			if let intValue = intValue as? Int, Self.preciseIntegerRangeInJSONNumbers.contains(intValue) {
-				try container.encodeIfPresent(intValue, forKey: .intValue)
-			} else if let intValue = intValue {
-				// Int128 and other weird types handled by the string fallback
-				let intAsString = "\(intValue)"
-				try container.encodeIfPresent(intAsString, forKey: .intValue)
+			if let intValue {
+				if Self.preciseIntegerRangeInJSONNumbers.contains(intValue) {
+					try container.encode(intValue, forKey: .intValue)
+				} else {
+					// Outside the precise range: emit as a JSON string to preserve the value.
+					try container.encode("\(intValue)", forKey: .intValue)
+				}
 			}
 
 			try container.encodeIfPresent(doubleValue, forKey: .doubleValue)

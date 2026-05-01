@@ -94,11 +94,11 @@ struct SpanTests {
 		let span1 = tracer.retiredSpans[1]
 		#expect(span1.status == .error(message: "failure"))
 
-		let exceptionType = try #require(span1.events?[0].attributes?["exception.type"] as? String)
+		let exceptionType = try #require(span1.events?[0].attributes?["exception.type"]?.stringPayload)
 		#expect(exceptionType == "NautilusTelemetryTests.SpanTests.TestError")
 
 		let event = span1.events?[0]
-		let backtrace = try #require(event?.attributes?["exception.stacktrace"] as? String)
+		let backtrace = try #require(event?.attributes?["exception.stacktrace"]?.stringPayload)
 		#expect(backtrace.contains("traceWithError"))
 
 		let traceParentHeader = span2.traceParentHeaderValue(sampled: false)
@@ -156,9 +156,13 @@ struct SpanTests {
 
 	@Test
 	func asyncSpan() async throws {
+		// Verifies the async `withSpan` overload: the block must perform a real
+		// `await` so Swift resolves to the `async` variant (otherwise the call
+		// would fall back to the synchronous overload and emit "no 'async'
+		// operations occur within 'await' expression").
 		try await tracer.withSpan(name: "span1") {
 			#expect(tracer.currentBaggage.span.parentId != nil)
-			try span2Run()
+			try await asyncSpan2Run()
 		}
 
 		#expect(tracer.retiredSpans.count == 2)
@@ -174,6 +178,21 @@ struct SpanTests {
 			let span = tracer.currentBaggage.span
 			span.addEvent("event1")
 			Thread.sleep(forTimeInterval: 0.1)
+			span.addEvent("event2")
+			span.status = .ok
+			ranSpan = true
+		}
+		#expect(ranSpan)
+	}
+
+	func asyncSpan2Run() async throws {
+		var ranSpan = false
+		try await tracer.withSpan(name: "span2") {
+			let span = tracer.currentBaggage.span
+			span.addEvent("event1")
+			// `Task.sleep` is a genuine suspension point, unlike `Thread.sleep`,
+			// so this block actually exercises the `async` `withSpan` overload.
+			try await Task.sleep(for: .milliseconds(100))
 			span.addEvent("event2")
 			span.status = .ok
 			ranSpan = true
@@ -215,8 +234,8 @@ struct SpanTests {
 		let exceptionEvent = try #require(span.events?.first)
 		let exceptionAttributes = try #require(exceptionEvent.attributes)
 		#expect(span.status == .error(message: "NSFailed"))
-		#expect(exceptionAttributes["exception.type"] as? String == "NSError.VeryBadError.-42")
-		#expect(exceptionAttributes["exception.message"] as? String == "NSFailed")
+		#expect(exceptionAttributes["exception.type"]?.stringPayload == "NSError.VeryBadError.-42")
+		#expect(exceptionAttributes["exception.message"]?.stringPayload == "NSFailed")
 	}
 
 	@Test
@@ -228,8 +247,8 @@ struct SpanTests {
 		let exceptionEvent = try #require(span.events?.first)
 		let exceptionAttributes = try #require(exceptionEvent.attributes)
 		#expect(span.status == .error(message: "failure"))
-		#expect(exceptionAttributes["exception.type"] as? String == "NautilusTelemetryTests.SpanTests.TestError")
-		#expect(exceptionAttributes["exception.message"] as? String == "failure")
+		#expect(exceptionAttributes["exception.type"]?.stringPayload == "NautilusTelemetryTests.SpanTests.TestError")
+		#expect(exceptionAttributes["exception.message"]?.stringPayload == "failure")
 	}
 
 	@Test
@@ -240,8 +259,8 @@ struct SpanTests {
 		let exceptionEvent = try #require(span.events?.first)
 		let exceptionAttributes = try #require(exceptionEvent.attributes)
 		#expect(span.status == .error(message: "custom error message"))
-		#expect(exceptionAttributes["exception.type"] as? String == "custom")
-		#expect(exceptionAttributes["exception.message"] as? String == "custom error message")
+		#expect(exceptionAttributes["exception.type"]?.stringPayload == "custom")
+		#expect(exceptionAttributes["exception.message"]?.stringPayload == "custom error message")
 	}
 
 	@Test
@@ -311,7 +330,7 @@ struct SpanTests {
 	func spanSubscript() {
 		let span = tracer.startSpan(name: "test")
 		span["key1"] = "value1"
-		#expect(span["key1"] as? String == "value1")
+		#expect(span["key1"] == "value1")
 	}
 
 	@Test

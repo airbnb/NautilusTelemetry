@@ -37,7 +37,7 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 			assert(false, "monotonic counters can only be increased")
 			return
 		}
-		lock.withLockUnchecked {
+		lock.withLock {
 			values.add(number, attributes: attributes)
 		}
 	}

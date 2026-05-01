@@ -55,7 +55,7 @@ final class TraceExporterTests: XCTestCase {
 		}
 
 		let tracer = Tracer()
-		tracer.withSpan(name: "span1", attributes: ["small integer": 42, "large integer": 2 << 54]) {
+		tracer.withSpan(name: "span1", attributes: ["small integer": 42, "large integer": .int(2 << 54)]) {
 			tracer.withSpan(name: "span2") {
 				let span2 = tracer.currentBaggage.span
 				span2.addEvent("event1")
@@ -161,10 +161,10 @@ final class TraceExporterTests: XCTestCase {
 						//	"activity": logEntry.activityIdentifier,
 						//	"thread": logEntry.threadIdentifier,
 
-						"category": logEntry.category,
-						"process": logEntry.process,
-						"sender": logEntry.sender,
-						"subsystem": logEntry.subsystem,
+						"category": .string(logEntry.category),
+						"process": .string(logEntry.process),
+						"sender": .string(logEntry.sender),
+						"subsystem": .string(logEntry.subsystem),
 					]
 
 					let attributesKV = exporter.convertToOTLP(attributes: attributes)

@@ -8,6 +8,37 @@ import XCTest
 
 @testable import NautilusTelemetry
 
+// MARK: - AttributeValue test helpers
+
+extension AttributeValue {
+	/// Unwraps `.string(_)` payload for tests. Returns nil for any other case.
+	var stringPayload: String? {
+		if case .string(let v) = self { v } else { nil }
+	}
+
+	/// Unwraps `.int(_)` payload for tests. Returns nil for any other case.
+	var intPayload: Int64? {
+		if case .int(let v) = self { v } else { nil }
+	}
+
+	/// Unwraps `.double(_)` payload for tests. Returns nil for any other case.
+	var doublePayload: Double? {
+		if case .double(let v) = self { v } else { nil }
+	}
+
+	/// Unwraps `.bool(_)` payload for tests. Returns nil for any other case.
+	var boolPayload: Bool? {
+		if case .bool(let v) = self { v } else { nil }
+	}
+
+	/// Unwraps `.data(_)` payload for tests. Returns nil for any other case.
+	var dataPayload: Data? {
+		if case .data(let v) = self { v } else { nil }
+	}
+}
+
+// MARK: - TestUtils
+
 enum TestUtils {
 
 	enum UtilError: Error {
@@ -31,18 +62,18 @@ enum TestUtils {
 		fragment: .optional
 	)
 
-	static var additionalAttributes: [String: String] {
+	static var additionalAttributes: TelemetryAttributes {
 		get throws {
 			guard let env = ProcessInfo.processInfo.environment["additionalAttributes"] else { return [:] }
 
-			var dictionary = [String: String]()
+			var dictionary = TelemetryAttributes()
 
 			let elements = env.split(separator: ",")
 
 			for element in elements {
 				let pair = element.split(separator: "=")
 				if pair.count == 2 {
-					dictionary[String(pair[0])] = String(pair[1])
+					dictionary[String(pair[0])] = .string(String(pair[1]))
 				}
 			}
 

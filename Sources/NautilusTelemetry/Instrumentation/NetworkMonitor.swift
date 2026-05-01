@@ -20,13 +20,13 @@ public final class NetworkMonitor {
 		var attributes = TelemetryAttributes()
 
 		if let networkPath = networkPath.withLock({ $0 }) {
-			attributes["network.path.status"] = networkPath.status.description
+			attributes["network.path.status"] = .string(networkPath.status.description)
 			if networkPath.status == .unsatisfied {
-				attributes["network.path.unsatisfied_reason"] = networkPath.unsatisfiedReason.description
+				attributes["network.path.unsatisfied_reason"] = .string(networkPath.unsatisfiedReason.description)
 			}
 
 			if #available(iOS 26.0, macOS 26.0, *) {
-				attributes["network.path.link_quality"] = networkPath.linkQuality.description
+				attributes["network.path.link_quality"] = .string(networkPath.linkQuality.description)
 			}
 		}
 
@@ -36,7 +36,7 @@ public final class NetworkMonitor {
 			let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
 			let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
 		{
-			attributes["network.connection.subtype"] = radioAccessTechnologyDescription(radioAccessTechnology)
+			attributes["network.connection.subtype"] = .string(radioAccessTechnologyDescription(radioAccessTechnology))
 		}
 		#endif
 

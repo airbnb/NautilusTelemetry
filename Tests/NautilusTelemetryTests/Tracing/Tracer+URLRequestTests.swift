@@ -29,9 +29,9 @@ final class TracerURLRequestTests: XCTestCase {
 		for span in spans {
 			XCTAssertEqual(span.name, "GET /users/:id")
 
-			let attributes = try XCTUnwrap(span.attributes as? [String: String])
-			XCTAssertEqual(attributes["server.address"], url.host())
-			XCTAssertEqual(attributes["http.request.method"], urlRequest.httpMethod)
+			let attributes = try XCTUnwrap(span.attributes)
+			XCTAssertEqual(attributes["server.address"]?.stringValue, url.host())
+			XCTAssertEqual(attributes["http.request.method"]?.stringValue, urlRequest.httpMethod)
 			XCTAssertEqual(attributes["http.request.header.content-type"], "application/json")
 			XCTAssertEqual(attributes["url.template"], "/users/:id")
 		}

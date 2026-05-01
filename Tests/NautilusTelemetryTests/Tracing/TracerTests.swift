@@ -138,7 +138,7 @@ struct TracerTests {
 		baggage["baggage.key"] = "baggage.value"
 
 		let child = tracer.buildSpan(name: "child", baggage: baggage)
-		#expect(child["baggage.key"] as? String == "baggage.value")
+		#expect(child["baggage.key"] == "baggage.value")
 	}
 
 	@Test
@@ -149,7 +149,7 @@ struct TracerTests {
 
 		let spanAttributes: TelemetryAttributes = ["shared.key": "from.span"]
 		let child = tracer.buildSpan(name: "child", attributes: spanAttributes, baggage: baggage)
-		#expect(child["shared.key"] as? String == "from.span")
+		#expect(child["shared.key"] == "from.span")
 	}
 
 	@Test
@@ -161,14 +161,14 @@ struct TracerTests {
 	func mergeAttributesBaggageOnlyNil() {
 		let spanAttributes: TelemetryAttributes = ["span.key": "span.value"]
 		let result = tracer.mergeAttributes(baggageAttributes: nil, spanAttributes: spanAttributes)
-		#expect(result?["span.key"] as? String == "span.value")
+		#expect(result?["span.key"] == "span.value")
 	}
 
 	@Test
 	func mergeAttributesSpanOnlyNil() {
 		let baggageAttributes: TelemetryAttributes = ["baggage.key": "baggage.value"]
 		let result = tracer.mergeAttributes(baggageAttributes: baggageAttributes, spanAttributes: nil)
-		#expect(result?["baggage.key"] as? String == "baggage.value")
+		#expect(result?["baggage.key"] == "baggage.value")
 	}
 
 	// MARK: - Error Propagation Tests

@@ -12,13 +12,23 @@ import Foundation
 public typealias MetricNumeric = Comparable & Numeric
 
 /// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md#attribute
-public typealias TelemetryAttributes = [String: AnyHashable]
+public typealias TelemetryAttributes = [String: AttributeValue]
 
 // MARK: - TelemetryAttributesContainer
 
 public protocol TelemetryAttributesContainer: AnyObject {
-	func addAttribute(_ name: String, _ value: AnyHashable?)
-	subscript(_: String) -> AnyHashable? { get set }
+	func addAttribute(_ name: String, _ value: AttributeValue?)
+	subscript(_: String) -> AttributeValue? { get set }
+}
+
+extension TelemetryAttributesContainer {
+	/// Adds an attribute from any `AttributeValueRepresentable` value (e.g. `String`,
+	/// `Int`, `Bool`, `Data`). Convenient when the value is a typed variable
+	/// rather than a literal: literals route directly through the primary
+	/// `addAttribute(_:AttributeValue?)` via `ExpressibleByStringLiteral`/etc.
+	public func addAttribute(_ name: String, _ value: (some AttributeValueRepresentable)?) {
+		addAttribute(name, value?.attributeValue)
+	}
 }
 
 // These could be converted to UInt128 / UInt64, once UInt128 is widely available

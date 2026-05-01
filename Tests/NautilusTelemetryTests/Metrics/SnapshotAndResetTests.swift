@@ -47,10 +47,10 @@ final class SnapshotAndResetTests: XCTestCase {
 		}
 		XCTAssertEqual(snapshotCounter.values.values.count, 2)
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 100 && attributes["key1"] as? String == "value1"
+			value == 100 && attributes["key1"]?.stringValue == "value1"
 		})
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 200 && attributes["key2"] as? String == "value2"
+			value == 200 && attributes["key2"]?.stringValue == "value2"
 		})
 
 		// Verify original counter is reset
@@ -206,7 +206,7 @@ final class SnapshotAndResetTests: XCTestCase {
 		}
 		XCTAssertFalse(snapshotCounter.values.values.isEmpty)
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 500 && attributes["source"] as? String == "callback"
+			value == 500 && attributes["source"]?.stringValue == "callback"
 		})
 
 		// Verify original counter is reset
@@ -312,7 +312,7 @@ final class SnapshotAndResetTests: XCTestCase {
 		}
 		XCTAssertFalse(snapshotGauge.values.values.isEmpty)
 		XCTAssertTrue(snapshotGauge.values.values.contains { attributes, value in
-			value == 750 && attributes["measurement"] as? String == "current"
+			value == 750 && attributes["measurement"]?.stringValue == "current"
 		})
 
 		// Verify original gauge is reset
@@ -395,7 +395,7 @@ final class SnapshotAndResetTests: XCTestCase {
 			return
 		}
 		XCTAssertTrue(snapshotCounter.values.values.contains { attributes, value in
-			value == 1.5 && attributes["precision"] as? String == "high"
+			value == 1.5 && attributes["precision"]?.stringValue == "high"
 		})
 	}
 

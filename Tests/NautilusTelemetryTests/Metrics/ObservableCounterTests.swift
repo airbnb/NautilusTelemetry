@@ -303,7 +303,7 @@ final class ObservableCounterTests: XCTestCase {
 		// Simulate concurrent observe operations with different attributes
 		for i in 1...10 {
 			DispatchQueue.global().async {
-				let attributes: TelemetryAttributes = ["thread": i]
+				let attributes: TelemetryAttributes = ["thread": AttributeValue(i)]
 				counter.observe(i * 10, attributes: attributes)
 				expectation.fulfill()
 			}
@@ -326,7 +326,7 @@ final class ObservableCounterTests: XCTestCase {
 			let attributes: TelemetryAttributes = [
 				"service": i % 2 == 0 ? "api" : "web",
 				"status": i % 3 == 0 ? "success" : "error",
-				"index": i,
+				"index": AttributeValue(i),
 			]
 			counter.observe((i + 1) * 10, attributes: attributes)
 		}
