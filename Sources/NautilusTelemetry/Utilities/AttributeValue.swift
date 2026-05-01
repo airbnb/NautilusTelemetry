@@ -93,7 +93,17 @@ extension AttributeValue: ExpressibleByDictionaryLiteral {
 /// The literal conformances above handle the common inline-literal case.
 extension AttributeValue {
 	public init(_ value: String) { self = .string(value) }
-	public init(_ value: some FixedWidthInteger) { self = .int(Int64(truncatingIfNeeded: value)) }
+	public init(_ value: some FixedWidthInteger) {
+		// Values that fit in `Int64` round-trip as JSON numbers; those that don't
+		// (e.g. `Int128`, `UInt64` > `Int64.max`) preserve their value as a JSON
+		// string per ProtoJSON's string fallback for integers beyond IEEE double's
+		// precise range. https://protobuf.dev/programming-guides/json/
+		if let fit = Int64(exactly: value) {
+			self = .int(fit)
+		} else {
+			self = .string("\(value)")
+		}
+	}
 	public init(_ value: Double) { self = .double(value) }
 	public init(_ value: Float) { self = .double(Double(value)) }
 	public init(_ value: Bool) { self = .bool(value) }
@@ -161,7 +171,7 @@ extension Int64: AttributeValueRepresentable {
 // MARK: - UInt + AttributeValueRepresentable
 
 extension UInt: AttributeValueRepresentable {
-	public var attributeValue: AttributeValue { .int(Int64(truncatingIfNeeded: self)) }
+	public var attributeValue: AttributeValue { AttributeValue(self) }
 }
 
 // MARK: - UInt8 + AttributeValueRepresentable
@@ -185,7 +195,7 @@ extension UInt32: AttributeValueRepresentable {
 // MARK: - UInt64 + AttributeValueRepresentable
 
 extension UInt64: AttributeValueRepresentable {
-	public var attributeValue: AttributeValue { .int(Int64(truncatingIfNeeded: self)) }
+	public var attributeValue: AttributeValue { AttributeValue(self) }
 }
 
 // MARK: - Float + AttributeValueRepresentable

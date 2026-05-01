@@ -53,6 +53,21 @@ struct AttributeValueTests {
 		#expect(AttributeValue(Int64(-1)) == .int(-1))
 	}
 
+	/// Integers that don't fit in `Int64` fall back to `.string(...)` so no value is
+	/// lost (matches the ProtoJSON string-fallback behavior). Exercises both sides
+	/// of the `Int64(exactly:)` guard in `AttributeValue.init(_:FixedWidthInteger)`.
+	@Test
+	func oversizedIntegerFallsBackToString() {
+		// `UInt64.max` exceeds `Int64.max`, so it can't round-trip as `.int(_)`.
+		#expect(AttributeValue(UInt64.max) == .string("\(UInt64.max)"))
+		// `Int128.max` (when available on the target) is also out of range.
+		if #available(iOS 18.0, macOS 15.0, *) {
+			#expect(AttributeValue(Int128.max) == .string("\(Int128.max)"))
+		}
+		// Values that DO fit still go through `.int(...)`.
+		#expect(AttributeValue(UInt64(Int64.max)) == .int(Int64.max))
+	}
+
 	@Test
 	func payloadAccessorsExtractValues() {
 		#expect(AttributeValue.string("x").stringValue == "x")
