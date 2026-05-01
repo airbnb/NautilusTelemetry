@@ -1,0 +1,154 @@
+// Created by Ladd Van Tol on 2026-04-30.
+// Copyright © 2026 Airbnb Inc. All rights reserved.
+
+import Foundation
+import Testing
+
+@testable import NautilusTelemetry
+
+@Suite
+struct TracerMetricsTests {
+
+	let tracer = Tracer()
+
+	@Test
+	func reportAsCounterMetricCopiesSelectedSpanAttributes() {
+		let span = tracer.startSpan(name: "counterAttrSpan")
+		span.addAttribute("included.string", "hello")
+		span.addAttribute("excluded", "should_not_appear")
+
+		let counter = tracer.reportAsCounterMetric(
+			span: span,
+			spanAttributeKeys: Set(["included.string", "included.int"])
+		)
+
+		// Attributes are collected at retire time, so this addition should be visible.
+		span.addAttribute("included.int", 7)
+
+		span.end()
+
+		let expected: TelemetryAttributes = [
+			"included.string": "hello",
+			"included.int": 7,
+		]
+		#expect(counter.values.valueFor(attributes: expected) == 1)
+	}
+
+	@Test
+	func reportAsDurationHistogramMetricCopiesSelectedSpanAttributes() {
+		let span = tracer.startSpan(name: "histogramAttrSpan")
+		span.addAttribute("route", "/users/:id")
+		span.addAttribute("excluded", "nope")
+
+		let histogram = tracer.reportAsDurationHistogramMetric(
+			span: span,
+			spanAttributeKeys: Set(["route", "method"])
+		)
+
+		// Attributes are collected at retire time, so this addition should be visible.
+		span.addAttribute("method", "GET")
+		span.adjust(start: .zero, end: .milliseconds(42))
+		span.end()
+
+		let expected: TelemetryAttributes = [
+			"route": "/users/:id",
+			"method": "GET",
+		]
+		let buckets = histogram.values.values[expected]
+		#expect(buckets?.count == 1)
+		#expect(buckets?.sum == 42)
+	}
+
+	@Test
+	func reportAsCounterMetricWithNilKeysUsesEmptyAttributes() {
+		let span = tracer.startSpan(name: "counterNilKeysSpan")
+		span.addAttribute("any", "value")
+
+		let counter = tracer.reportAsCounterMetric(span: span, spanAttributeKeys: nil)
+
+		span.end()
+
+		#expect(counter.values.valueFor(attributes: [:]) == 1)
+	}
+
+	@Test
+	func reportAsCounterMetricWithNonMatchingKeysUsesEmptyAttributes() {
+		let span = tracer.startSpan(name: "counterNoMatchSpan")
+		span.addAttribute("present", "yes")
+
+		let counter = tracer.reportAsCounterMetric(
+			span: span,
+			spanAttributeKeys: Set(["absent"])
+		)
+
+		span.end()
+
+		#expect(counter.values.valueFor(attributes: [:]) == 1)
+	}
+
+	@Test
+	func reportAsCounterMetricWithNoSpanAttributes() {
+		// Exercises the `span.attributes == nil` branch in collectAttributes.
+		let span = tracer.startSpan(name: "counterNoAttrSpan")
+
+		let counter = tracer.reportAsCounterMetric(
+			span: span,
+			spanAttributeKeys: Set(["anything"])
+		)
+
+		span.end()
+
+		#expect(counter.values.valueFor(attributes: [:]) == 1)
+	}
+
+	@Test
+	func sharedCounterCapturesPerSpanAttributeKeys() {
+		// Two spans with the same name share a cached counter, but each retire callback
+		// should use its own captured spanAttributeKeys.
+		let span1 = tracer.startSpan(name: "sharedCounterSpan")
+		span1.addAttribute("a", "1")
+		span1.addAttribute("b", "1")
+
+		let span2 = tracer.startSpan(name: "sharedCounterSpan")
+		span2.addAttribute("a", "2")
+		span2.addAttribute("b", "2")
+
+		let counter1 = tracer.reportAsCounterMetric(span: span1, spanAttributeKeys: Set(["a"]))
+		let counter2 = tracer.reportAsCounterMetric(span: span2, spanAttributeKeys: Set(["b"]))
+		#expect(counter1 === counter2)
+
+		span1.end()
+		span2.end()
+
+		#expect(counter1.values.valueFor(attributes: ["a": "1"]) == 1)
+		#expect(counter1.values.valueFor(attributes: ["b": "2"]) == 1)
+	}
+
+	@Test
+	func collectAttributesFiltersToRequestedKeys() {
+		let span = tracer.startSpan(name: "collectSpan")
+		span.addAttribute("a", 1)
+		span.addAttribute("b", 2)
+		span.addAttribute("c", 3)
+
+		let filtered = Tracer.collectAttributes(span, Set(["a", "c"]))
+		#expect(filtered == ["a": AnyHashable(1), "c": AnyHashable(3)])
+	}
+
+	@Test
+	func collectAttributesReturnsEmptyForEmptyOrNilKeys() {
+		let span = tracer.startSpan(name: "collectSpan")
+		span.addAttribute("a", 1)
+
+		#expect(Tracer.collectAttributes(span, nil).isEmpty)
+		#expect(Tracer.collectAttributes(span, Set<String>()).isEmpty)
+	}
+
+	@Test
+	func collectAttributesReturnsEmptyWhenNoKeysMatch() {
+		let span = tracer.startSpan(name: "collectSpan")
+		span.addAttribute("a", 1)
+
+		#expect(Tracer.collectAttributes(span, Set(["missing"])).isEmpty)
+	}
+}
