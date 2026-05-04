@@ -19,15 +19,15 @@ final class ResourceAttributesTests: XCTestCase {
 
 		_ = try XCTUnwrap(exporter.convertToOTLP(attributes: attributes)) // make sure it converts
 
-		let serviceName = try XCTUnwrap(attributes["service.name"] as? String)
+		let serviceName = try XCTUnwrap(attributes["service.name"]?.stringValue)
 		_ = try XCTUnwrap(attributes["service.version"])
 		_ = try XCTUnwrap(attributes["telemetry.sdk.name"])
 		_ = try XCTUnwrap(attributes["telemetry.sdk.language"])
 		_ = try XCTUnwrap(attributes["device.id"])
 		_ = try XCTUnwrap(attributes["foo"])
 		_ = try XCTUnwrap(attributes["os.type"])
-		let osName = try XCTUnwrap(attributes["os.name"] as? String)
-		let osVersion = try XCTUnwrap(attributes["os.version"] as? String)
+		let osName = try XCTUnwrap(attributes["os.name"]?.stringValue)
+		let osVersion = try XCTUnwrap(attributes["os.version"]?.stringValue)
 
 		// Verify platform-specific OS name
 		#if os(macOS)
@@ -79,7 +79,7 @@ final class ResourceAttributesTests: XCTestCase {
 
 		// Even with empty options, additionalAttributes should be included
 		let filtered = resourceAttributes.keyValues(options: [])
-		XCTAssertEqual(filtered["custom.key"] as? String, "value")
+		XCTAssertEqual(filtered["custom.key"], "value")
 		XCTAssertNil(filtered["service.name"])
 	}
 }

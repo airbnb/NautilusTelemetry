@@ -60,66 +60,40 @@ public struct Exporter {
 		return String(timeReference.nanosecondsSinceEpoch(from: time))
 	}
 
-	/// Converts common value types to OTLP format.
-	/// - Parameter value: Any value type.
-	/// - Returns: OTLP wrapped type, or nil if it could not be converted.
-	func convertToOTLP(value: Any) -> OTLP.V1AnyValue? {
-		var v1AnyValue: OTLP.V1AnyValue? = nil
-
+	/// Converts an `AttributeValue` to OTLP format.
+	/// - Parameter value: an `AttributeValue`.
+	/// - Returns: OTLP wrapped type.
+	func convertToOTLP(value: AttributeValue) -> OTLP.V1AnyValue {
 		switch value {
-		case let value as String:
-			v1AnyValue = OTLP.V1AnyValue(stringValue: value)
-
-		case let value as any FixedWidthInteger:
-			v1AnyValue = OTLP.V1AnyValue(intValue: value)
-
-		case let value as Bool:
-			v1AnyValue = OTLP.V1AnyValue(boolValue: value)
-
-		case let value as Float:
-			v1AnyValue = OTLP.V1AnyValue(doubleValue: Double(value))
-
-		case let value as Double:
-			v1AnyValue = OTLP.V1AnyValue(doubleValue: value)
-
-		case let value as Data:
-			v1AnyValue = OTLP.V1AnyValue(bytesValue: value)
-
-		case let value as [Any]:
-			let otlpArray = value.compactMap { convertToOTLP(value: $0) }
-			v1AnyValue = OTLP.V1AnyValue(arrayValue: OTLP.V1ArrayValue(values: otlpArray))
-
-		case let value as [String: Any]:
-			let otlpValues = value.compactMap { key, value in OTLP.V1KeyValue(key: key, value: convertToOTLP(value: value)) }
-			v1AnyValue = OTLP.V1AnyValue(kvlistValue: OTLP.V1KeyValueList(values: otlpValues))
-
-		default:
-			v1AnyValue = nil
+		case .string(let v):
+			OTLP.V1AnyValue(stringValue: v)
+		case .int(let v):
+			OTLP.V1AnyValue(intValue: v)
+		case .double(let v):
+			OTLP.V1AnyValue(doubleValue: v)
+		case .bool(let v):
+			OTLP.V1AnyValue(boolValue: v)
+		case .data(let v):
+			OTLP.V1AnyValue(bytesValue: v)
+		case .array(let v):
+			OTLP.V1AnyValue(arrayValue: OTLP.V1ArrayValue(values: v.map { convertToOTLP(value: $0) }))
+		case .keyValueList(let v):
+			OTLP.V1AnyValue(kvlistValue: OTLP.V1KeyValueList(
+				values: v.map { OTLP.V1KeyValue(key: $0.key, value: convertToOTLP(value: $0.value)) }
+			))
 		}
-
-		return v1AnyValue
 	}
 
 	/// Converts `TelemetryAttributes` to OTLP format.
 	/// - Parameter attributes: TelemetryAttributes.
-	/// - Returns: attributes converted to OTLP format. Values that cannot be converted are omitted.
+	/// - Returns: attributes converted to OTLP format.
 	func convertToOTLP(attributes: TelemetryAttributes?) -> [OTLP.V1KeyValue]? {
 		guard let attributes else {
 			return nil
 		}
 
-		let otlpAttributes = attributes.compactMap { key, value -> OTLP.V1KeyValue? in
-			// Skip nil values wrapped in AnyHashable
-			if case Optional<Any>.none = value.base {
-				return nil
-			}
-
-			guard let v1AnyValue = convertToOTLP(value: value) else {
-				assert(false, "failed to convert \(key), \(value)")
-				return nil
-			}
-
-			return OTLP.V1KeyValue(key: key, value: v1AnyValue)
+		let otlpAttributes = attributes.map { key, value in
+			OTLP.V1KeyValue(key: key, value: convertToOTLP(value: value))
 		}
 
 		// Sort by key for deterministic output

@@ -324,12 +324,12 @@ final class MetricValuesTests: XCTestCase {
 
 		// Test with many different attribute combinations
 		for i in 0..<100 {
-			let attributes: TelemetryAttributes = ["index": i]
+			let attributes: TelemetryAttributes = ["index": AttributeValue(i)]
 			metrics.add(i, attributes: attributes)
 		}
 
 		for i in 0..<100 {
-			let attributes: TelemetryAttributes = ["index": i]
+			let attributes: TelemetryAttributes = ["index": AttributeValue(i)]
 			XCTAssertEqual(metrics.valueFor(attributes: attributes), i)
 		}
 

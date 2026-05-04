@@ -132,7 +132,7 @@ struct TracerMetricsTests {
 		span.addAttribute("c", 3)
 
 		let filtered = Tracer.collectAttributes(span, Set(["a", "c"]))
-		#expect(filtered == ["a": AnyHashable(1), "c": AnyHashable(3)])
+		#expect(filtered == ["a": 1, "c": 3])
 	}
 
 	@Test

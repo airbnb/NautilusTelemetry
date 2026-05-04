@@ -236,7 +236,7 @@ final class CounterTests: XCTestCase {
 			let attributes: TelemetryAttributes = [
 				"method": i % 2 == 0 ? "GET" : "POST",
 				"status": i % 3 == 0 ? "success" : "error",
-				"index": i,
+				"index": AttributeValue(i),
 			]
 			counter.add(i + 1, attributes: attributes)
 		}

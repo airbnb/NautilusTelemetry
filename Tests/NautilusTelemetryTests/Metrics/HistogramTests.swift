@@ -235,7 +235,7 @@ final class HistogramTests: XCTestCase {
 			let attributes: TelemetryAttributes = [
 				"service": i % 2 == 0 ? "api" : "web",
 				"status": i % 3 == 0 ? "success" : "error",
-				"index": i,
+				"index": AttributeValue(i),
 			]
 			histogram.record(i + 1, attributes: attributes)
 		}

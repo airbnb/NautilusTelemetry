@@ -57,12 +57,10 @@ public final class Baggage: TelemetryAttributesContainer, @unchecked Sendable {
 	/// - Parameters:
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
 	///   - value: a value.
-	public func addAttribute(_ name: String, _ value: AnyHashable?) {
+	public func addAttribute(_ name: String, _ value: AttributeValue?) {
 		guard let value else { return }
 
-		// AnyHashable is not Sendable. For now, make this unchecked, but could consider wrapping ala:
-		// https://github.com/pointfreeco/swift-concurrency-extras/blob/main/Sources/ConcurrencyExtras/AnyHashableSendable.swift
-		lock.withLockUnchecked {
+		lock.withLock {
 			if _attributes == nil {
 				_attributes = TelemetryAttributes()
 			}
@@ -71,9 +69,9 @@ public final class Baggage: TelemetryAttributesContainer, @unchecked Sendable {
 		}
 	}
 
-	public subscript(name: String) -> AnyHashable? {
+	public subscript(name: String) -> AttributeValue? {
 		get {
-			lock.withLockUnchecked {
+			lock.withLock {
 				_attributes?[name]
 			}
 		}
@@ -93,7 +91,7 @@ public final class Baggage: TelemetryAttributesContainer, @unchecked Sendable {
 
 	/// Vend private attributes as a thread-safe copy
 	var attributes: TelemetryAttributes? {
-		lock.withLockUnchecked { _attributes }
+		lock.withLock { _attributes }
 	}
 
 	// MARK: Private

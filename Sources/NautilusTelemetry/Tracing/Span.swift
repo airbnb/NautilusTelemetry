@@ -144,12 +144,10 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	/// - Parameters:
 	///   - name: a name, conforming to https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions
 	///   - value: a value.
-	public func addAttribute(_ name: String, _ value: AnyHashable?) {
+	public func addAttribute(_ name: String, _ value: AttributeValue?) {
 		guard let value else { return }
 
-		// AnyHashable is not Sendable. For now, make this unchecked, but could consider wrapping ala:
-		// https://github.com/pointfreeco/swift-concurrency-extras/blob/main/Sources/ConcurrencyExtras/AnyHashableSendable.swift
-		lock.withLockUnchecked {
+		lock.withLock {
 			if _attributes == nil {
 				_attributes = TelemetryAttributes()
 			}
@@ -158,9 +156,9 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		}
 	}
 
-	public subscript(name: String) -> AnyHashable? {
+	public subscript(name: String) -> AttributeValue? {
 		get {
-			lock.withLockUnchecked {
+			lock.withLock {
 				_attributes?[name]
 			}
 		}
@@ -201,7 +199,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/exceptions.md
 
 		let attributes = Self.exceptionAttributes(error, includeBacktrace: includeBacktrace)
-		let message = attributes["exception.message"] ?? ""
+		let message: String = if case .string(let m) = attributes["exception.message"] { m } else { "" }
 		let exceptionEvent = Event(name: "exception", attributes: attributes)
 		addEvent(exceptionEvent)
 		status = .error(message: message) // this duplicates exception.message, but makes the reporting work better
@@ -268,7 +266,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 
 	/// Vend private attributes as a thread-safe copy
 	var attributes: TelemetryAttributes? {
-		lock.withLockUnchecked { _attributes }
+		lock.withLock { _attributes }
 	}
 
 	var elapsed: Duration? {
@@ -276,7 +274,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		return endTime - startTime
 	}
 
-	static func exceptionAttributes(_ error: any Error, includeBacktrace: Bool) -> [String: String] {
+	static func exceptionAttributes(_ error: any Error, includeBacktrace: Bool) -> TelemetryAttributes {
 		let exceptionType: String
 		let exceptionMessage: String
 
@@ -328,13 +326,13 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 
 	private var _attributes: TelemetryAttributes?
 
-	private static func exceptionAttributes(type: String, message: String, stacktrace: String?) -> [String: String] {
-		var attributes = [
-			"exception.type": type,
-			"exception.message": message,
+	private static func exceptionAttributes(type: String, message: String, stacktrace: String?) -> TelemetryAttributes {
+		var attributes: TelemetryAttributes = [
+			"exception.type": .string(type),
+			"exception.message": .string(message),
 		]
 		if let stacktrace {
-			attributes["exception.stacktrace"] = stacktrace
+			attributes["exception.stacktrace"] = .string(stacktrace)
 		}
 
 		return attributes

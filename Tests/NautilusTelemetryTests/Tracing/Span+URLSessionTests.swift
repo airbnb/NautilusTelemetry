@@ -35,7 +35,7 @@ final class SpanURLSessionTests: XCTestCase {
 		span.urlSession(urlSession, didCreateTask: task, captureHeaders: Set(["content-type"]))
 
 		let attributes = try XCTUnwrap(span.attributes)
-		XCTAssertEqual(attributes["url.full"], url.absoluteString)
+		XCTAssertEqual(attributes["url.full"], .string(url.absoluteString))
 		XCTAssertEqual(attributes["http.request.header.content-type"], "application/json")
 	}
 
@@ -56,7 +56,7 @@ final class SpanURLSessionTests: XCTestCase {
 		let exceptionEvent = try XCTUnwrap(span.events?.first)
 		let exceptionAttributes = try XCTUnwrap(exceptionEvent.attributes)
 		XCTAssertEqual(exceptionAttributes["exception.type"], "NSError.test.1")
-		XCTAssertEqual(exceptionAttributes["exception.message"], message)
+		XCTAssertEqual(exceptionAttributes["exception.message"], .string(message))
 	}
 
 	// URLSessionTaskMetrics is annoying to mock
@@ -133,7 +133,7 @@ final class SpanURLSessionTests: XCTestCase {
 		span.addRequestAttributes(urlRequest)
 
 		let attributes = try XCTUnwrap(span.attributes)
-		XCTAssertEqual(attributes["url.scheme"], url.scheme)
+		XCTAssertEqual(attributes["url.scheme"], url.scheme.map { .string($0) })
 	}
 
 	func testCustomUrlRedaction() throws {
@@ -185,7 +185,7 @@ final class SpanURLSessionTests: XCTestCase {
 		span.urlSession(urlSession, didCreateTask: task)
 
 		let attributes = try XCTUnwrap(span.attributes)
-		XCTAssertEqual(attributes["http.priority"], task.priority)
+		XCTAssertEqual(attributes["http.priority"], .double(Double(task.priority)))
 	}
 
 }

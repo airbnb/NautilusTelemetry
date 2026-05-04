@@ -50,7 +50,7 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 	/// Record a value. Positive, negative, and zero values are all allowed (unlike `Histogram`),
 	/// since the spec maps them into separate positive/negative/zero buckets.
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLockUnchecked {
+		lock.withLock {
 			values.record(number, attributes: attributes)
 		}
 	}
@@ -59,7 +59,7 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 		let now = ContinuousClock.now
 
 		return lock.withLock {
-			let copy = Self(name: name, unit: unit, description: description)
+			let copy = Self(name: name, unit: unit, description: description, maxBuckets: maxBuckets)
 			copy.startTime = startTime
 			copy.endTime = now
 			copy.aggregationTemporality = aggregationTemporality

@@ -141,20 +141,20 @@ public struct ResourceAttributes {
 
 		// https://opentelemetry.io/docs/specs/semconv/registry/attributes/service/
 		if options.contains(.serviceName) {
-			attributes["service.name"] = "\(osName.lowercased()).app"
+			attributes["service.name"] = .string("\(osName.lowercased()).app")
 		}
 		if options.contains(.serviceNamespace) {
-			attributes["service.namespace"] = bundleIdentifier
+			attributes["service.namespace"] = .string(bundleIdentifier)
 		}
 		if options.contains(.serviceVersion) {
-			attributes["service.version"] = applicationVersion
+			attributes["service.version"] = .string(applicationVersion)
 		}
 		if options.contains(.telemetrySdk) {
 			attributes["telemetry.sdk.name"] = "NautilusTelemetry"
 			attributes["telemetry.sdk.language"] = "swift"
 		}
 		if options.contains(.deviceId) {
-			attributes["device.id"] = vendorIdentifier
+			attributes["device.id"] = .string(vendorIdentifier)
 		}
 		// Can we set "deployment.environment" here?
 
@@ -163,18 +163,18 @@ public struct ResourceAttributes {
 			attributes["device.manufacturer"] = "Apple"
 		}
 		if options.contains(.deviceModel) {
-			attributes["device.model"] = deviceModelIdentifier
+			attributes["device.model"] = .string(deviceModelIdentifier)
 		}
 
 		// https://opentelemetry.io/docs/specs/semconv/resource/os/
 		if options.contains(.osType) {
-			attributes["os.type"] = osType
+			attributes["os.type"] = .string(osType)
 		}
 		if options.contains(.osName) {
-			attributes["os.name"] = osName
+			attributes["os.name"] = .string(osName)
 		}
 		if options.contains(.osVersion) {
-			attributes["os.version"] = osVersion
+			attributes["os.version"] = .string(osVersion)
 		}
 
 		if let additionalAttributes {

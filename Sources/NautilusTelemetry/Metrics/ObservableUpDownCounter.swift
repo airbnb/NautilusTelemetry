@@ -33,7 +33,7 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
 
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLockUnchecked {
+		lock.withLock {
 			values.set(number, attributes: attributes)
 		}
 	}

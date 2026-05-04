@@ -289,7 +289,7 @@ final class ObservableGaugeTests: XCTestCase {
 		// Simulate concurrent observe operations with different attributes
 		for i in 1...10 {
 			DispatchQueue.global().async {
-				let attributes: TelemetryAttributes = ["sensor": i]
+				let attributes: TelemetryAttributes = ["sensor": AttributeValue(i)]
 				gauge.observe(i * 10, attributes: attributes)
 				expectation.fulfill()
 			}
@@ -312,7 +312,7 @@ final class ObservableGaugeTests: XCTestCase {
 			let attributes: TelemetryAttributes = [
 				"host": i % 2 == 0 ? "server1" : "server2",
 				"metric": i % 3 == 0 ? "cpu" : "memory",
-				"index": i,
+				"index": AttributeValue(i),
 			]
 			gauge.observe((i + 1) * 10, attributes: attributes)
 		}

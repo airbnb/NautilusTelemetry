@@ -51,7 +51,7 @@ public class ExampleReporter: NautilusTelemetryReporter {
 		let filtered = sampledSpans(spans)
 		guard !filtered.isEmpty else { return }
 
-		let additionalAttributes = ["sample": "value"]
+		let additionalAttributes: TelemetryAttributes = ["sample": "value"]
 		let exporter = Exporter(timeReference: timeReference)
 
 		if let jsonPayload = try? exporter.exportOTLPToJSON(spans: filtered, additionalAttributes: additionalAttributes) {
@@ -64,7 +64,7 @@ public class ExampleReporter: NautilusTelemetryReporter {
 			return
 		}
 
-		let additionalAttributes = ["sample": "value"]
+		let additionalAttributes: TelemetryAttributes = ["sample": "value"]
 		let exporter = Exporter(timeReference: timeReference)
 
 		if let jsonPayload = try? exporter.exportOTLPToJSON(instruments: instruments, additionalAttributes: additionalAttributes) {
