@@ -300,6 +300,7 @@ extension Span {
 	func elapsedNanoseconds(_ start: Date?, _ end: Date?, upperBound: Duration) -> Int64? {
 		guard let start, let end else { return nil }
 		let duration = end.timeIntervalSince(start)
+		guard duration >= 0, duration < (Double(Int64.max) / 1_000_000_000.0) else { return nil }
 		let result = Int64(duration * 1_000_000_000)
 		guard result >= 0, result < upperBound.asNanoseconds else { return nil }
 		return result
