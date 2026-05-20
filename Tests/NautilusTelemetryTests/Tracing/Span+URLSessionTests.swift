@@ -6,6 +6,8 @@ import XCTest
 
 @testable import NautilusTelemetry
 
+// MARK: - SpanURLSessionTests
+
 final class SpanURLSessionTests: XCTestCase {
 
 	let tracer = Tracer()
@@ -113,16 +115,23 @@ final class SpanURLSessionTests: XCTestCase {
 		let span = tracer.startSpan(name: #function)
 		let now = Date()
 
-		span.addAttribute("duration_nils", span.elapsedNanoseconds(nil, nil))
-		span.addAttribute("duration_start_in_future", span.elapsedNanoseconds(NSDate.distantFuture, NSDate.distantPast))
-		span.addAttribute("duration_zero", span.elapsedNanoseconds(now, now))
-		span.addAttribute("duration_one_second", span.elapsedNanoseconds(now, now + 1.0))
+		let upperBound = Duration.seconds(1000)
+
+		span.addAttribute("duration_nils", span.elapsedNanoseconds(nil, nil, upperBound: upperBound))
+		span.addAttribute(
+			"duration_start_in_future",
+			span.elapsedNanoseconds(NSDate.distantFuture, NSDate.distantPast, upperBound: upperBound)
+		)
+		span.addAttribute("duration_zero", span.elapsedNanoseconds(now, now, upperBound: upperBound))
+		span.addAttribute("duration_one_second", span.elapsedNanoseconds(now, now + 1.0, upperBound: upperBound))
+		span.addAttribute("duration_two_thousand_seconds", span.elapsedNanoseconds(now, now + 2000.0, upperBound: upperBound))
 
 		let attributes = try XCTUnwrap(span.attributes)
 		XCTAssertNil(attributes["duration_nils"])
 		XCTAssertNil(attributes["duration_start_in_future"])
 		XCTAssertEqual(attributes["duration_zero"], 0)
 		XCTAssertEqual(attributes["duration_one_second"], 1_000_000_000)
+		XCTAssertNil(attributes["duration_two_thousand_seconds"]) // exceeds upper bound
 	}
 
 	func testUrlSchemeAttributeCaptured() throws {
@@ -187,5 +196,59 @@ final class SpanURLSessionTests: XCTestCase {
 		let attributes = try XCTUnwrap(span.attributes)
 		XCTAssertEqual(attributes["http.priority"], .double(Double(task.priority)))
 	}
+
+	func testAddMetricsLive() async throws {
+		guard TestUtils.testEnabled("liveNetworkTests") else { return }
+
+		let url = try XCTUnwrap(URL(string: "https://api.airbnb.com/v2/ping"))
+		let span = tracer.startSpan(name: #function)
+
+		let delegate = MetricsCapturingDelegate()
+		let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+		let _ = try await session.data(from: url)
+		let metrics = try XCTUnwrap(delegate.capturedMetrics)
+
+		span.addMetrics(metrics)
+
+		let attributes = try XCTUnwrap(span.attributes)
+
+		// Byte counts
+		XCTAssertNotNil(attributes["http.response.size"])
+		XCTAssertNotNil(attributes["http.response.body.size"])
+
+		// Network attributes always populated for a successful request
+		XCTAssertNotNil(attributes["network.peer.address"])
+		XCTAssertNotNil(attributes["network.type"])
+		XCTAssertNotNil(attributes["network.protocol.version"])
+
+		// TLS — api.airbnb.com speaks HTTPS
+		XCTAssertNotNil(attributes["tls.protocol.version"])
+		XCTAssertNotNil(attributes["tls.cipher"])
+
+		// Timing: first-byte duration must be a positive nanosecond count
+		let firstByte = try XCTUnwrap(attributes["http.first_byte.duration"]?.intPayload)
+		XCTAssertGreaterThan(firstByte, 0)
+	}
+
+}
+
+// MARK: - MetricsCapturingDelegate
+
+private final class MetricsCapturingDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+
+	// MARK: Internal
+
+	var capturedMetrics: URLSessionTaskMetrics? {
+		lock.withLock { metrics }
+	}
+
+	func urlSession(_: URLSession, task _: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+		lock.withLock { self.metrics = metrics }
+	}
+
+	// MARK: Private
+
+	private var metrics: URLSessionTaskMetrics?
+	private let lock = NSLock()
 
 }
