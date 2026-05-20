@@ -2,6 +2,7 @@
 // Copyright © 2025 Airbnb Inc. All rights reserved.
 
 import Foundation
+import Synchronization
 import XCTest
 
 @testable import NautilusTelemetry
@@ -234,21 +235,16 @@ final class SpanURLSessionTests: XCTestCase {
 
 // MARK: - MetricsCapturingDelegate
 
-private final class MetricsCapturingDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
-
-	// MARK: Internal
+private final class MetricsCapturingDelegate: NSObject, URLSessionTaskDelegate, Sendable {
 
 	var capturedMetrics: URLSessionTaskMetrics? {
-		lock.withLock { metrics }
+		mutex.withLock { $0 }
 	}
 
 	func urlSession(_: URLSession, task _: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
-		lock.withLock { self.metrics = metrics }
+		mutex.withLock { $0 = metrics }
 	}
 
-	// MARK: Private
-
-	private var metrics: URLSessionTaskMetrics?
-	private let lock = NSLock()
+	private let mutex: Mutex<URLSessionTaskMetrics?> = Mutex(nil)
 
 }
