@@ -104,22 +104,32 @@ extension Span {
 		addAttribute("http.connection.reused", metric.isReusedConnection)
 		addAttribute("http.connection.proxied", metric.isProxyConnection)
 
+		// Plausible upper bound on timing,
+		let upperBound = startTime.duration(to: ContinuousClock.now)
+
 		// Connection sub-phase timings could also be expressed as sub-spans of the HTTP span, but that's less
 		// convenient for analytics.
 		// Will be omitted if the timestamps are nil, or express a negative duration.
-		addAttribute("http.dns.duration", elapsedNanoseconds(metric.domainLookupStartDate, metric.domainLookupEndDate))
+		addAttribute(
+			"http.dns.duration",
+			elapsedNanoseconds(metric.domainLookupStartDate, metric.domainLookupEndDate, upperBound: upperBound)
+		)
 		if
-			let connectDuration = elapsedNanoseconds(metric.connectStartDate, metric.connectEndDate),
-			let tlsDuration = elapsedNanoseconds(metric.secureConnectionStartDate, metric.secureConnectionEndDate)
+			let connectDuration = elapsedNanoseconds(metric.connectStartDate, metric.connectEndDate, upperBound: upperBound),
+			let tlsDuration = elapsedNanoseconds(metric.secureConnectionStartDate, metric.secureConnectionEndDate, upperBound: upperBound)
 		{
-			if connectDuration > tlsDuration {
-				addAttribute("http.tcp.duration", connectDuration - tlsDuration)
+			let elapsedNanoseconds = connectDuration - tlsDuration
+			if elapsedNanoseconds > 0, elapsedNanoseconds < upperBound.asNanoseconds {
+				addAttribute("http.tcp.duration", elapsedNanoseconds)
 			}
 
 			addAttribute("http.tls.duration", tlsDuration)
 		}
 
-		addAttribute("http.first_byte.duration", elapsedNanoseconds(metric.fetchStartDate, metric.responseStartDate))
+		addAttribute(
+			"http.first_byte.duration",
+			elapsedNanoseconds(metric.fetchStartDate, metric.responseStartDate, upperBound: upperBound)
+		)
 	}
 
 	/// Annotates the span with attributes from the task and its URLRequest.
@@ -287,11 +297,13 @@ extension Span {
 		}
 	}
 
-	func elapsedNanoseconds(_ start: Date?, _ end: Date?) -> Int64? {
+	func elapsedNanoseconds(_ start: Date?, _ end: Date?, upperBound: Duration) -> Int64? {
 		guard let start, let end else { return nil }
 		let duration = end.timeIntervalSince(start)
-		guard duration >= 0 else { return nil }
-		return Int64(duration * 1_000_000_000)
+		guard duration >= 0, duration < (Double(Int64.max) / 1_000_000_000.0) else { return nil }
+		let result = Int64(duration * 1_000_000_000)
+		guard result >= 0, result < upperBound.asNanoseconds else { return nil }
+		return result
 	}
 
 	/// Add URLRequest attributes to the span

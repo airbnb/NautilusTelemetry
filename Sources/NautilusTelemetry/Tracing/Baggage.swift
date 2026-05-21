@@ -10,7 +10,7 @@ import os
 
 // MARK: - SubtraceLinking
 
-public struct SubtraceLinking: OptionSet {
+public struct SubtraceLinking: OptionSet, Sendable {
 
 	public init(rawValue: Int) {
 		self.rawValue = rawValue
@@ -27,7 +27,7 @@ public struct SubtraceLinking: OptionSet {
 
 // MARK: - Baggage
 
-public final class Baggage: TelemetryAttributesContainer, @unchecked Sendable {
+public final class Baggage: TelemetryAttributesContainer, Sendable {
 
 	// MARK: Lifecycle
 
