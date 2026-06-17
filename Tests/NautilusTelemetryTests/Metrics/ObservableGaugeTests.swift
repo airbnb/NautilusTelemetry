@@ -144,7 +144,7 @@ final class ObservableGaugeTests: XCTestCase {
 		XCTAssertFalse(gauge.isEmpty)
 
 		// Even after reset, gauges are never empty
-		gauge.values.reset()
+		_ = gauge.snapshotAndReset()
 		XCTAssertFalse(gauge.isEmpty)
 	}
 

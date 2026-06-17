@@ -396,7 +396,7 @@ final class UpDownCounterTests: XCTestCase {
 		XCTAssertEqual(counter.values.valueFor(attributes: [:]), Int.max)
 
 		// Reset and test minimum value
-		counter.values.reset()
+		_ = counter.snapshotAndReset()
 		counter.add(Int.min)
 		XCTAssertEqual(counter.values.valueFor(attributes: [:]), Int.min)
 		XCTAssertFalse(counter.isEmpty)

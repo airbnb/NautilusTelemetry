@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 // MARK: - SubtraceLinking
 
@@ -47,7 +47,7 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 		self.subTraceId = subTraceId
 		self.subtraceLinking = subtraceLinking
 		// Infer baggage attributes from current context if not provided
-		_attributes = attributes ?? Baggage.currentBaggageTaskLocal?.attributes
+		_attributes = Mutex(attributes ?? Baggage.currentBaggageTaskLocal?.attributes)
 	}
 
 	// MARK: Public
@@ -60,24 +60,30 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 	public func addAttribute(_ name: String, _ value: AttributeValue?) {
 		guard let value else { return }
 
-		lock.withLock {
-			if _attributes == nil {
-				_attributes = TelemetryAttributes()
+		_attributes.withLock { attributes in
+			if attributes == nil {
+				attributes = TelemetryAttributes()
 			}
 
-			_attributes?[name] = value
+			attributes?[name] = value
 		}
 	}
 
 	public subscript(name: String) -> AttributeValue? {
 		get {
-			lock.withLock {
-				_attributes?[name]
-			}
+			_attributes.withLock { $0?[name] }
 		}
 		set(newValue) {
 			addAttribute(name, newValue)
 		}
+	}
+
+	/// The parent span this baggage is attached to.
+	public let span: Span
+
+	/// Vend private attributes as a thread-safe copy
+	public var attributes: TelemetryAttributes? {
+		_attributes.withLock { $0 }
 	}
 
 	// MARK: Internal
@@ -85,20 +91,12 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 	/// TaskLocal works even for conventional threads: https://developer.apple.com/documentation/swift/tasklocal
 	@TaskLocal static var currentBaggageTaskLocal: Baggage?
 
-	let span: Span
 	let subTraceId: TraceId?
 	let subtraceLinking: SubtraceLinking
 
-	/// Vend private attributes as a thread-safe copy
-	var attributes: TelemetryAttributes? {
-		lock.withLock { _attributes }
-	}
-
 	// MARK: Private
 
-	private let lock = OSAllocatedUnfairLock()
-
-	/// Carry arbitrary attributes:
-	private var _attributes: TelemetryAttributes?
+	/// Carry arbitrary attributes, guarded for thread-safe access:
+	private let _attributes: Mutex<TelemetryAttributes?>
 
 }

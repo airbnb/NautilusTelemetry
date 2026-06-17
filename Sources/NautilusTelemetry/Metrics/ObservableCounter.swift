@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
@@ -30,12 +30,12 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 
 	public var isMonotonic: Bool { true }
 
-	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+	public var isEmpty: Bool { lockedValues.withLock { $0.isEmpty } }
 
 	/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLock {
-			values.set(number, attributes: attributes)
+		lockedValues.withLock {
+			$0.set(number, attributes: attributes)
 		}
 	}
 
@@ -43,12 +43,12 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 		let now = ContinuousClock.now
 		callback(self)
 
-		return lock.withLock {
+		return lockedValues.withLock { values in
 			let copy = Self(name: name, unit: unit, description: description, callback: callback)
 			copy.startTime = startTime
 			copy.endTime = now
 			copy.aggregationTemporality = aggregationTemporality
-			copy.values = values.snapshotAndReset()
+			copy.lockedValues.withLock { $0 = values.snapshotAndReset() }
 
 			// now reset
 			startTime = now
@@ -61,7 +61,9 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	// MARK: Internal
 
 	let callback: (ObservableCounter<T>) -> Void
-	var values = MetricValues<T>()
+
+	/// Thread-safe snapshot of the recorded values.
+	var values: MetricValues<T> { lockedValues.withLock { $0 } }
 
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(counter: self)
@@ -71,5 +73,5 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 
 	/// Locking is handled at the Instrument level
 	/// The implementation must take care to avoid concurrently modifying values
-	private let lock = OSAllocatedUnfairLock()
+	private let lockedValues = Mutex(MetricValues<T>())
 }

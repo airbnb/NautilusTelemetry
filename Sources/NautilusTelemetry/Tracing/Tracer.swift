@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 public final class Tracer {
 
@@ -53,7 +53,7 @@ public final class Tracer {
 	}
 
 	public var root: Span {
-		lock.withLock {
+		_retiredSpans.withLock { _ in
 			if let root = _root {
 				return root
 			} else {
@@ -68,7 +68,7 @@ public final class Tracer {
 	public func flushTrace() {
 		idleTimer?.suspend()
 
-		let priorRoot = lock.withLock {
+		let priorRoot = _retiredSpans.withLock { _ -> Span? in
 			let priorRoot = _root
 			traceId = Identifiers.generateTraceId()
 			_root = nil // will be recreated on next access
@@ -237,10 +237,13 @@ public final class Tracer {
 
 	// MARK: Internal
 
-	let lock = OSAllocatedUnfairLock()
-
 	var traceId = Identifiers.generateTraceId()
-	var retiredSpans = [Span]()
+
+	/// Protects internal mutable state: `retiredSpans`, `traceId`, `_root`, and the metric caches.
+	let _retiredSpans = Mutex<[Span]>([])
+
+	/// Thread-safe snapshot of the retired spans awaiting flush.
+	var retiredSpans: [Span] { _retiredSpans.withLock { $0 } }
 
 	/// Optional to avoid initialization order issue
 	var flushTimer: FlushTimer? = nil
@@ -272,8 +275,8 @@ public final class Tracer {
 	}
 
 	func retire(span: Span) {
-		lock.withLock {
-			retiredSpans.append(span)
+		_retiredSpans.withLock {
+			$0.append(span)
 		}
 
 		// Push the timeout ahead
@@ -284,7 +287,7 @@ public final class Tracer {
 		// These are long-lived in normal usage, but clean up on flush for completeness.
 		purgeStaleCacheEntries()
 
-		let spansToReport: [Span] = lock.withLock {
+		let spansToReport: [Span] = _retiredSpans.withLock { retiredSpans in
 			// copy and empty the array.
 			let spans = retiredSpans
 			retiredSpans.removeAll()
@@ -370,7 +373,7 @@ public final class Tracer {
 
 	/// Removes entries whose weak references have been deallocated.
 	private func purgeStaleCacheEntries() {
-		lock.withLock {
+		_retiredSpans.withLock { _ in
 			cachedDurationHistograms = cachedDurationHistograms.filter { $0.value.value != nil }
 			cachedCounters = cachedCounters.filter { $0.value.value != nil }
 		}

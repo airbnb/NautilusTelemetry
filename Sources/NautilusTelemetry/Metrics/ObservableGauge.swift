@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument {
 
@@ -31,8 +31,8 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	public var isEmpty: Bool { false }
 
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLock {
-			values.set(number, attributes: attributes)
+		lockedValues.withLock {
+			$0.set(number, attributes: attributes)
 		}
 	}
 
@@ -40,11 +40,11 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 		let now = ContinuousClock.now
 		callback(self)
 
-		return lock.withLock {
+		return lockedValues.withLock { values in
 			let copy = Self(name: name, unit: unit, description: description, callback: callback)
 			copy.startTime = startTime
 			copy.endTime = now
-			copy.values = values.snapshotAndReset()
+			copy.lockedValues.withLock { $0 = values.snapshotAndReset() }
 
 			// now reset
 			startTime = now
@@ -57,7 +57,9 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	// MARK: Internal
 
 	let callback: (ObservableGauge<T>) -> Void
-	var values = MetricValues<T>()
+
+	/// Thread-safe snapshot of the recorded values.
+	var values: MetricValues<T> { lockedValues.withLock { $0 } }
 
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(gauge: self)
@@ -66,5 +68,5 @@ public class ObservableGauge<T: MetricNumeric>: Instrument, ExportableInstrument
 	// MARK: Private
 
 	/// Locking is handled at the Instrument level
-	private let lock = OSAllocatedUnfairLock()
+	private let lockedValues = Mutex(MetricValues<T>())
 }

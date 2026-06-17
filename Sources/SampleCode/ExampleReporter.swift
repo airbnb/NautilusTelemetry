@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -78,8 +78,6 @@ public class ExampleReporter: NautilusTelemetryReporter {
 		case failure
 	}
 
-	static let lock = OSAllocatedUnfairLock()
-
 	static var userAgent: String = {
 		let bundle = Bundle.main
 		let bundleIdentifier = bundle.bundleIdentifier ?? "unknown"
@@ -91,12 +89,12 @@ public class ExampleReporter: NautilusTelemetryReporter {
 	static let sampler = StableGuidSampler(sampleRate: 1.0, seed: samplerSeed, guid: sessionGUID)
 
 	static var sessionGUID: Data {
-		lock.withLock {
-			if let guid = _sessionGUID {
+		_sessionGUID.withLock { sessionGUID in
+			if let guid = sessionGUID {
 				return guid
 			} else {
 				let guid = Identifiers.generateSessionGUID()
-				_sessionGUID = guid
+				sessionGUID = guid
 				return guid
 			}
 		}
@@ -119,8 +117,8 @@ public class ExampleReporter: NautilusTelemetryReporter {
 	let urlSession: URLSession
 
 	static func resetSessionGUID() {
-		lock.withLock {
-			_sessionGUID = nil
+		_sessionGUID.withLock {
+			$0 = nil
 		}
 	}
 
@@ -185,6 +183,6 @@ public class ExampleReporter: NautilusTelemetryReporter {
 
 	// MARK: Private
 
-	static private var _sessionGUID: Data?
+	static private let _sessionGUID = Mutex<Data?>(nil)
 
 }

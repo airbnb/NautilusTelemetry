@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 // MARK: - Link
 
@@ -59,7 +59,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	) {
 		self.name = name
 		self.kind = kind
-		_attributes = attributes
+		_attributes = Mutex(attributes)
 		self.traceId = traceId
 		self.id = id
 		self.parentId = parentId
@@ -115,7 +115,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	}
 
 	public func end() {
-		let callbacks = lock.withLock {
+		let callbacks = _attributes.withLock { _ in
 			assert(endTime == nil, "span \(name) was ended more than once")
 
 			if let endTimeAdjustment {
@@ -147,20 +147,18 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	public func addAttribute(_ name: String, _ value: AttributeValue?) {
 		guard let value else { return }
 
-		lock.withLock {
-			if _attributes == nil {
-				_attributes = TelemetryAttributes()
+		_attributes.withLock { attributes in
+			if attributes == nil {
+				attributes = TelemetryAttributes()
 			}
 
-			_attributes?[name] = value
+			attributes?[name] = value
 		}
 	}
 
 	public subscript(name: String) -> AttributeValue? {
 		get {
-			lock.withLock {
-				_attributes?[name]
-			}
+			_attributes.withLock { $0?[name] }
 		}
 		set(newValue) {
 			addAttribute(name, newValue)
@@ -168,7 +166,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	}
 
 	public func addEvent(_ event: Event) {
-		lock.withLock {
+		_attributes.withLock { _ in
 			if events == nil {
 				events = [Event]()
 			}
@@ -180,7 +178,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	/// https://opentelemetry.io/docs/specs/semconv/registry/attributes/opentracing/
 	/// In lieu of an existing standard, we'll build something reasonable
 	public func addLink(_ span: Span, relationship: Link.Relationship = .undefined) {
-		lock.withLock {
+		_attributes.withLock { _ in
 			links.append(Link(traceId: span.traceId, id: span.id, relationship: relationship))
 		}
 	}
@@ -266,7 +264,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 
 	/// Vend private attributes as a thread-safe copy
 	var attributes: TelemetryAttributes? {
-		lock.withLock { _attributes }
+		_attributes.withLock { $0 }
 	}
 
 	var elapsed: Duration? {
@@ -315,16 +313,17 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	/// Adds an additional retire callback to enable metrics from spans.
 	/// - Parameter retireCallback: closure to be appended to retireCallbacks
 	func addRetireCallback(_ callback: @escaping (_: Span) -> Void) {
-		lock.withLock {
+		_attributes.withLock { _ in
 			retireCallbacks.append(callback)
 		}
 	}
 
 	// MARK: Private
 
-	private let lock = OSAllocatedUnfairLock()
-
-	private var _attributes: TelemetryAttributes?
+	/// Carries arbitrary attributes. Its lock also serializes mutation of the other
+	/// mutable collections above (`events`, `links`, `retireCallbacks`, `endTime`),
+	/// matching the single-lock design this type previously used.
+	private let _attributes: Mutex<TelemetryAttributes?>
 
 	private static func exceptionAttributes(type: String, message: String, stacktrace: String?) -> TelemetryAttributes {
 		var attributes: TelemetryAttributes = [
