@@ -86,33 +86,50 @@ final class FlushTimerTests: XCTestCase {
 	}
 
 	func testFlushTimerSuspendAndResume() throws {
-		let expectation1 = XCTestExpectation(description: "Timer handler called before suspend")
-		let expectation2 = XCTestExpectation(description: "Timer handler called after resume")
+		let firstFire = XCTestExpectation(description: "Timer handler called before suspend")
+		let resumedFire = XCTestExpectation(description: "Timer handler called after resume")
+		// The resumed timer keeps firing, so allow the post-resume expectation to be met more than once.
+		resumedFire.assertForOverFulfill = false
+
+		// The handler runs on a background queue, so guard the shared counter against the test thread.
+		let lock = NSLock()
 		var handlerCallCount = 0
+		// Fires past this baseline (captured just before resuming) prove the timer resumed.
+		var resumeBaseline = Int.max
 
 		let timer = FlushTimer(flushInterval: 0.2, repeating: true) {
-			handlerCallCount += 1
-			if handlerCallCount == 1 {
-				expectation1.fulfill()
-			} else if handlerCallCount == 2 {
-				expectation2.fulfill()
+			lock.withLock {
+				handlerCallCount += 1
+				if handlerCallCount == 1 {
+					firstFire.fulfill()
+				}
+				if handlerCallCount > resumeBaseline {
+					resumedFire.fulfill()
+				}
 			}
 		}
 
-		wait(for: [expectation1], timeout: 1.0)
-		XCTAssertEqual(handlerCallCount, 1)
+		// 1. The running timer fires at least once.
+		wait(for: [firstFire], timeout: timeout)
 
+		// 2. While suspended, the timer must not fire again. Snapshot the count at suspend
+		// rather than asserting an exact value, since the running timer may have fired more
+		// than once before suspend took effect.
 		timer.suspend()
 		XCTAssertTrue(timer.suspended)
 
+		// Drain any handler invocation already in flight when we suspended, so the
+		// snapshot below reflects a quiesced timer (the queue is serial).
+		NautilusTelemetry.queue.sync {}
+		let countAtSuspend = lock.withLock { handlerCallCount }
 		Thread.sleep(forTimeInterval: 0.3)
-		XCTAssertEqual(handlerCallCount, 1)
+		XCTAssertEqual(lock.withLock { handlerCallCount }, countAtSuspend, "suspended timer must not fire")
 
+		// 3. Changing the interval resumes the timer, which fires again.
+		lock.withLock { resumeBaseline = countAtSuspend }
 		timer.flushInterval = 0.1
-
 		XCTAssertFalse(timer.suspended)
 
-		wait(for: [expectation2], timeout: timeout)
-		XCTAssertEqual(handlerCallCount, 2)
+		wait(for: [resumedFire], timeout: timeout)
 	}
 }
