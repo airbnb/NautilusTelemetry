@@ -104,6 +104,7 @@ extension AttributeValue {
 			self = .string("\(value)")
 		}
 	}
+
 	public init(_ value: Double) { self = .double(value) }
 	public init(_ value: Float) { self = .double(Double(value)) }
 	public init(_ value: Bool) { self = .bool(value) }

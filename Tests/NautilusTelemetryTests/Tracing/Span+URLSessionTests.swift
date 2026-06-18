@@ -237,6 +237,8 @@ final class SpanURLSessionTests: XCTestCase {
 
 private final class MetricsCapturingDelegate: NSObject, URLSessionTaskDelegate, Sendable {
 
+	// MARK: Internal
+
 	var capturedMetrics: URLSessionTaskMetrics? {
 		mutex.withLock { $0 }
 	}
@@ -244,6 +246,8 @@ private final class MetricsCapturingDelegate: NSObject, URLSessionTaskDelegate, 
 	func urlSession(_: URLSession, task _: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
 		mutex.withLock { $0 = metrics }
 	}
+
+	// MARK: Private
 
 	private let mutex: Mutex<URLSessionTaskMetrics?> = Mutex(nil)
 

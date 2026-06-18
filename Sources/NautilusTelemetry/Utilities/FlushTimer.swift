@@ -29,10 +29,10 @@ class FlushTimer {
 
 	let flushTimer: DispatchSourceTimer
 
-	var suspended: Bool { _suspended.withLock { $0 } }
-
 	let minimumFlushInterval: TimeInterval = 0.1
 	let repeating: Bool
+
+	var suspended: Bool { _suspended.withLock { $0 } }
 
 	var flushInterval: TimeInterval {
 		get { _flushInterval }

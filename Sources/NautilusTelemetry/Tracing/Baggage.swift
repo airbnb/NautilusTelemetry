@@ -47,10 +47,18 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 		self.subTraceId = subTraceId
 		self.subtraceLinking = subtraceLinking
 		// Infer baggage attributes from current context if not provided
-		_attributes = Mutex(attributes ?? Baggage.currentBaggageTaskLocal?.attributes)
+		lockedAttributes = Mutex(attributes ?? Baggage.currentBaggageTaskLocal?.attributes)
 	}
 
 	// MARK: Public
+
+	/// The parent span this baggage is attached to.
+	public let span: Span
+
+	/// Vend private attributes as a thread-safe copy
+	public var attributes: TelemetryAttributes? {
+		lockedAttributes.withLock { $0 }
+	}
 
 	/// Adds an attribute to the baggage. This can be used to propagate selected attributes to child spans.
 	/// https://opentelemetry.io/docs/concepts/signals/baggage/#baggage-is-not-the-same-as-attributes
@@ -60,7 +68,7 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 	public func addAttribute(_ name: String, _ value: AttributeValue?) {
 		guard let value else { return }
 
-		_attributes.withLock { attributes in
+		lockedAttributes.withLock { attributes in
 			if attributes == nil {
 				attributes = TelemetryAttributes()
 			}
@@ -71,19 +79,11 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 
 	public subscript(name: String) -> AttributeValue? {
 		get {
-			_attributes.withLock { $0?[name] }
+			lockedAttributes.withLock { $0?[name] }
 		}
 		set(newValue) {
 			addAttribute(name, newValue)
 		}
-	}
-
-	/// The parent span this baggage is attached to.
-	public let span: Span
-
-	/// Vend private attributes as a thread-safe copy
-	public var attributes: TelemetryAttributes? {
-		_attributes.withLock { $0 }
 	}
 
 	// MARK: Internal
@@ -97,6 +97,6 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 	// MARK: Private
 
 	/// Carry arbitrary attributes, guarded for thread-safe access:
-	private let _attributes: Mutex<TelemetryAttributes?>
+	private let lockedAttributes: Mutex<TelemetryAttributes?>
 
 }

@@ -107,9 +107,6 @@ public final class Meter {
 	/// Optional to avoid initialization order issue
 	var flushTimer: FlushTimer?
 
-	/// Used for protecting internal state
-	let activeInstruments = Mutex<[Instrument]>([])
-
 	/// Sets the flush interval for reporting back to the configured ``Reporter``.
 	var flushInterval: TimeInterval {
 		didSet {
@@ -140,5 +137,10 @@ public final class Meter {
 			reporter.reportInstruments(instrumentsToReport)
 		}
 	}
+
+	// MARK: Private
+
+	/// Used for protecting internal state
+	private let activeInstruments = Mutex<[Instrument]>([])
 
 }
