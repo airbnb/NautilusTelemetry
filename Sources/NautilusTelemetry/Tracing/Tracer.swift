@@ -53,7 +53,7 @@ public final class Tracer {
 	}
 
 	public var root: Span {
-		_retiredSpans.withLock { _ in
+		lock.withLock { _ in
 			if let root = _root {
 				return root
 			} else {
@@ -68,7 +68,7 @@ public final class Tracer {
 	public func flushTrace() {
 		idleTimer?.suspend()
 
-		let priorRoot = _retiredSpans.withLock { _ -> Span? in
+		let priorRoot = lock.withLock { _ -> Span? in
 			let priorRoot = _root
 			traceId = Identifiers.generateTraceId()
 			_root = nil // will be recreated on next access
@@ -238,12 +238,10 @@ public final class Tracer {
 	// MARK: Internal
 
 	var traceId = Identifiers.generateTraceId()
+	var retiredSpans = [Span]()
 
 	/// Protects internal mutable state: `retiredSpans`, `traceId`, `_root`, and the metric caches.
-	let _retiredSpans = Mutex<[Span]>([])
-
-	/// Thread-safe snapshot of the retired spans awaiting flush.
-	var retiredSpans: [Span] { _retiredSpans.withLock { $0 } }
+	let lock = Mutex<Void>(())
 
 	/// Optional to avoid initialization order issue
 	var flushTimer: FlushTimer? = nil
@@ -275,8 +273,8 @@ public final class Tracer {
 	}
 
 	func retire(span: Span) {
-		_retiredSpans.withLock {
-			$0.append(span)
+		lock.withLock { _ in
+			retiredSpans.append(span)
 		}
 
 		// Push the timeout ahead
@@ -287,7 +285,7 @@ public final class Tracer {
 		// These are long-lived in normal usage, but clean up on flush for completeness.
 		purgeStaleCacheEntries()
 
-		let spansToReport: [Span] = _retiredSpans.withLock { retiredSpans in
+		let spansToReport: [Span] = lock.withLock { _ in
 			// copy and empty the array.
 			let spans = retiredSpans
 			retiredSpans.removeAll()
@@ -373,7 +371,7 @@ public final class Tracer {
 
 	/// Removes entries whose weak references have been deallocated.
 	private func purgeStaleCacheEntries() {
-		_retiredSpans.withLock { _ in
+		lock.withLock { _ in
 			cachedDurationHistograms = cachedDurationHistograms.filter { $0.value.value != nil }
 			cachedCounters = cachedCounters.filter { $0.value.value != nil }
 		}

@@ -32,7 +32,7 @@ extension Tracer {
 	) -> Counter<Int> {
 		let name = metricName(span: span, namingConvention: namingConvention, fileID: fileID, suffix: "_counter")
 
-		let counter = _retiredSpans.withLock { _ in
+		let counter = lock.withLock { _ in
 			if let counter = cachedCounters[name]?.value { return counter }
 			let counter: Counter<Int> = InstrumentationSystem.meter.createCounter(
 				name: name,
@@ -69,7 +69,7 @@ extension Tracer {
 	) -> ExponentialHistogram<Int> {
 		let name = metricName(span: span, namingConvention: namingConvention, fileID: fileID, suffix: "_histogram")
 
-		let histogram = _retiredSpans.withLock { _ in
+		let histogram = lock.withLock { _ in
 			if let histogram = cachedDurationHistograms[name]?.value { return histogram }
 			let histogram: ExponentialHistogram<Int> = InstrumentationSystem.meter.createExponentialHistogram(
 				name: name,
