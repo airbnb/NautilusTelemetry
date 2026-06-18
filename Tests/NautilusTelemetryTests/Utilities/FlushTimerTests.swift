@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Synchronization
 import XCTest
 
 @testable import NautilusTelemetry
@@ -91,19 +92,21 @@ final class FlushTimerTests: XCTestCase {
 		// The resumed timer keeps firing, so allow the post-resume expectation to be met more than once.
 		resumedFire.assertForOverFulfill = false
 
-		// The handler runs on a background queue, so guard the shared counter against the test thread.
-		let lock = NSLock()
-		var handlerCallCount = 0
-		// Fires past this baseline (captured just before resuming) prove the timer resumed.
-		var resumeBaseline = Int.max
+		// The handler runs on a background queue, so guard the shared state against the test thread.
+		// `resumeBaseline` is captured just before resuming; fires past it prove the timer resumed.
+		struct State {
+			var handlerCallCount = 0
+			var resumeBaseline = Int.max
+		}
+		let state = Mutex(State())
 
 		let timer = FlushTimer(flushInterval: 0.2, repeating: true) {
-			lock.withLock {
-				handlerCallCount += 1
-				if handlerCallCount == 1 {
+			state.withLock { state in
+				state.handlerCallCount += 1
+				if state.handlerCallCount == 1 {
 					firstFire.fulfill()
 				}
-				if handlerCallCount > resumeBaseline {
+				if state.handlerCallCount > state.resumeBaseline {
 					resumedFire.fulfill()
 				}
 			}
@@ -121,12 +124,12 @@ final class FlushTimerTests: XCTestCase {
 		// Drain any handler invocation already in flight when we suspended, so the
 		// snapshot below reflects a quiesced timer (the queue is serial).
 		NautilusTelemetry.queue.sync {}
-		let countAtSuspend = lock.withLock { handlerCallCount }
+		let countAtSuspend = state.withLock { $0.handlerCallCount }
 		Thread.sleep(forTimeInterval: 0.3)
-		XCTAssertEqual(lock.withLock { handlerCallCount }, countAtSuspend, "suspended timer must not fire")
+		XCTAssertEqual(state.withLock { $0.handlerCallCount }, countAtSuspend, "suspended timer must not fire")
 
 		// 3. Changing the interval resumes the timer, which fires again.
-		lock.withLock { resumeBaseline = countAtSuspend }
+		state.withLock { $0.resumeBaseline = countAtSuspend }
 		timer.flushInterval = 0.1
 		XCTAssertFalse(timer.suspended)
 
