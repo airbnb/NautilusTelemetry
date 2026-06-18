@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 /// An exponential histogram where bucket boundaries are `base^i` with `base = 2^(2^-scale)`.
 /// https://opentelemetry.io/docs/specs/otel/metrics/data-model/#exponentialhistogram
@@ -32,7 +32,7 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 		self.unit = unit
 		self.description = description
 		self.maxBuckets = maxBuckets
-		values = ExponentialHistogramValues<T>()
+		lockedValues = Mutex(ExponentialHistogramValues<T>())
 	}
 
 	// MARK: Public
@@ -45,25 +45,25 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public var aggregationTemporality = AggregationTemporality.delta
 
-	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+	public var isEmpty: Bool { lockedValues.withLock { $0.isEmpty } }
 
 	/// Record a value. Positive, negative, and zero values are all allowed (unlike `Histogram`),
 	/// since the spec maps them into separate positive/negative/zero buckets.
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLock {
-			values.record(number, attributes: attributes)
+		lockedValues.withLock {
+			$0.record(number, attributes: attributes)
 		}
 	}
 
 	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
 
-		return lock.withLock {
+		return lockedValues.withLock { values in
 			let copy = Self(name: name, unit: unit, description: description, maxBuckets: maxBuckets)
 			copy.startTime = startTime
 			copy.endTime = now
 			copy.aggregationTemporality = aggregationTemporality
-			copy.values = values.snapshotAndReset()
+			copy.lockedValues.withLock { $0 = values.snapshotAndReset() }
 
 			// now reset the instrument
 			startTime = now
@@ -75,7 +75,8 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 
 	// MARK: Internal
 
-	var values: ExponentialHistogramValues<T>
+	/// Thread-safe snapshot of the recorded values.
+	var values: ExponentialHistogramValues<T> { lockedValues.withLock { $0 } }
 
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(histogram: self)
@@ -85,5 +86,5 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 
 	/// Locking is handled at the Instrument level
 	/// The implementation must take care to avoid concurrently modifying values
-	private let lock = OSAllocatedUnfairLock()
+	private let lockedValues: Mutex<ExponentialHistogramValues<T>>
 }

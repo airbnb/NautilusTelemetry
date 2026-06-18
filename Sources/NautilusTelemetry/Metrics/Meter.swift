@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/datamodel.md
@@ -107,8 +107,6 @@ public final class Meter {
 	/// Optional to avoid initialization order issue
 	var flushTimer: FlushTimer?
 
-	var activeInstruments = [Instrument]()
-
 	/// Sets the flush interval for reporting back to the configured ``Reporter``.
 	var flushInterval: TimeInterval {
 		didSet {
@@ -117,22 +115,22 @@ public final class Meter {
 	}
 
 	func register(_ instrument: Instrument) {
-		lock.withLock {
-			activeInstruments.append(instrument)
+		activeInstruments.withLock {
+			$0.append(instrument)
 		}
 	}
 
 	func unregister(_ instrument: Instrument) {
-		lock.withLock {
+		activeInstruments.withLock {
 			// O(N) -- may need to improve this
-			activeInstruments.removeAll { $0 === instrument }
+			$0.removeAll { $0 === instrument }
 		}
 	}
 
 	func flushActiveInstruments() {
-		let instrumentsToReport = lock.withLock {
+		let instrumentsToReport = activeInstruments.withLock {
 			// Make copies
-			activeInstruments.compactMap { $0.snapshotAndReset() }
+			$0.compactMap { $0.snapshotAndReset() }
 		}
 
 		if instrumentsToReport.count > 0, let reporter = InstrumentationSystem.reporter {
@@ -143,6 +141,6 @@ public final class Meter {
 	// MARK: Private
 
 	/// Used for protecting internal state
-	private let lock = OSAllocatedUnfairLock()
+	private let activeInstruments = Mutex<[Instrument]>([])
 
 }

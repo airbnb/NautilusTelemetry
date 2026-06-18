@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
@@ -30,11 +30,11 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 
 	public var isMonotonic: Bool { false }
 
-	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+	public var isEmpty: Bool { lockedValues.withLock { $0.isEmpty } }
 
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
-		lock.withLock {
-			values.set(number, attributes: attributes)
+		lockedValues.withLock {
+			$0.set(number, attributes: attributes)
 		}
 	}
 
@@ -42,11 +42,11 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 		let now = ContinuousClock.now
 		callback(self)
 
-		return lock.withLock {
+		return lockedValues.withLock { values in
 			let copy = Self(name: name, unit: unit, description: description, callback: callback)
 			copy.startTime = startTime
 			copy.endTime = now
-			copy.values = values.snapshotAndReset()
+			copy.lockedValues.withLock { $0 = values.snapshotAndReset() }
 
 			// now reset
 			startTime = now
@@ -59,7 +59,9 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 	// MARK: Internal
 
 	let callback: (ObservableUpDownCounter<T>) -> Void
-	var values = MetricValues<T>()
+
+	/// Thread-safe snapshot of the recorded values.
+	var values: MetricValues<T> { lockedValues.withLock { $0 } }
 
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(counter: self)
@@ -68,5 +70,5 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 	// MARK: Private
 
 	/// Locking is handled at the Instrument level
-	private let lock = OSAllocatedUnfairLock()
+	private let lockedValues = Mutex(MetricValues<T>())
 }

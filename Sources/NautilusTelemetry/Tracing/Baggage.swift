@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 // MARK: - SubtraceLinking
 
@@ -47,10 +47,18 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 		self.subTraceId = subTraceId
 		self.subtraceLinking = subtraceLinking
 		// Infer baggage attributes from current context if not provided
-		_attributes = attributes ?? Baggage.currentBaggageTaskLocal?.attributes
+		lockedAttributes = Mutex(attributes ?? Baggage.currentBaggageTaskLocal?.attributes)
 	}
 
 	// MARK: Public
+
+	/// The parent span this baggage is attached to.
+	public let span: Span
+
+	/// Vend private attributes as a thread-safe copy
+	public var attributes: TelemetryAttributes? {
+		lockedAttributes.withLock { $0 }
+	}
 
 	/// Adds an attribute to the baggage. This can be used to propagate selected attributes to child spans.
 	/// https://opentelemetry.io/docs/concepts/signals/baggage/#baggage-is-not-the-same-as-attributes
@@ -60,20 +68,18 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 	public func addAttribute(_ name: String, _ value: AttributeValue?) {
 		guard let value else { return }
 
-		lock.withLock {
-			if _attributes == nil {
-				_attributes = TelemetryAttributes()
+		lockedAttributes.withLock { attributes in
+			if attributes == nil {
+				attributes = TelemetryAttributes()
 			}
 
-			_attributes?[name] = value
+			attributes?[name] = value
 		}
 	}
 
 	public subscript(name: String) -> AttributeValue? {
 		get {
-			lock.withLock {
-				_attributes?[name]
-			}
+			lockedAttributes.withLock { $0?[name] }
 		}
 		set(newValue) {
 			addAttribute(name, newValue)
@@ -85,20 +91,12 @@ public final class Baggage: TelemetryAttributesContainer, Sendable {
 	/// TaskLocal works even for conventional threads: https://developer.apple.com/documentation/swift/tasklocal
 	@TaskLocal static var currentBaggageTaskLocal: Baggage?
 
-	let span: Span
 	let subTraceId: TraceId?
 	let subtraceLinking: SubtraceLinking
 
-	/// Vend private attributes as a thread-safe copy
-	var attributes: TelemetryAttributes? {
-		lock.withLock { _attributes }
-	}
-
 	// MARK: Private
 
-	private let lock = OSAllocatedUnfairLock()
-
-	/// Carry arbitrary attributes:
-	private var _attributes: TelemetryAttributes?
+	/// Carry arbitrary attributes, guarded for thread-safe access:
+	private let lockedAttributes: Mutex<TelemetryAttributes?>
 
 }

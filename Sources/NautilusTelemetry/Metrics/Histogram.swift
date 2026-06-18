@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
@@ -22,7 +22,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 		self.name = name
 		self.unit = unit
 		self.description = description
-		values = HistogramValues<T>(explicitBounds: explicitBounds)
+		lockedValues = Mutex(HistogramValues<T>(explicitBounds: explicitBounds))
 	}
 
 	// MARK: Public
@@ -34,7 +34,7 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	public private(set) var endTime: ContinuousClock.Instant? = nil
 	public var aggregationTemporality = AggregationTemporality.delta
 
-	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+	public var isEmpty: Bool { lockedValues.withLock { $0.isEmpty } }
 
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
 		if number < 0 {
@@ -42,20 +42,20 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 			return
 		}
 
-		lock.withLock {
-			values.record(number, attributes: attributes)
+		lockedValues.withLock {
+			$0.record(number, attributes: attributes)
 		}
 	}
 
 	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
 
-		return lock.withLock {
+		return lockedValues.withLock { values in
 			let copy = Self(name: name, unit: unit, description: description, explicitBounds: values.explicitBounds)
 			copy.startTime = startTime
 			copy.endTime = now
 			copy.aggregationTemporality = aggregationTemporality
-			copy.values = values.snapshotAndReset()
+			copy.lockedValues.withLock { $0 = values.snapshotAndReset() }
 
 			// now reset the instrument
 			startTime = now
@@ -67,7 +67,8 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	// MARK: Internal
 
-	var values: HistogramValues<T>
+	/// Thread-safe snapshot of the recorded values.
+	var values: HistogramValues<T> { lockedValues.withLock { $0 } }
 
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(histogram: self)
@@ -77,5 +78,5 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	/// Locking is handled at the Instrument level
 	/// The implementation must take care to avoid concurrently modifying values
-	private let lock = OSAllocatedUnfairLock()
+	private let lockedValues: Mutex<HistogramValues<T>>
 }

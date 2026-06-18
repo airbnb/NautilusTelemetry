@@ -7,7 +7,7 @@
 
 import CryptoKit
 import Foundation
-import os
+import Synchronization
 
 // MARK: - Sampler
 
@@ -31,7 +31,7 @@ public final class StableGuidSampler: Sampler {
 	public init(sampleRate: Double, seed: Data, guid: Data) {
 		self.sampleRate = sampleRate
 		self.seed = seed
-		_guid = guid
+		_guid = Mutex(guid)
 		shouldSample = false
 		computeShouldSample()
 	}
@@ -54,18 +54,18 @@ public final class StableGuidSampler: Sampler {
 	public var guid: Data {
 		// actors would be great here!
 		get {
-			lock.withLock { _guid }
+			_guid.withLock { $0 }
 		}
 
 		set {
 			assert(newValue.count >= 0, "expected at least 1 byte of data")
 
-			var didChange = false
-			lock.withLockUnchecked {
-				if newValue != _guid {
-					_guid = newValue
-					didChange = true
+			let didChange = _guid.withLock { guid in
+				if newValue != guid {
+					guid = newValue
+					return true
 				}
+				return false
 			}
 
 			if didChange {
@@ -98,8 +98,6 @@ public final class StableGuidSampler: Sampler {
 
 	// MARK: Private
 
-	private let lock = OSAllocatedUnfairLock()
-
-	private var _guid: Data
+	private let _guid: Mutex<Data>
 
 }

@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import os
+import Synchronization
 
 public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
@@ -29,7 +29,7 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	public var isMonotonic: Bool { true }
 
-	public var isEmpty: Bool { lock.withLock { values.isEmpty } }
+	public var isEmpty: Bool { lockedValues.withLock { $0.isEmpty } }
 
 	public func add(_ number: T, attributes: TelemetryAttributes = [:]) {
 		if isMonotonic, number < 0 {
@@ -37,20 +37,20 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 			assert(false, "monotonic counters can only be increased")
 			return
 		}
-		lock.withLock {
-			values.add(number, attributes: attributes)
+		lockedValues.withLock {
+			$0.add(number, attributes: attributes)
 		}
 	}
 
 	public func snapshotAndReset() -> Instrument {
 		let now = ContinuousClock.now
 
-		return lock.withLock {
+		return lockedValues.withLock { values in
 			let copy = Self(name: name, unit: unit, description: description)
 			copy.startTime = startTime
 			copy.endTime = now
 			copy.aggregationTemporality = aggregationTemporality
-			copy.values = values.snapshotAndReset()
+			copy.lockedValues.withLock { $0 = values.snapshotAndReset() }
 
 			// now reset
 			startTime = now
@@ -62,7 +62,8 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	// MARK: Internal
 
-	var values = MetricValues<T>()
+	/// Thread-safe snapshot of the recorded values.
+	var values: MetricValues<T> { lockedValues.withLock { $0 } }
 
 	func exportOTLP(_ exporter: Exporter) -> OTLP.V1Metric {
 		exporter.exportOTLP(counter: self)
@@ -72,5 +73,5 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	/// Locking is handled at the Instrument level
 	/// The implementation must take care to avoid concurrently modifying values
-	private let lock = OSAllocatedUnfairLock()
+	private let lockedValues = Mutex(MetricValues<T>())
 }
