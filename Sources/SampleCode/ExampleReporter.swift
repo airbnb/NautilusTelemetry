@@ -60,15 +60,22 @@ public class ExampleReporter: NautilusTelemetryReporter {
 	}
 
 	public func reportInstruments(_ instruments: [Instrument]) {
+		// NOTE: This gates the entire metrics payload on the trace sampling decision. Metrics and traces
+		// don't have to share a sampling decision -- an app might always emit metrics while sampling traces,
+		// or sample the two at different rates. If so, replace this with a dedicated metrics sampling
+		// decision here, and keep `exemplarSamplingDecision` for whether trace exemplars are attached.
 		guard Self.samplingEnabled else {
 			return
 		}
 
 		let additionalAttributes: TelemetryAttributes = ["sample": "value"]
-		let exporter = Exporter(timeReference: timeReference)
+
+		// Exemplars link a data point back to a trace, so they are only attached when that trace would be
+		// sampled. We reuse the same per-span decision as `reportSpans`.
+		let exporter = Exporter(timeReference: timeReference, exemplarSamplingDecision: shouldSampleSpan)
 
 		if let jsonPayload = try? exporter.exportOTLPToJSON(instruments: instruments, additionalAttributes: additionalAttributes) {
-			try? dispatchPayload(jsonPayload: jsonPayload, url: traceEndpoint)
+			try? dispatchPayload(jsonPayload: jsonPayload, url: metricEndpoint)
 		}
 	}
 
@@ -124,12 +131,16 @@ public class ExampleReporter: NautilusTelemetryReporter {
 
 	/// Filters spans based on their sample rate override, falling back to `Self.samplingEnabled` when unset.
 	func sampledSpans(_ spans: [Span]) -> [Span] {
-		spans.filter { span in
-			if let sampleRate = span.sampleRate {
-				return StableGuidSampler(sampleRate: sampleRate, seed: Self.samplerSeed, guid: Self.sessionGUID).shouldSample
-			}
-			return Self.samplingEnabled
+		spans.filter { shouldSampleSpan($0) }
+	}
+
+	/// The sampling decision for a single span: honor a per-span `sampleRate` override, otherwise fall back
+	/// to `Self.samplingEnabled`. Used both to filter reported spans and to decide exemplar attachment.
+	func shouldSampleSpan(_ span: Span) -> Bool {
+		if let sampleRate = span.sampleRate {
+			return StableGuidSampler(sampleRate: sampleRate, seed: Self.samplerSeed, guid: Self.sessionGUID).shouldSample
 		}
+		return Self.samplingEnabled
 	}
 
 	// MARK: Lifecycle events

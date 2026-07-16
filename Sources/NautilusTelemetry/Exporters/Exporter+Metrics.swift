@@ -53,6 +53,7 @@ extension Exporter {
 
 	func exportOTLP<T>(counter: Counter<T>) -> OTLP.V1Metric {
 		let values = counter.values.values
+		let exemplars = counter.exemplars
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -74,7 +75,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: nil, // no exemplar support yet
+				exemplars: convertToOTLP(exemplars: exemplars, key: key),
 				flags: nil
 			) // no flags support yet
 
@@ -101,6 +102,7 @@ extension Exporter {
 
 	func exportOTLP<T>(counter: ObservableCounter<T>) -> OTLP.V1Metric {
 		let values = counter.values.values
+		let exemplars = counter.exemplars
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -122,7 +124,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: nil, // no exemplar support yet
+				exemplars: convertToOTLP(exemplars: exemplars, key: key),
 				flags: nil // no flags support yet
 			)
 
@@ -149,6 +151,7 @@ extension Exporter {
 
 	func exportOTLP<T>(counter: ObservableUpDownCounter<T>) -> OTLP.V1Metric {
 		let values = counter.values.values
+		let exemplars = counter.exemplars
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -170,7 +173,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: nil, // no exemplar support yet
+				exemplars: convertToOTLP(exemplars: exemplars, key: key),
 				flags: nil
 			) // no flags support yet
 
@@ -197,6 +200,7 @@ extension Exporter {
 
 	func exportOTLP<T>(gauge: ObservableGauge<T>) -> OTLP.V1Metric {
 		let values = gauge.values.values
+		let exemplars = gauge.exemplars
 		var dataPoints = [OTLP.V1NumberDataPoint]()
 
 		for key in values.keys {
@@ -218,7 +222,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: nil, // no exemplar support yet
+				exemplars: convertToOTLP(exemplars: exemplars, key: key),
 				flags: nil
 			) // no flags support yet
 
@@ -240,6 +244,7 @@ extension Exporter {
 
 	func exportOTLP<T>(histogram: Histogram<T>) -> OTLP.V1Metric {
 		let values = histogram.values.values
+		let exemplars = histogram.exemplars
 		var dataPoints = [OTLP.V1HistogramDataPoint]()
 
 		for key in values.keys {
@@ -263,7 +268,7 @@ extension Exporter {
 				sum: sum,
 				bucketCounts: bucketCounts,
 				explicitBounds: convertToOTLP(explicitBounds: value.explicitBounds),
-				exemplars: nil, // no exemplar support
+				exemplars: convertToOTLP(exemplars: exemplars, key: key),
 				flags: nil
 			)
 			dataPoints.append(dataPoint)
@@ -288,6 +293,7 @@ extension Exporter {
 
 	func exportOTLP<T>(histogram: ExponentialHistogram<T>) -> OTLP.V1Metric {
 		let values = histogram.values.values
+		let exemplars = histogram.exemplars
 		var dataPoints = [OTLP.V1ExponentialHistogramDataPoint]()
 
 		for key in values.keys {
@@ -322,7 +328,7 @@ extension Exporter {
 				positive: mapped.positive,
 				negative: mapped.negative,
 				flags: nil,
-				exemplars: nil, // no exemplar support
+				exemplars: convertToOTLP(exemplars: exemplars, key: key),
 				min: value.range.flatMap { asDouble($0.lowerBound) },
 				max: value.range.flatMap { asDouble($0.upperBound) },
 				zeroThreshold: nil
@@ -346,6 +352,35 @@ extension Exporter {
 			exponentialHistogram: v1ExponentialHistogram,
 			summary: nil
 		)
+	}
+
+	/// Converts the exemplars recorded under a given data point's aggregation key to OTLP.
+	/// Exemplars whose span is rejected by `exemplarSamplingDecision` are dropped, so a reporter can
+	/// attach exemplars only when the linked trace is sampled.
+	/// - Parameters:
+	///   - exemplars: all exemplars recorded on the instrument.
+	///   - key: the aggregation attributes identifying the data point.
+	/// - Returns: the matching exemplars, or `nil` if there are none.
+	func convertToOTLP<T>(exemplars: [Exemplar<T>], key: TelemetryAttributes) -> [OTLP.V1Exemplar]? {
+		let matching = exemplars.filter { $0.attributes == key && exemplarSamplingDecision($0.span) }
+		guard matching.count > 0 else { return nil }
+
+		return matching.map { exemplar in
+			let span = exemplar.span
+			// filtered_attributes are those recorded on the span but not already part of the data point's aggregation key.
+			let extraAttributes = span.attributes?.filter { key[$0.key] == nil } ?? [:]
+			let filteredAttributes = extraAttributes.isEmpty ? nil : convertToOTLP(attributes: extraAttributes)
+			let timeUnixNano = convertToOTLP(time: span.endTime ?? ContinuousClock.now)
+
+			return OTLP.V1Exemplar(
+				filteredAttributes: filteredAttributes,
+				timeUnixNano: timeUnixNano,
+				asDouble: asDouble(exemplar.value),
+				asInt: asIntString(exemplar.value),
+				spanId: span.id,
+				traceId: span.traceId
+			)
+		}
 	}
 
 	func convertToOTLP(bucketCounts: [UInt64]) -> [String] {

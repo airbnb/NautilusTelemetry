@@ -35,4 +35,15 @@ struct ExampleReporterTests {
 		#expect(reporter.sampledSpans([span]).count == 0)
 	}
 
+	@Test("shouldSampleSpan drives exemplar attachment from the per-span decision")
+	func shouldSampleSpan_honorsOverride() {
+		let always = tracer.startSpan(name: "always")
+		always.sampleRate = 100.0
+		#expect(reporter.shouldSampleSpan(always))
+
+		let never = tracer.startSpan(name: "never")
+		never.sampleRate = 0.0
+		#expect(!reporter.shouldSampleSpan(never))
+	}
+
 }

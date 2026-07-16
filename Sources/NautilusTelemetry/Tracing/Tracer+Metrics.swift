@@ -45,7 +45,9 @@ extension Tracer {
 
 		span.addRetireCallback { [weak counter] span in
 			guard let counter else { return }
-			counter.add(1, attributes: Self.collectAttributes(span, spanAttributeKeys))
+			let attributes = Self.collectAttributes(span, spanAttributeKeys)
+			counter.add(1, attributes: attributes)
+			counter.addExemplar(span: span, value: 1, attributes: attributes)
 		}
 
 		return counter
@@ -82,7 +84,10 @@ extension Tracer {
 
 		span.addRetireCallback { [weak histogram] span in
 			guard let histogram, let elapsed = span.elapsed else { return }
-			histogram.record(Int(elapsed.asMilliseconds), attributes: Self.collectAttributes(span, spanAttributeKeys))
+			let value = Int(elapsed.asMilliseconds)
+			let attributes = Self.collectAttributes(span, spanAttributeKeys)
+			histogram.record(value, attributes: attributes)
+			histogram.addExemplar(span: span, value: value, attributes: attributes)
 		}
 
 		return histogram
