@@ -103,6 +103,7 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	public let name: String
 	public let traceId: TraceId
 	public let id: SpanId
+	public let parentId: SpanId?
 	public let isRoot: Bool
 
 	/// Allows overriding the default sample rate for this span and its children.
@@ -250,7 +251,6 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	// MARK: Internal
 
 	let kind: SpanKind
-	let parentId: SpanId?
 
 	/// Span references are converted  to `Link` to avoid cyclic references.
 	var links: [Link]
