@@ -7,6 +7,13 @@
 
 import Foundation
 
+// MARK: - ExemplarSamplingDecision
+
+/// Decides whether the exemplar associated with a given span should be attached to exported metrics.
+/// Reporters typically drive this from the current trace sampling decision, so that exemplars — which
+/// link a metric data point back to a trace — are only attached when that trace is sampled.
+public typealias ExemplarSamplingDecision = (Span) -> Bool
+
 // MARK: - Exporter
 
 /// Provides conversions to OTLP-JSON format
@@ -15,10 +22,19 @@ public struct Exporter {
 	// MARK: Lifecycle
 
 	/// Initialize the exporter with a time reference.
-	/// - Parameter timeReference: describes the computed offset to server time.
-	public init(timeReference: TimeReference, prettyPrint: Bool = false) {
+	/// - Parameters:
+	///   - timeReference: describes the computed offset to server time.
+	///   - prettyPrint: whether JSON output should be pretty printed. Defaults to `false`.
+	///   - exemplarSamplingDecision: decides, per span, whether its exemplar is attached to exported metrics.
+	///     Defaults to attaching every exemplar. Reporters should pass their current sampling decision here.
+	public init(
+		timeReference: TimeReference,
+		prettyPrint: Bool = false,
+		exemplarSamplingDecision: @escaping ExemplarSamplingDecision = { _ in true }
+	) {
 		self.timeReference = timeReference
 		self.prettyPrint = prettyPrint
+		self.exemplarSamplingDecision = exemplarSamplingDecision
 	}
 
 	// MARK: Internal
@@ -30,6 +46,9 @@ public struct Exporter {
 
 	/// Should the JSON output be pretty printed? Defaults to false.
 	let prettyPrint: Bool
+
+	/// Decides whether a given span's exemplar is attached to exported metrics.
+	let exemplarSamplingDecision: ExemplarSamplingDecision
 
 	/// Encodes JSON, with Data objects encoded as hex.
 	/// - Returns: JSON data.

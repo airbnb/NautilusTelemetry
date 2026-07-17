@@ -26,6 +26,11 @@ public protocol Instrument: AnyObject {
 
 	var aggregationTemporality: AggregationTemporality { get }
 
+	/// A list of spans associated with the measurement that may be reported as exemplars when the trace is sampled.
+	/// Exemplars are recorded with their measurement value via the concrete instrument's `addExemplar(span:value:attributes:)`,
+	/// which cannot be expressed on this non-generic protocol.
+	var exemplarSpans: [Span] { get }
+
 	/// In a thread safe manner:
 	///  - Invokes callback, if observable
 	///  - Captures a copy of the instrument at this moment in time

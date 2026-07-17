@@ -67,6 +67,111 @@ struct MetricExporterTests {
 	}
 
 	@Test
+	func counterExemplars() throws {
+		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
+
+		let span = InstrumentationSystem.tracer.startSpan(name: "exemplarSpan")
+		span.addAttribute("http.target", "/checkout")
+		span.end()
+
+		let attributes: TelemetryAttributes = ["route": "home"]
+		counter.add(1, attributes: attributes)
+		counter.addExemplar(span: span, value: 1, attributes: attributes)
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		let metric = counter.exportOTLP(exporter)
+		let json = try exporter.encodeJSON(metric)
+
+		// spanId/traceId/filteredAttributes vary per run, so redact them along with the timestamps.
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction + ["attributes", "filteredAttributes", "spanId", "traceId"]
+		))
+
+		let expectedOutput =
+			#"{"description":"Counts accumulated bytes","name":"ByteCounter","sum":{"aggregationTemporality":1,"dataPoints":[{"asDouble":1,"asInt":"1","attributes":"***","exemplars":[{"asDouble":1,"asInt":"1","filteredAttributes":"***","spanId":"***","timeUnixNano":"***","traceId":"***"}],"startTimeUnixNano":"***","timeUnixNano":"***"}],"isMonotonic":true},"unit":"bytes"}"#
+
+		#expect(normalizedJsonString == expectedOutput)
+	}
+
+	@Test
+	func exemplarSnapshotAndReset() throws {
+		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
+
+		let span = InstrumentationSystem.tracer.startSpan(name: "exemplarSpan")
+		span.end()
+
+		counter.add(1)
+		counter.addExemplar(span: span, value: 1)
+
+		#expect(counter.exemplarSpans.count == 1)
+
+		let snapshot = try #require(counter.snapshotAndReset() as? Counter<Int>)
+
+		// Exemplars move to the snapshot; the live instrument is reset.
+		#expect(snapshot.exemplarSpans.map(\.id) == [span.id])
+		#expect(counter.exemplarSpans.isEmpty)
+	}
+
+	@Test
+	func exemplarsMatchDataPointAttributes() throws {
+		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
+
+		let homeSpan = InstrumentationSystem.tracer.startSpan(name: "home")
+		homeSpan.end()
+		let cartSpan = InstrumentationSystem.tracer.startSpan(name: "cart")
+		cartSpan.end()
+
+		let home: TelemetryAttributes = ["route": "home"]
+		let cart: TelemetryAttributes = ["route": "cart"]
+
+		counter.addExemplar(span: homeSpan, value: 1, attributes: home)
+		counter.addExemplar(span: cartSpan, value: 1, attributes: cart)
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		// Exemplars only attach to the data point sharing their aggregation key.
+		let homeExemplars = try #require(exporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: home))
+		#expect(homeExemplars.map(\.spanId) == [homeSpan.id])
+
+		let cartExemplars = try #require(exporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: cart))
+		#expect(cartExemplars.map(\.spanId) == [cartSpan.id])
+
+		#expect(exporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: ["route": "search"]) == nil)
+	}
+
+	@Test
+	func exemplarSamplingDecision() throws {
+		let counter = Counter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
+
+		let sampledSpan = InstrumentationSystem.tracer.startSpan(name: "sampled")
+		sampledSpan.end()
+		let unsampledSpan = InstrumentationSystem.tracer.startSpan(name: "unsampled")
+		unsampledSpan.end()
+
+		counter.addExemplar(span: sampledSpan, value: 1)
+		counter.addExemplar(span: unsampledSpan, value: 1)
+
+		let timeReference = TimeReference(serverOffset: 0)
+
+		// Decision drops everything: no exemplars are attached.
+		let noneExporter = Exporter(timeReference: timeReference, exemplarSamplingDecision: { _ in false })
+		#expect(noneExporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: [:]) == nil)
+
+		// Decision keeps only the sampled span.
+		let selectiveExporter = Exporter(timeReference: timeReference, exemplarSamplingDecision: { $0.id == sampledSpan.id })
+		let attached = try #require(selectiveExporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: [:]))
+		#expect(attached.map(\.spanId) == [sampledSpan.id])
+
+		// Default decision attaches every exemplar.
+		let defaultExporter = Exporter(timeReference: timeReference)
+		#expect(defaultExporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: [:])?.count == 2)
+	}
+
+	@Test
 	func upDownCounter() throws {
 		let counter = UpDownCounter<Int>(name: "ByteCounter", unit: unit, description: "Counts accumulated bytes")
 

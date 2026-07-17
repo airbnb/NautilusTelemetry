@@ -35,7 +35,7 @@ struct TracerMetricsTests {
 	}
 
 	@Test
-	func reportAsDurationHistogramMetricCopiesSelectedSpanAttributes() {
+	func reportAsDurationHistogramMetricCopiesSelectedSpanAttributes() throws {
 		let span = tracer.startSpan(name: "histogramAttrSpan")
 		span.addAttribute("route", "/users/:id")
 		span.addAttribute("excluded", "nope")
@@ -49,6 +49,7 @@ struct TracerMetricsTests {
 		span.addAttribute("method", "GET")
 		span.adjust(start: .zero, end: .milliseconds(42))
 		span.end()
+		let elapsed = try #require(span.elapsed)
 
 		let expected: TelemetryAttributes = [
 			"route": "/users/:id",
@@ -56,7 +57,44 @@ struct TracerMetricsTests {
 		]
 		let buckets = histogram.values.values[expected]
 		#expect(buckets?.count == 1)
-		#expect(buckets?.sum == 42)
+		#expect(buckets?.sum == Int(elapsed.asMilliseconds))
+	}
+
+	@Test
+	func reportAsDurationHistogramMetricHonorsUnit() throws {
+		// Seconds: inject a ~2s duration so the recorded value distinguishes seconds from finer units, then
+		// assert against the span's own frozen elapsed so the real wall-clock component can't cause flakiness.
+		let secondsSpan = tracer.startSpan(name: "secondsDurationSpan")
+		let secondsHistogram = tracer.reportAsDurationHistogramMetric(span: secondsSpan, unit: .seconds)
+		secondsSpan.adjust(start: .zero, end: .seconds(2))
+		secondsSpan.end()
+		let secondsElapsed = try #require(secondsSpan.elapsed)
+
+		#expect(secondsHistogram.unit?.symbol == "s")
+		#expect(secondsHistogram.values.values[[:]]?.sum == Int(secondsElapsed.asSeconds))
+
+		// Microseconds: the value is recorded from span.elapsed during end(), so assert the histogram
+		// captured the span's actual elapsed converted to microseconds. Reading elapsed after end() yields
+		// the same frozen value the retire callback used, so this is deterministic regardless of wall-clock timing.
+		let microSpan = tracer.startSpan(name: "microDurationSpan")
+		let microHistogram = tracer.reportAsDurationHistogramMetric(span: microSpan, unit: .microseconds)
+		microSpan.end()
+		let microElapsed = try #require(microSpan.elapsed)
+
+		#expect(microHistogram.unit?.symbol == "µs")
+		#expect(microHistogram.values.values[[:]]?.sum == Int(microElapsed.asMicroseconds))
+	}
+
+	@Test
+	func reportAsDurationHistogramMetricDefaultsToMilliseconds() throws {
+		let span = tracer.startSpan(name: "defaultUnitDurationSpan")
+		let histogram = tracer.reportAsDurationHistogramMetric(span: span)
+		span.adjust(start: .zero, end: .milliseconds(42))
+		span.end()
+		let elapsed = try #require(span.elapsed)
+
+		#expect(histogram.unit?.symbol == "ms")
+		#expect(histogram.values.values[[:]]?.sum == Int(elapsed.asMilliseconds))
 	}
 
 	@Test

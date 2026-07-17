@@ -123,7 +123,7 @@ final class FlushTimerTests: XCTestCase {
 
 		// Drain any handler invocation already in flight when we suspended, so the
 		// snapshot below reflects a quiesced timer (the queue is serial).
-		NautilusTelemetry.queue.sync {}
+		NautilusTelemetry.queue.sync { }
 		let countAtSuspend = state.withLock { $0.handlerCallCount }
 		Thread.sleep(forTimeInterval: 0.3)
 		XCTAssertEqual(state.withLock { $0.handlerCallCount }, countAtSuspend, "suspended timer must not fire")
