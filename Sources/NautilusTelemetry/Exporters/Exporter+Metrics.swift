@@ -363,7 +363,7 @@ extension Exporter {
 	/// - Returns: the matching exemplars, or `nil` if there are none.
 	func convertToOTLP<T>(exemplars: [Exemplar<T>], metricAttributes: TelemetryAttributes) -> [OTLP.V1Exemplar]? {
 		let matching = exemplars.filter { exemplarSamplingDecision($0.span) && $0.attributes == metricAttributes }
-		guard matching.count > 0 else { return nil }
+		guard !matching.isEmpty else { return nil }
 
 		return matching.map { exemplar in
 			let span = exemplar.span
