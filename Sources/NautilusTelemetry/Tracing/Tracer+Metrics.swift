@@ -14,6 +14,35 @@ extension Tracer {
 		case raw
 	}
 
+	/// The unit a duration histogram records in, exposed both as the metric's UCUM `unit` symbol and the
+	/// conversion applied to each recorded span duration.
+	public enum DurationUnit {
+		case seconds
+		case milliseconds
+		case microseconds
+		case nanoseconds
+
+		/// UCUM unit symbol reported as the metric's `unit`.
+		var symbol: String {
+			switch self {
+			case .seconds: "s"
+			case .milliseconds: "ms"
+			case .microseconds: "µs"
+			case .nanoseconds: "ns"
+			}
+		}
+
+		/// Converts a duration to a whole number of this unit, rounded half-away-from-zero.
+		func measurement(from duration: Duration) -> Int {
+			switch self {
+			case .seconds: Int(duration.asSeconds)
+			case .milliseconds: Int(duration.asMilliseconds)
+			case .microseconds: Int(duration.asMicroseconds)
+			case .nanoseconds: Int(duration.asNanoseconds)
+			}
+		}
+	}
+
 	/// Report span counts as an OTel Counter metric
 	/// The counter is strongly referenced through Meter's register, and a cached copy will be returned if the derived metric name matches.
 	/// Callers need only hold a reference to the counter if they need to later unregister.
@@ -53,11 +82,12 @@ extension Tracer {
 		return counter
 	}
 
-	/// Report span durations as an OTel ExponentialHistogram metric
+	/// Report span durations as an OTel ExponentialHistogram metric.
 	/// The histogram is strongly referenced through Meter's register, and a cached copy will be returned if the derived metric name matches.
 	/// Callers need only hold a reference to the histogram if they need to later unregister.
 	/// - Parameters:
 	///   - span: the span to measure. A metric name will be derived from the span name.
+	///   - unit: the time unit durations are recorded in, reported as the metric's `unit`. Defaults to milliseconds. A given metric name should always use the same unit, since the unit is fixed when the histogram is first created.
 	///   - namingConvention: determines how to derive the metric name
 	///   - fileID: fileID where the span was created, for module name determination.
 	///   - spanAttributeKeys: A set of attribute keys to collect from the span when it is ended. This set should be minimal to avoid metric cardinality explosion.
@@ -65,6 +95,7 @@ extension Tracer {
 	@discardableResult
 	public func reportAsDurationHistogramMetric(
 		span: Span,
+		unit: DurationUnit = .milliseconds,
 		namingConvention: MetricNamingConvention = .modulePrefix,
 		fileID: String = #fileID,
 		spanAttributeKeys: Set<String>? = nil
@@ -75,7 +106,7 @@ extension Tracer {
 			if let histogram = cachedDurationHistograms[name]?.value { return histogram }
 			let histogram: ExponentialHistogram<Int> = InstrumentationSystem.meter.createExponentialHistogram(
 				name: name,
-				unit: Unit(symbol: "ms"),
+				unit: Unit(symbol: unit.symbol),
 				description: "Created from span"
 			)
 			cachedDurationHistograms[name] = Weak(histogram)
@@ -84,7 +115,7 @@ extension Tracer {
 
 		span.addRetireCallback { [weak histogram] span in
 			guard let histogram, let elapsed = span.elapsed else { return }
-			let value = Int(elapsed.asMilliseconds)
+			let value = unit.measurement(from: elapsed)
 			let attributes = Self.collectAttributes(span, spanAttributeKeys)
 			histogram.record(value, attributes: attributes)
 			histogram.addExemplar(span: span, value: value, attributes: attributes)

@@ -75,7 +75,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: convertToOTLP(exemplars: exemplars, key: key),
+				exemplars: convertToOTLP(exemplars: exemplars, metricAttributes: key),
 				flags: nil
 			) // no flags support yet
 
@@ -124,7 +124,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: convertToOTLP(exemplars: exemplars, key: key),
+				exemplars: convertToOTLP(exemplars: exemplars, metricAttributes: key),
 				flags: nil // no flags support yet
 			)
 
@@ -173,7 +173,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: convertToOTLP(exemplars: exemplars, key: key),
+				exemplars: convertToOTLP(exemplars: exemplars, metricAttributes: key),
 				flags: nil
 			) // no flags support yet
 
@@ -222,7 +222,7 @@ extension Exporter {
 				timeUnixNano: timeUnixNano,
 				asDouble: doubleValue,
 				asInt: intValueString,
-				exemplars: convertToOTLP(exemplars: exemplars, key: key),
+				exemplars: convertToOTLP(exemplars: exemplars, metricAttributes: key),
 				flags: nil
 			) // no flags support yet
 
@@ -268,7 +268,7 @@ extension Exporter {
 				sum: sum,
 				bucketCounts: bucketCounts,
 				explicitBounds: convertToOTLP(explicitBounds: value.explicitBounds),
-				exemplars: convertToOTLP(exemplars: exemplars, key: key),
+				exemplars: convertToOTLP(exemplars: exemplars, metricAttributes: key),
 				flags: nil
 			)
 			dataPoints.append(dataPoint)
@@ -328,7 +328,7 @@ extension Exporter {
 				positive: mapped.positive,
 				negative: mapped.negative,
 				flags: nil,
-				exemplars: convertToOTLP(exemplars: exemplars, key: key),
+				exemplars: convertToOTLP(exemplars: exemplars, metricAttributes: key),
 				min: value.range.flatMap { asDouble($0.lowerBound) },
 				max: value.range.flatMap { asDouble($0.upperBound) },
 				zeroThreshold: nil
@@ -354,21 +354,21 @@ extension Exporter {
 		)
 	}
 
-	/// Converts the exemplars recorded under a given data point's aggregation key to OTLP.
+	/// Converts the exemplars recorded under a given data point's set of attributes to OTLP.
 	/// Exemplars whose span is rejected by `exemplarSamplingDecision` are dropped, so a reporter can
 	/// attach exemplars only when the linked trace is sampled.
 	/// - Parameters:
 	///   - exemplars: all exemplars recorded on the instrument.
-	///   - key: the aggregation attributes identifying the data point.
+	///   - metricAttributes: the attributes associated with the metric.
 	/// - Returns: the matching exemplars, or `nil` if there are none.
-	func convertToOTLP<T>(exemplars: [Exemplar<T>], key: TelemetryAttributes) -> [OTLP.V1Exemplar]? {
-		let matching = exemplars.filter { $0.attributes == key && exemplarSamplingDecision($0.span) }
+	func convertToOTLP<T>(exemplars: [Exemplar<T>], metricAttributes: TelemetryAttributes) -> [OTLP.V1Exemplar]? {
+		let matching = exemplars.filter { exemplarSamplingDecision($0.span) && $0.attributes == metricAttributes }
 		guard matching.count > 0 else { return nil }
 
 		return matching.map { exemplar in
 			let span = exemplar.span
 			// filtered_attributes are those recorded on the span but not already part of the data point's aggregation key.
-			let extraAttributes = span.attributes?.filter { key[$0.key] == nil } ?? [:]
+			let extraAttributes = span.attributes?.filter { metricAttributes[$0.key] == nil } ?? [:]
 			let filteredAttributes = extraAttributes.isEmpty ? nil : convertToOTLP(attributes: extraAttributes)
 			let timeUnixNano = convertToOTLP(time: span.endTime ?? ContinuousClock.now)
 

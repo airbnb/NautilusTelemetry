@@ -134,13 +134,13 @@ struct MetricExporterTests {
 		let exporter = Exporter(timeReference: timeReference)
 
 		// Exemplars only attach to the data point sharing their aggregation key.
-		let homeExemplars = try #require(exporter.convertToOTLP(exemplars: counter.exemplars, key: home))
+		let homeExemplars = try #require(exporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: home))
 		#expect(homeExemplars.map(\.spanId) == [homeSpan.id])
 
-		let cartExemplars = try #require(exporter.convertToOTLP(exemplars: counter.exemplars, key: cart))
+		let cartExemplars = try #require(exporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: cart))
 		#expect(cartExemplars.map(\.spanId) == [cartSpan.id])
 
-		#expect(exporter.convertToOTLP(exemplars: counter.exemplars, key: ["route": "search"]) == nil)
+		#expect(exporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: ["route": "search"]) == nil)
 	}
 
 	@Test
@@ -159,16 +159,16 @@ struct MetricExporterTests {
 
 		// Decision drops everything: no exemplars are attached.
 		let noneExporter = Exporter(timeReference: timeReference, exemplarSamplingDecision: { _ in false })
-		#expect(noneExporter.convertToOTLP(exemplars: counter.exemplars, key: [:]) == nil)
+		#expect(noneExporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: [:]) == nil)
 
 		// Decision keeps only the sampled span.
 		let selectiveExporter = Exporter(timeReference: timeReference, exemplarSamplingDecision: { $0.id == sampledSpan.id })
-		let attached = try #require(selectiveExporter.convertToOTLP(exemplars: counter.exemplars, key: [:]))
+		let attached = try #require(selectiveExporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: [:]))
 		#expect(attached.map(\.spanId) == [sampledSpan.id])
 
 		// Default decision attaches every exemplar.
 		let defaultExporter = Exporter(timeReference: timeReference)
-		#expect(defaultExporter.convertToOTLP(exemplars: counter.exemplars, key: [:])?.count == 2)
+		#expect(defaultExporter.convertToOTLP(exemplars: counter.exemplars, metricAttributes: [:])?.count == 2)
 	}
 
 	@Test

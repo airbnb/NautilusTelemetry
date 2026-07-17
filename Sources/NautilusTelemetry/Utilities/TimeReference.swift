@@ -56,26 +56,37 @@ extension Duration {
 	/// Duration as a whole number of nanoseconds, rounded half-away-from-zero.
 	/// Will overflow above ≈292 year duration.
 	var asNanoseconds: Int64 {
-		let attosecondsPerNs: Int128 = 1_000_000_000 // 10^9
-		let halfNs: Int128 = 500_000_000 // 5 × 10^8
-		let attos = attoseconds
-		let subNs = attos % attosecondsPerNs
-		let ns = attos / attosecondsPerNs + (subNs >= halfNs ? 1 : subNs <= -halfNs ? -1 : 0)
-		return Int64(ns)
+		wholeUnits(attosecondsPerUnit: 1_000_000_000) // 10^9
+	}
+
+	/// Duration as a whole number of microseconds, rounded half-away-from-zero.
+	/// Will overflow above ≈292 thousand year duration.
+	var asMicroseconds: Int64 {
+		wholeUnits(attosecondsPerUnit: 1_000_000_000_000) // 10^12
 	}
 
 	/// Duration as a whole number of milliseconds, rounded half-away-from-zero.
-	///
-	/// Uses `Duration.attoseconds` (Int128) directly, avoiding any precision loss from
-	/// intermediate truncation. The sub-millisecond remainder shares the sign of the
-	/// duration, so the half-ms threshold check needs no sign adjustment.
 	/// Will overflow above 292 million years.
 	var asMilliseconds: Int64 {
-		let attosecondsPerMs: Int128 = 1_000_000_000_000_000 // 10^15
-		let halfMs: Int128 = 500_000_000_000_000 // 5 × 10^14
+		wholeUnits(attosecondsPerUnit: 1_000_000_000_000_000) // 10^15
+	}
+
+	/// Duration as a whole number of seconds, rounded half-away-from-zero.
+	var asSeconds: Int64 {
+		wholeUnits(attosecondsPerUnit: 1_000_000_000_000_000_000) // 10^18
+	}
+
+	/// Converts the duration to a whole number of a unit, rounded half-away-from-zero.
+	///
+	/// Uses `Duration.attoseconds` (Int128) directly, avoiding any precision loss from intermediate
+	/// truncation. The sub-unit remainder shares the sign of the duration, so the half-unit threshold
+	/// check needs no sign adjustment.
+	/// - Parameter attosecondsPerUnit: attoseconds in one unit (e.g. `10^15` for a millisecond).
+	private func wholeUnits(attosecondsPerUnit: Int128) -> Int64 {
+		let half = attosecondsPerUnit / 2
 		let attos = attoseconds
-		let subMs = attos % attosecondsPerMs
-		let ms = attos / attosecondsPerMs + (subMs >= halfMs ? 1 : subMs <= -halfMs ? -1 : 0)
-		return Int64(ms)
+		let remainder = attos % attosecondsPerUnit
+		let whole = attos / attosecondsPerUnit + (remainder >= half ? 1 : remainder <= -half ? -1 : 0)
+		return Int64(whole)
 	}
 }

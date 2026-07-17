@@ -75,6 +75,36 @@ struct TimeReferenceTests {
 		#expect(Duration(secondsComponent: -1, attosecondsComponent: -500_000_000_000_000).asMilliseconds == -1001)
 	}
 
+	@Test("Microsecond rounding")
+	func microsecondsRounding() {
+		#expect(Duration.microseconds(0).asMicroseconds == 0)
+		#expect(Duration.microseconds(5).asMicroseconds == 5)
+		#expect(Duration.microseconds(-5).asMicroseconds == -5)
+
+		// Just below the half-us threshold (499_999_999_999 as) — truncates.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 499_999_999_999).asMicroseconds == 1_000_000)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -499_999_999_999).asMicroseconds == -1_000_000)
+
+		// Exactly at the half-us threshold (500_000_000_000 as) — rounds away from zero.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 500_000_000_000).asMicroseconds == 1_000_001)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -500_000_000_000).asMicroseconds == -1_000_001)
+	}
+
+	@Test("Second rounding")
+	func secondsRounding() {
+		#expect(Duration.seconds(0).asSeconds == 0)
+		#expect(Duration.seconds(5).asSeconds == 5)
+		#expect(Duration.seconds(-5).asSeconds == -5)
+
+		// Just below the half-second threshold — truncates toward zero.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 499_999_999_999_999_999).asSeconds == 1)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -499_999_999_999_999_999).asSeconds == -1)
+
+		// Exactly at the half-second threshold — rounds away from zero.
+		#expect(Duration(secondsComponent: 1, attosecondsComponent: 500_000_000_000_000_000).asSeconds == 2)
+		#expect(Duration(secondsComponent: -1, attosecondsComponent: -500_000_000_000_000_000).asSeconds == -2)
+	}
+
 	#if os(macOS)
 	@Test("Infinite and NaN")
 	func infiniteAndNan() async {
