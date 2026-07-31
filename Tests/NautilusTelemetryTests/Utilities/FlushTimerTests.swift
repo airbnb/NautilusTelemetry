@@ -86,6 +86,18 @@ final class FlushTimerTests: XCTestCase {
 		XCTAssertNotNil(timer) // keep timer alive
 	}
 
+	/// libdispatch traps on the release of a suspended source ("BUG IN CLIENT OF LIBDISPATCH: Release of a
+	/// suspended object"), so `deinit` has to balance any outstanding `suspend()`. Without that, releasing
+	/// the timer here aborts the whole test process rather than failing this test.
+	func testDeallocatingWhileSuspendedDoesNotTrap() throws {
+		var timer: FlushTimer? = FlushTimer(flushInterval: 0.1, repeating: true) { }
+		timer?.suspend()
+		XCTAssertTrue(try XCTUnwrap(timer).suspended)
+
+		timer = nil
+		XCTAssertNil(timer)
+	}
+
 	func testFlushTimerSuspendAndResume() throws {
 		let firstFire = XCTestExpectation(description: "Timer handler called before suspend")
 		let resumedFire = XCTestExpectation(description: "Timer handler called after resume")

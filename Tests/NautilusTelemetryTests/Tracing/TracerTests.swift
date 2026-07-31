@@ -120,6 +120,22 @@ struct TracerTests {
 		#expect(originalRoot !== newRoot)
 	}
 
+	/// libdispatch traps on the release of a suspended dispatch source, so releasing a flushed tracer used to
+	/// abort the process from `FlushTimer.deinit`. Flushing with no active root is the case that leaves a
+	/// timer suspended, since no span retires to push the deadline ahead.
+	@Test
+	func tracerDeallocatesAfterFlushTrace() {
+		weak var weakTracer: Tracer?
+
+		do {
+			let tracer = Tracer()
+			weakTracer = tracer
+			tracer.flushTrace()
+		}
+
+		#expect(weakTracer == nil)
+	}
+
 	@Test
 	func tracerChildSpanIsNotRoot() {
 		let tracer = Tracer()

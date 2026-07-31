@@ -20,7 +20,15 @@ class FlushTimer {
 	}
 
 	deinit {
+		// Cancel first so resuming can't deliver the event handler, then balance any outstanding
+		// `suspend()`: libdispatch traps on the release of a source that is still suspended.
 		flushTimer.cancel()
+		_suspended.withLock { suspended in
+			if suspended {
+				flushTimer.resume()
+				suspended = false
+			}
+		}
 	}
 
 	// MARK: Internal
