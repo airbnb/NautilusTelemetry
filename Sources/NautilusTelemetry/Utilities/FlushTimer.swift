@@ -50,6 +50,8 @@ class FlushTimer {
 		}
 	}
 
+	/// Stops the timer firing until `setupTimer()` re-arms it, which is the only counterpart —
+	/// suspensions must be balanced, and `deinit` clears an outstanding one before releasing the source.
 	func suspend() {
 		_suspended.withLock { suspended in
 			if !suspended {

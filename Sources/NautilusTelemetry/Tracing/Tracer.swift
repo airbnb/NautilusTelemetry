@@ -66,6 +66,8 @@ public final class Tracer {
 
 	/// Flushes the root span, and cycles the trace id
 	public func flushTrace() {
+		// Held off for the duration of the flush so the idle timeout can't fire against work we're
+		// already reporting.
 		idleTimer?.suspend()
 
 		let priorRoot = lock.withLock { _ -> Span? in
@@ -77,6 +79,11 @@ public final class Tracer {
 
 		priorRoot?.end() // this implicitly retires if there is a current root
 		flushRetiredSpans()
+
+		// Restart the timeout from the end of the flush. `retire` is otherwise the only thing that re-arms
+		// it, so flushing with no active root — nothing to retire — would leave the timeout suspended until
+		// the next span happened to end.
+		idleTimer?.setupTimer()
 	}
 
 	/// Creates a new subtrace span, with a link to a parent span.
