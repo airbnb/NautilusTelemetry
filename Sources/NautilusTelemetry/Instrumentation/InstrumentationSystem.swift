@@ -29,18 +29,9 @@ public enum InstrumentationSystem {
 
 			meter.flushInterval = flushInterval
 		}
-
-		#if DEBUG && os(iOS)
-		// not yet ready for release
-		metricKitInstrument.start()
-		#endif
 	}
 
 	// MARK: Internal
-
-	#if os(iOS)
-	static var metricKitInstrument = MetricKitInstrument()
-	#endif
 
 	static func resetBootstrapForTests() {
 		reporter = nil
