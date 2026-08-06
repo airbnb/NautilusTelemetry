@@ -22,6 +22,8 @@ extension Tracer {
 		case microseconds
 		case nanoseconds
 
+		// MARK: Internal
+
 		/// UCUM unit symbol reported as the metric's `unit`.
 		var symbol: String {
 			switch self {
