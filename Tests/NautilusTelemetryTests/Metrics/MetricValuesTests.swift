@@ -364,4 +364,25 @@ final class MetricValuesTests: XCTestCase {
 		// Both should accumulate to the same entry
 		XCTAssertEqual(metrics.valueFor(attributes: [:]), 150)
 	}
+
+	// MARK: - isFiniteMetricValue Tests
+
+	func testIsFiniteMetricValue() {
+		XCTAssertTrue(isFiniteMetricValue(1.5))
+		XCTAssertTrue(isFiniteMetricValue(Double.greatestFiniteMagnitude))
+		XCTAssertTrue(isFiniteMetricValue(Float(-2.5)))
+
+		XCTAssertFalse(isFiniteMetricValue(Double.nan))
+		XCTAssertFalse(isFiniteMetricValue(Double.infinity))
+		XCTAssertFalse(isFiniteMetricValue(-Double.infinity))
+		XCTAssertFalse(isFiniteMetricValue(Float.nan))
+		XCTAssertFalse(isFiniteMetricValue(Float.infinity))
+	}
+
+	func testIsFiniteMetricValueForIntegers() {
+		// Integer types have no non-finite representation.
+		XCTAssertTrue(isFiniteMetricValue(0))
+		XCTAssertTrue(isFiniteMetricValue(Int.min))
+		XCTAssertTrue(isFiniteMetricValue(Int.max))
+	}
 }

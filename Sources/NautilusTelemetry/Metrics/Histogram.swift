@@ -43,6 +43,13 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	}
 
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
+		// NaN compares false against every bound, so it would otherwise land in the overflow bucket
+		// and leave `sum` unusable.
+		guard isFiniteMetricValue(number) else {
+			assert(false, "histograms can only record finite values")
+			return
+		}
+
 		if number < 0 {
 			assert(false, "histograms can only be increased")
 			return

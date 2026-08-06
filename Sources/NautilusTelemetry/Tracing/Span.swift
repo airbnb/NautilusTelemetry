@@ -235,6 +235,8 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 	}
 
 	/// Adjust start and/or end timestamps. This can be used for cases where the time is inferred from other sources, such as `ProcessDetails.timeSinceStart`.
+	/// The adjusted end must not precede the adjusted start: a negative duration is not measurable, and
+	/// consumers such as the duration histogram drop the span rather than reporting it.
 	/// - Parameters:
 	///   - start: duration to add to startTime. May be negative.
 	///   - end: duration to add to endTime. May be negative. If the span is not yet ended, the adjustment will be applied once ended.
@@ -242,7 +244,11 @@ public final class Span: TelemetryAttributesContainer, Identifiable {
 		startTime = startTime.advanced(by: start)
 
 		if let endTime {
-			self.endTime = endTime.advanced(by: end)
+			let adjustedEndTime = endTime.advanced(by: end)
+			// Only checkable once the span has ended — otherwise the end time isn't known yet, and the
+			// negative duration only materializes in `end()`.
+			assert(adjustedEndTime >= startTime, "adjust produced a negative span duration")
+			self.endTime = adjustedEndTime
 		} else {
 			endTimeAdjustment = end
 		}
