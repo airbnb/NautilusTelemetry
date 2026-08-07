@@ -150,6 +150,57 @@ struct ExponentialHistogramTests {
 		#expect(mapping.negative.bucketCounts == nil)
 	}
 
+	// MARK: - zeroCount
+
+	@Test
+	func zeroCountCollectsAllZeros() {
+		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [0.0, 0.0, 0.0], maxBuckets: 160)
+
+		#expect(mapping.zeroCount == 3)
+		#expect(mapping.positive.bucketCounts == nil)
+		#expect(mapping.negative.bucketCounts == nil)
+	}
+
+	@Test
+	func zeroCountIncludesNegativeZero() {
+		// -0.0 == 0.0, so it belongs in the zero bucket rather than the negative range.
+		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [-0.0, 1.0], maxBuckets: 160)
+
+		#expect(mapping.zeroCount == 1)
+		#expect(mapping.negative.bucketCounts == nil)
+	}
+
+	@Test
+	func zeroCountIncludesNonFiniteValues() {
+		let values: [Double] = [.nan, .infinity, -.infinity, 0.0, 5.0]
+		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: values, maxBuckets: 160)
+
+		#expect(mapping.zeroCount == 4)
+		#expect(mapping.positive.bucketCounts?.reduce(0, +) == 1)
+		#expect(mapping.negative.bucketCounts == nil)
+	}
+
+	@Test
+	func exportReportsZeroCountForDurationsRoundedToZero() throws {
+		// The duration path records rounded milliseconds, so sub-millisecond spans land in the zero bucket.
+		let histogram = ExponentialHistogram<Int>(name: "Durations", unit: Unit(symbol: "ms"), description: nil)
+		for value in [0, 0, 0, 12, 250] {
+			histogram.record(value)
+		}
+
+		let exporter = Exporter(timeReference: TimeReference(serverOffset: 0))
+		let snapshot = histogram.snapshotAndReset() as! ExponentialHistogram<Int>
+		let dp = try #require(exporter.exportOTLP(histogram: snapshot).exponentialHistogram?.dataPoints?.first)
+
+		#expect(dp.count == 5)
+		#expect(dp.zeroCount == 3)
+		#expect(dp.min == 0)
+		#expect(dp.max == 250)
+		#expect(dp.positive?.bucketCounts?.reduce(0, +) == 2)
+		// zeroThreshold is left unset (0), meaning the zero bucket holds values rounded to zero.
+		#expect(dp.zeroThreshold == nil)
+	}
+
 	@Test
 	func mapSingleValueMaxScale() {
 		let mapping = ExponentialHistogramUtils.mapToExponentialBuckets(values: [42.0], maxBuckets: 160)

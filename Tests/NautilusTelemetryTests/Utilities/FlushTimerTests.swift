@@ -48,21 +48,35 @@ final class FlushTimerTests: XCTestCase {
 	}
 
 	func testFlushTimerIntervalChange() throws {
-		let expectation1 = XCTestExpectation(description: "First timer interval")
-		let expectation2 = XCTestExpectation(description: "Second timer interval")
-		var handlerCallCount = 0
+		let firstFire = XCTestExpectation(description: "Timer handler called before the interval change")
+		let firedAfterChange = XCTestExpectation(description: "Timer handler called after the interval change")
+		// The re-armed timer keeps firing, so allow the post-change expectation to be met more than once.
+		firedAfterChange.assertForOverFulfill = false
+
+		// The handler runs on a background queue, so guard the shared state against the test thread.
+		// `changeBaseline` is captured just after the interval change; fires past it prove the timer re-armed.
+		struct State {
+			var handlerCallCount = 0
+			var changeBaseline = Int.max
+		}
+		let state = Mutex(State())
 
 		let timer = FlushTimer(flushInterval: 0.1, repeating: true) {
-			handlerCallCount += 1
-			if handlerCallCount == 1 {
-				expectation1.fulfill()
-			} else if handlerCallCount >= 2 {
-				expectation2.fulfill()
+			state.withLock { state in
+				state.handlerCallCount += 1
+				if state.handlerCallCount == 1 {
+					firstFire.fulfill()
+				}
+				if state.handlerCallCount > state.changeBaseline {
+					firedAfterChange.fulfill()
+				}
 			}
 		}
 
-		wait(for: [expectation1], timeout: timeout)
-		XCTAssertEqual(handlerCallCount, 1)
+		// The timer repeats, so it may fire again before the test thread resumes. Assert that it fired at
+		// all rather than an exact count.
+		wait(for: [firstFire], timeout: timeout)
+		XCTAssertGreaterThanOrEqual(state.withLock { $0.handlerCallCount }, 1)
 
 		// Check minimum enforced
 		let tooSmallFlushInterval = 0.05
@@ -70,8 +84,12 @@ final class FlushTimerTests: XCTestCase {
 		timer.flushInterval = tooSmallFlushInterval
 		XCTAssertEqual(timer.flushInterval, timer.minimumFlushInterval)
 
-		wait(for: [expectation2], timeout: 1.0)
-		XCTAssertGreaterThanOrEqual(handlerCallCount, 2)
+		// Setting the interval re-schedules from now, so drain any handler still queued from the old
+		// schedule (the queue is serial) before taking the baseline. Fires counted past it are the new one's.
+		NautilusTelemetry.queue.sync { }
+		state.withLock { $0.changeBaseline = $0.handlerCallCount }
+
+		wait(for: [firedAfterChange], timeout: timeout)
 	}
 
 	func testFlushTimerSetupCalledOnInit() throws {
@@ -84,6 +102,18 @@ final class FlushTimerTests: XCTestCase {
 		wait(for: [expectation], timeout: timeout)
 
 		XCTAssertNotNil(timer) // keep timer alive
+	}
+
+	/// libdispatch traps on the release of a suspended source ("BUG IN CLIENT OF LIBDISPATCH: Release of a
+	/// suspended object"), so `deinit` has to balance any outstanding `suspend()`. Without that, releasing
+	/// the timer here aborts the whole test process rather than failing this test.
+	func testDeallocatingWhileSuspendedDoesNotTrap() throws {
+		var timer: FlushTimer? = FlushTimer(flushInterval: 0.1, repeating: true) { }
+		timer?.suspend()
+		XCTAssertTrue(try XCTUnwrap(timer).suspended)
+
+		timer = nil
+		XCTAssertNil(timer)
 	}
 
 	func testFlushTimerSuspendAndResume() throws {

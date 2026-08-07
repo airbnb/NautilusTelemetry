@@ -120,6 +120,39 @@ struct TracerTests {
 		#expect(originalRoot !== newRoot)
 	}
 
+	/// `flushTrace` holds off the idle timeout while it reports, then has to re-arm it: `retire` is otherwise
+	/// the only thing that resumes the timer, so flushing with nothing to retire left the timeout down until
+	/// some later span happened to end.
+	@Test
+	func flushTraceRearmsIdleTimer() {
+		let tracer = Tracer()
+
+		// No root was accessed, so this flush retires no spans.
+		tracer.flushTrace()
+		#expect(tracer.idleTimer?.suspended == false)
+
+		// With a root, ending it during the flush re-arms the timer as well.
+		_ = tracer.root
+		tracer.flushTrace()
+		#expect(tracer.idleTimer?.suspended == false)
+	}
+
+	/// libdispatch traps on the release of a suspended dispatch source, so releasing a flushed tracer used to
+	/// abort the process from `FlushTimer.deinit`. Flushing with no active root is the case that leaves a
+	/// timer suspended, since no span retires to push the deadline ahead.
+	@Test
+	func tracerDeallocatesAfterFlushTrace() {
+		weak var weakTracer: Tracer?
+
+		do {
+			let tracer = Tracer()
+			weakTracer = tracer
+			tracer.flushTrace()
+		}
+
+		#expect(weakTracer == nil)
+	}
+
 	@Test
 	func tracerChildSpanIsNotRoot() {
 		let tracer = Tracer()

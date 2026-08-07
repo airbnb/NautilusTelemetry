@@ -33,18 +33,34 @@ struct HistogramBuckets<T: MetricNumeric> {
 	mutating func record(_ number: T) {
 		sum += number
 		count += 1
+		data[bucketIndex(for: number)] += 1
+	}
 
-		let count = explicitBounds.count
-		for i in 0..<count {
-			let bound = explicitBounds[i]
-			if number <= bound {
-				data[i] += 1
-				return
+	/// Records `numberOfObservations` observations of `number` in a single step.
+	mutating func record(_ number: T, count numberOfObservations: UInt64) {
+		guard let multiplier = T(exactly: numberOfObservations) else {
+			assert(false, "\(numberOfObservations) observations is not exactly representable as \(T.self)")
+			return
+		}
+
+		sum += number * multiplier
+		count += numberOfObservations
+		data[bucketIndex(for: number)] += numberOfObservations
+	}
+
+	// MARK: Private
+
+	/// The index in `data` holding the count for `number`. Bounds are treated as inclusive upper bounds,
+	/// and `explicitBounds.count` is the overflow bucket covering (lastBound...infinity).
+	private func bucketIndex(for number: T) -> Int {
+		let boundsCount = explicitBounds.count
+		for i in 0..<boundsCount {
+			if number <= explicitBounds[i] {
+				return i
 			}
 		}
 
-		// In the range of (lastBound...infinity).
-		data[count] += 1
+		return boundsCount
 	}
 
 }
@@ -76,6 +92,26 @@ struct HistogramValues<T: MetricNumeric> {
 	mutating func record(_ number: T, attributes: TelemetryAttributes = [:]) {
 		var value = values[attributes] ?? HistogramBuckets<T>(explicitBounds: explicitBounds)
 		value.record(number)
+		values[attributes] = value
+	}
+
+	mutating func record(_ number: T, count: UInt64, attributes: TelemetryAttributes = [:]) {
+		var value = values[attributes] ?? HistogramBuckets<T>(explicitBounds: explicitBounds)
+		value.record(number, count: count)
+		values[attributes] = value
+	}
+
+	/// Records a batch of pre-bucketed measurements against a single set of attributes, touching the
+	/// backing dictionary once for the whole batch.
+	mutating func record(_ measurements: [BucketedMeasurement<T>], attributes: TelemetryAttributes = [:]) {
+		guard measurements.contains(where: { $0.count > 0 }) else {
+			return
+		}
+
+		var value = values[attributes] ?? HistogramBuckets<T>(explicitBounds: explicitBounds)
+		for measurement in measurements where measurement.count > 0 {
+			value.record(measurement.value, count: measurement.count)
+		}
 		values[attributes] = value
 	}
 

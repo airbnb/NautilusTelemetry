@@ -53,6 +53,9 @@ public struct TimeReference {
 
 /// Will overflow for very large durations, and are permitted to be negative.
 extension Duration {
+
+	// MARK: Internal
+
 	/// Duration as a whole number of nanoseconds, rounded half-away-from-zero.
 	/// Will overflow above ≈292 year duration.
 	var asNanoseconds: Int64 {
@@ -75,6 +78,8 @@ extension Duration {
 	var asSeconds: Int64 {
 		wholeUnits(attosecondsPerUnit: 1_000_000_000_000_000_000) // 10^18
 	}
+
+	// MARK: Private
 
 	/// Converts the duration to a whole number of a unit, rounded half-away-from-zero.
 	///

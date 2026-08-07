@@ -22,6 +22,8 @@ extension Tracer {
 		case microseconds
 		case nanoseconds
 
+		// MARK: Internal
+
 		/// UCUM unit symbol reported as the metric's `unit`.
 		var symbol: String {
 			switch self {
@@ -91,7 +93,7 @@ extension Tracer {
 	///   - namingConvention: determines how to derive the metric name
 	///   - fileID: fileID where the span was created, for module name determination.
 	///   - spanAttributeKeys: A set of attribute keys to collect from the span when it is ended. This set should be minimal to avoid metric cardinality explosion.
-	/// - Returns: the created histogram.
+	/// - Returns: the created histogram. Spans whose elapsed time is negative are not recorded.
 	@discardableResult
 	public func reportAsDurationHistogramMetric(
 		span: Span,
@@ -114,7 +116,9 @@ extension Tracer {
 		}
 
 		span.addRetireCallback { [weak histogram] span in
-			guard let histogram, let elapsed = span.elapsed else { return }
+			// A negative duration is not measurable — `Span.adjust` can produce one — so drop the sample
+			// rather than recording it into the histogram's negative range.
+			guard let histogram, let elapsed = span.elapsed, elapsed >= .zero else { return }
 			let value = unit.measurement(from: elapsed)
 			let attributes = Self.collectAttributes(span, spanAttributeKeys)
 			histogram.record(value, attributes: attributes)

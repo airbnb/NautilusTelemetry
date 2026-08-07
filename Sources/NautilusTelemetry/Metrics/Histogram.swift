@@ -43,13 +43,45 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 	}
 
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
-		if number < 0 {
-			assert(false, "histograms can only be increased")
+		guard Self.isRecordable(number) else {
 			return
 		}
 
 		lockedValues.withLock {
 			$0.record(number, attributes: attributes)
+		}
+	}
+
+	/// Records `count` observations of `number` in a single step.
+	/// - Parameters:
+	///   - number: the value to record.
+	///   - count: the number of observations of `number`. A count of zero records nothing.
+	///   - attributes: attributes to associate with the measurements.
+	public func record(_ number: T, count: UInt64, attributes: TelemetryAttributes = [:]) {
+		guard Self.isRecordable(number), count > 0 else {
+			return
+		}
+
+		lockedValues.withLock {
+			$0.record(number, count: count, attributes: attributes)
+		}
+	}
+
+	/// Records measurements that another source has already bucketed, such as a MetricKit `MXHistogram`,
+	/// under one lock acquisition for the whole batch. See ``BucketedMeasurement``.
+	/// - Parameters:
+	///   - measurements: the source buckets. Entries with a count of zero are skipped, as are entries with a
+	///   non-finite or negative value, which assert in debug builds.
+	///   - attributes: attributes to associate with the measurements.
+	public func record(_ measurements: [BucketedMeasurement<T>], attributes: TelemetryAttributes = [:]) {
+		let recordable = measurements.filter { $0.count > 0 && Self.isRecordable($0.value) }
+
+		guard !recordable.isEmpty else {
+			return
+		}
+
+		lockedValues.withLock {
+			$0.record(recordable, attributes: attributes)
 		}
 	}
 
@@ -96,4 +128,22 @@ public class Histogram<T: MetricNumeric>: Instrument, ExportableInstrument {
 
 	/// Exemplars recorded in the current collection interval.
 	private let lockedExemplars = Mutex<[Exemplar<T>]>([])
+
+	/// Whether `number` can be placed in a bucket. Asserts in debug builds so bad data surfaces during
+	/// development, and reports the rejection without trapping in release.
+	private static func isRecordable(_ number: T) -> Bool {
+		// NaN compares false against every bound, so it would otherwise land in the overflow bucket
+		// and leave `sum` unusable.
+		guard isFiniteMetricValue(number) else {
+			assert(false, "histograms can only record finite values")
+			return false
+		}
+
+		if number < 0 {
+			assert(false, "histograms can only be increased")
+			return false
+		}
+
+		return true
+	}
 }

@@ -20,7 +20,15 @@ class FlushTimer {
 	}
 
 	deinit {
+		// Cancel first so resuming can't deliver the event handler, then balance any outstanding
+		// `suspend()`: libdispatch traps on the release of a source that is still suspended.
 		flushTimer.cancel()
+		_suspended.withLock { suspended in
+			if suspended {
+				flushTimer.resume()
+				suspended = false
+			}
+		}
 	}
 
 	// MARK: Internal
@@ -42,6 +50,8 @@ class FlushTimer {
 		}
 	}
 
+	/// Stops the timer firing until `setupTimer()` re-arms it, which is the only counterpart —
+	/// suspensions must be balanced, and `deinit` clears an outstanding one before releasing the source.
 	func suspend() {
 		_suspended.withLock { suspended in
 			if !suspended {

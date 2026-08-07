@@ -9,8 +9,6 @@ import Foundation
 
 // Identifiers and shared types
 
-public typealias MetricNumeric = Comparable & Numeric
-
 /// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md#attribute
 public typealias TelemetryAttributes = [String: AttributeValue]
 

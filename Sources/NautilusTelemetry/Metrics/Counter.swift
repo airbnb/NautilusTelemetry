@@ -38,6 +38,13 @@ public class Counter<T: MetricNumeric>: Instrument, ExportableInstrument {
 	}
 
 	public func add(_ number: T, attributes: TelemetryAttributes = [:]) {
+		// Checked ahead of the sign test, which NaN would pass. A non-finite addend makes the running
+		// total unrecoverable and fails JSON encoding at export.
+		guard isFiniteMetricValue(number) else {
+			assert(false, "counters can only record finite values")
+			return
+		}
+
 		if isMonotonic, number < 0 {
 			// UpDownCounter is not monotonic
 			assert(false, "monotonic counters can only be increased")

@@ -302,6 +302,41 @@ struct MetricExporterTests {
 	}
 
 	@Test
+	func histogramFromBucketedMeasurements() throws {
+		let bucketSize = 1024
+
+		let histogram = Histogram<Int>(
+			name: "ByteHistogram",
+			unit: unit,
+			description: "Counts byte sizes by bucket",
+			explicitBounds: [bucketSize * 1, bucketSize * 2, bucketSize * 3, bucketSize * 4]
+		)
+
+		histogram.record([
+			BucketedMeasurement(value: 100, count: 2),
+			BucketedMeasurement(value: 4000, count: 0),
+			BucketedMeasurement(value: 16000, count: 3),
+		])
+
+		let timeReference = TimeReference(serverOffset: 0)
+		let exporter = Exporter(timeReference: timeReference)
+
+		let exportableInstrument = try #require(histogram.snapshotAndReset() as? ExportableInstrument)
+		let metric = exportableInstrument.exportOTLP(exporter)
+		let json = try exporter.encodeJSON(metric)
+
+		let normalizedJsonString = try #require(try TestDataNormalization.normalizedJsonString(
+			data: json,
+			keyValuesToRedact: redaction
+		))
+
+		let expectedOutput =
+			#"{"description":"Counts byte sizes by bucket","histogram":{"aggregationTemporality":1,"dataPoints":[{"attributes":[],"bucketCounts":["2","0","0","0","3"],"count":"5","explicitBounds":[1024,2048,3072,4096],"startTimeUnixNano":"***","sum":48200,"timeUnixNano":"***"}]},"name":"ByteHistogram","unit":"bytes"}"#
+
+		#expect(normalizedJsonString == expectedOutput)
+	}
+
+	@Test
 	func exponentialHistogram() async throws {
 		let msUnit = Unit(symbol: "ms")
 		let histogram = ExponentialHistogram<Double>(

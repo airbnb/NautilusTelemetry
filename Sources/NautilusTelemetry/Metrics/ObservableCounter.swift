@@ -39,7 +39,13 @@ public class ObservableCounter<T: MetricNumeric>: Instrument, ExportableInstrume
 	}
 
 	/// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#asynchronous-counter-creation
+	/// Non-finite observations are dropped, leaving the previous value in place.
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
+		guard isFiniteMetricValue(number) else {
+			assert(false, "counters can only record finite values")
+			return
+		}
+
 		lockedValues.withLock {
 			$0.set(number, attributes: attributes)
 		}

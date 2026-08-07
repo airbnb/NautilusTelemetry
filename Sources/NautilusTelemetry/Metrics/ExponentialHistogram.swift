@@ -55,7 +55,13 @@ public class ExponentialHistogram<T: MetricNumeric>: Instrument, ExportableInstr
 
 	/// Record a value. Positive, negative, and zero values are all allowed (unlike `Histogram`),
 	/// since the spec maps them into separate positive/negative/zero buckets.
+	/// Non-finite values are dropped: a single one would render `sum` and the min/max range unusable.
 	public func record(_ number: T, attributes: TelemetryAttributes = [:]) {
+		guard isFiniteMetricValue(number) else {
+			assert(false, "histograms can only record finite values")
+			return
+		}
+
 		lockedValues.withLock {
 			$0.record(number, attributes: attributes)
 		}

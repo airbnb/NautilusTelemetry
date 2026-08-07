@@ -98,6 +98,40 @@ struct TracerMetricsTests {
 	}
 
 	@Test
+	func reportAsDurationHistogramMetricIgnoresNegativeDurations() {
+		let span = tracer.startSpan(name: "histogramNegativeDurationSpan")
+		let histogram = tracer.reportAsDurationHistogramMetric(span: span)
+
+		// Push startTime past the end of the span so elapsed is negative.
+		span.adjust(start: .milliseconds(100))
+		span.end()
+
+		#expect(histogram.isEmpty)
+	}
+
+	@Test
+	func reportAsDurationHistogramMetricRecordsSubMillisecondDurationsAsZero() throws {
+		let span = tracer.startSpan(name: "histogramSubMillisecondSpan")
+		let histogram = tracer.reportAsDurationHistogramMetric(span: span)
+
+		span.adjust(start: .zero, end: .milliseconds(50))
+		span.end()
+
+		// Matches the conversion in the retire callback: durations under half a millisecond round to 0 ms.
+		histogram.record(Int(Duration.microseconds(400).asMilliseconds))
+
+		let exporter = Exporter(timeReference: TimeReference(serverOffset: 0))
+		let snapshot = try #require(histogram.snapshotAndReset() as? ExponentialHistogram<Int>)
+		let dp = try #require(exporter.exportOTLP(histogram: snapshot).exponentialHistogram?.dataPoints?.first)
+
+		#expect(dp.count == 2)
+		#expect(dp.zeroCount == 1)
+		#expect(dp.min == 0)
+		#expect(dp.max == 50)
+		#expect(dp.positive?.bucketCounts?.reduce(0, +) == 1)
+	}
+
+	@Test
 	func reportAsCounterMetricWithNilKeysUsesEmptyAttributes() {
 		let span = tracer.startSpan(name: "counterNilKeysSpan")
 		span.addAttribute("any", "value")

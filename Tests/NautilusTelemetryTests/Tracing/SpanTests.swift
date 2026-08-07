@@ -368,5 +368,10 @@ struct SpanTests {
 		span4.adjust(start: .seconds(5), end: .seconds(5))
 		#expect(span4.startTime == t + .seconds(5))
 		#expect(span4.endTime == nil)
+
+		// Collapsing a span to zero length is allowed; only an end before the start is rejected.
+		let span5 = Span(name: "test", startTime: t, endTime: t + .seconds(10), traceId: traceId, parentId: nil)
+		span5.adjust(start: .seconds(10))
+		#expect(span5.elapsed == .zero)
 	}
 }

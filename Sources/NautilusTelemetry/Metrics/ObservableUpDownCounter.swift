@@ -38,7 +38,13 @@ public class ObservableUpDownCounter<T: MetricNumeric>: Instrument, ExportableIn
 		lockedExemplars.withLock { $0.append(Exemplar(span: span, value: value, attributes: attributes)) }
 	}
 
+	/// Non-finite observations are dropped, leaving the previous value in place.
 	public func observe(_ number: T, attributes: TelemetryAttributes = [:]) {
+		guard isFiniteMetricValue(number) else {
+			assert(false, "counters can only record finite values")
+			return
+		}
+
 		lockedValues.withLock {
 			$0.set(number, attributes: attributes)
 		}
