@@ -36,16 +36,11 @@ public struct BucketedMeasurement<T: MetricNumeric>: Equatable {
 
 	// MARK: Internal
 
-	/// Whether a histogram can represent a bucket with these bounds. Asserts in debug builds.
+	/// Whether a histogram can represent a bucket with these bounds. Callers assert on `false`, so that the
+	/// failure reports at the initializer rather than here.
 	static func boundsAreUsable(_ lowerBound: T, _ upperBound: T) -> Bool {
 		// NaN is not finite, so it never reaches the ordering comparisons.
-		guard isFiniteMetricValue(lowerBound), isFiniteMetricValue(upperBound), lowerBound >= 0, lowerBound <= upperBound
-		else {
-			assert(false, "unusable bucket bounds")
-			return false
-		}
-
-		return true
+		isFiniteMetricValue(lowerBound) && isFiniteMetricValue(upperBound) && lowerBound >= 0 && lowerBound <= upperBound
 	}
 }
 
@@ -71,6 +66,7 @@ extension BucketedMeasurement where T: BinaryFloatingPoint {
 	/// asserting in debug builds.
 	public init?(lowerBound: T, upperBound: T, count: UInt64) {
 		guard Self.boundsAreUsable(lowerBound, upperBound) else {
+			assert(false, "unusable bucket bounds")
 			return nil
 		}
 
@@ -97,6 +93,7 @@ extension BucketedMeasurement where T: BinaryInteger {
 	/// builds.
 	public init?(lowerBound: T, upperBound: T, count: UInt64) {
 		guard Self.boundsAreUsable(lowerBound, upperBound) else {
+			assert(false, "unusable bucket bounds")
 			return nil
 		}
 
