@@ -141,6 +141,28 @@ struct SpanTests {
 	}
 
 	@Test
+	func traceparentHeaderReplacesExistingValue() throws {
+		let url = try TestUtils.makeURL("https://api.example.com/")
+		let span = tracer.startSpan(name: "test")
+
+		var sampledRequest = URLRequest(url: url)
+		sampledRequest.setValue("existing", forHTTPHeaderField: "traceparent")
+		span.addTraceHeadersIfSampling(&sampledRequest, isSampling: true)
+		#expect(
+			sampledRequest.value(forHTTPHeaderField: "traceparent")
+				== span.traceParentHeaderValue(sampled: true).1
+		)
+
+		var unsampledRequest = URLRequest(url: url)
+		unsampledRequest.setValue("existing", forHTTPHeaderField: "traceparent")
+		span.addTraceHeadersUnconditionally(&unsampledRequest, isSampling: false)
+		#expect(
+			unsampledRequest.value(forHTTPHeaderField: "traceparent")
+				== span.traceParentHeaderValue(sampled: false).1
+		)
+	}
+
+	@Test
 	func throwingSpan() throws {
 		#expect(throws: TestError.self) {
 			try tracer.withSpan(name: "span1") {

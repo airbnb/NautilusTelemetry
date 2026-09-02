@@ -25,7 +25,7 @@ extension Span {
 		return "\(method) \(target)"
 	}
 
-	/// Add `traceparent` header to a URLRequest if we're sampling
+	/// Sets the `traceparent` header on a URLRequest if we're sampling.
 	/// - Parameter isSampling: whether we are sampling, defaults to InstrumentationSystem.tracer.isSampling
 	/// - Parameter urlRequest: urlRequest to modify
 	public func addTraceHeadersIfSampling(
@@ -34,11 +34,11 @@ extension Span {
 	) {
 		if isSampling {
 			let value = traceParentHeaderValue(sampled: true)
-			urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
+			urlRequest.setValue(value.1, forHTTPHeaderField: value.0)
 		}
 	}
 
-	/// Add `traceparent` header to a URLRequest regardless of sampling state
+	/// Sets the `traceparent` header on a URLRequest regardless of sampling state.
 	/// Sampled flag determined from InstrumentationSystem.tracer.isSampling
 	/// - Parameter urlRequest: urlRequest to modify
 	public func addTraceHeadersUnconditionally(
@@ -46,7 +46,7 @@ extension Span {
 		isSampling: Bool = InstrumentationSystem.tracer.isSampling
 	) {
 		let value = traceParentHeaderValue(sampled: isSampling)
-		urlRequest.addValue(value.1, forHTTPHeaderField: value.0)
+		urlRequest.setValue(value.1, forHTTPHeaderField: value.0)
 	}
 
 	/// Annotates the span with attributes from URLSessionTaskMetrics.
