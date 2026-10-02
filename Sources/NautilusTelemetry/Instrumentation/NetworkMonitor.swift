@@ -43,20 +43,13 @@ public final class NetworkMonitor {
 
 		#if os(iOS)
 		// CoreTelephony can synchronously contact CommCenter; only read it for cellular paths.
-		if currentPath?.usesInterfaceType(.cellular) == true {
-			let telephonyNetworkInfo = telephonyNetworkInfo.withLock { networkInfo in
-				if let networkInfo { return networkInfo }
-				let createdNetworkInfo = telephonyNetworkInfoFactory()
-				networkInfo = createdNetworkInfo
-				return createdNetworkInfo
-			}
-			if
-				let dataServiceIdentifier = telephonyNetworkInfo.dataServiceIdentifier,
-				let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
-				let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
-			{
-				attributes["network.connection.subtype"] = .string(radioAccessTechnologyDescription(radioAccessTechnology))
-			}
+		if
+			let telephonyNetworkInfo = cellularNetworkInfo(usesCellularInterface: currentPath?.usesInterfaceType(.cellular) == true),
+			let dataServiceIdentifier = telephonyNetworkInfo.dataServiceIdentifier,
+			let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
+			let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
+		{
+			attributes["network.connection.subtype"] = .string(radioAccessTechnologyDescription(radioAccessTechnology))
 		}
 		#endif
 
@@ -78,6 +71,16 @@ public final class NetworkMonitor {
 	// MARK: Internal
 
 	#if os(iOS)
+	func cellularNetworkInfo(usesCellularInterface: Bool) -> CTTelephonyNetworkInfo? {
+		guard usesCellularInterface else { return nil }
+		return telephonyNetworkInfo.withLock { networkInfo in
+			if let networkInfo { return networkInfo }
+			let createdNetworkInfo = telephonyNetworkInfoFactory()
+			networkInfo = createdNetworkInfo
+			return createdNetworkInfo
+		}
+	}
+
 	func radioAccessTechnologyDescription(_ technology: String) -> String {
 		radioAccessTechnologyMap[technology] ?? technology
 	}
