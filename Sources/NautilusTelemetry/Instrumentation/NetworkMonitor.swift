@@ -71,8 +71,8 @@ public final class NetworkMonitor {
 	// MARK: Internal
 
 	#if os(iOS)
-	func cellularNetworkInfo(usesCellularInterface: Bool) -> CTTelephonyNetworkInfo? {
-		guard usesCellularInterface else { return nil }
+	func cellularNetworkInfo(usesCellularInterface: Bool?) -> CTTelephonyNetworkInfo? {
+		guard usesCellularInterface == true else { return nil }
 		return telephonyNetworkInfo.withLock { networkInfo in
 			if let networkInfo { return networkInfo }
 			let createdNetworkInfo = telephonyNetworkInfoFactory()
