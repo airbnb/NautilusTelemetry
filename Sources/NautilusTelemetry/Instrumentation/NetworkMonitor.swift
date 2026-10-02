@@ -44,7 +44,7 @@ public final class NetworkMonitor {
 		#if os(iOS)
 		// CoreTelephony can synchronously contact CommCenter; only read it for cellular paths.
 		if
-			let telephonyNetworkInfo = cellularNetworkInfo(usesCellularInterface: currentPath?.usesInterfaceType(.cellular) == true),
+			let telephonyNetworkInfo = cellularNetworkInfo(usesCellularInterface: currentPath?.usesInterfaceType(.cellular)),
 			let dataServiceIdentifier = telephonyNetworkInfo.dataServiceIdentifier,
 			let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
 			let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
