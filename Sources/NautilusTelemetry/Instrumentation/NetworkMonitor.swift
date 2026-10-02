@@ -12,14 +12,25 @@ public final class NetworkMonitor {
 
 	// MARK: Lifecycle
 
-	public init() { }
+	public init() {
+		#if os(iOS)
+		telephonyNetworkInfoFactory = { CTTelephonyNetworkInfo() }
+		#endif
+	}
+
+	#if os(iOS)
+	init(telephonyNetworkInfoFactory: @escaping () -> CTTelephonyNetworkInfo) {
+		self.telephonyNetworkInfoFactory = telephonyNetworkInfoFactory
+	}
+	#endif
 
 	// MARK: Public
 
 	public var attributes: TelemetryAttributes {
 		var attributes = TelemetryAttributes()
+		let currentPath = networkPath.withLock { $0 }
 
-		if let networkPath = networkPath.withLock({ $0 }) {
+		if let networkPath = currentPath {
 			attributes["network.path.status"] = .string(networkPath.status.description)
 			if networkPath.status == .unsatisfied {
 				attributes["network.path.unsatisfied_reason"] = .string(networkPath.unsatisfiedReason.description)
@@ -31,12 +42,21 @@ public final class NetworkMonitor {
 		}
 
 		#if os(iOS)
-		if
-			let dataServiceIdentifier = telephonyNetworkInfo.dataServiceIdentifier,
-			let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
-			let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
-		{
-			attributes["network.connection.subtype"] = .string(radioAccessTechnologyDescription(radioAccessTechnology))
+		// CoreTelephony can synchronously contact CommCenter; only read it for cellular paths.
+		if currentPath?.usesInterfaceType(.cellular) == true {
+			let telephonyNetworkInfo = telephonyNetworkInfo.withLock { networkInfo in
+				if let networkInfo { return networkInfo }
+				let createdNetworkInfo = telephonyNetworkInfoFactory()
+				networkInfo = createdNetworkInfo
+				return createdNetworkInfo
+			}
+			if
+				let dataServiceIdentifier = telephonyNetworkInfo.dataServiceIdentifier,
+				let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
+				let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
+			{
+				attributes["network.connection.subtype"] = .string(radioAccessTechnologyDescription(radioAccessTechnology))
+			}
 		}
 		#endif
 
@@ -70,7 +90,8 @@ public final class NetworkMonitor {
 	private let networkPath = Mutex<NWPath?>(nil)
 
 	#if os(iOS)
-	private let telephonyNetworkInfo = CTTelephonyNetworkInfo()
+	private let telephonyNetworkInfo = Mutex<CTTelephonyNetworkInfo?>(nil)
+	private let telephonyNetworkInfoFactory: () -> CTTelephonyNetworkInfo
 
 	private let radioAccessTechnologyMap: [String: String] = [
 		CTRadioAccessTechnologyGPRS: "GPRS",
