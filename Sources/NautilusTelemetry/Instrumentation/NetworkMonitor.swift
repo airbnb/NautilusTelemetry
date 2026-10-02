@@ -12,14 +12,25 @@ public final class NetworkMonitor {
 
 	// MARK: Lifecycle
 
-	public init() { }
+	public init() {
+		#if os(iOS)
+		telephonyNetworkInfoFactory = { CTTelephonyNetworkInfo() }
+		#endif
+	}
+
+	#if os(iOS)
+	init(telephonyNetworkInfoFactory: @escaping () -> CTTelephonyNetworkInfo) {
+		self.telephonyNetworkInfoFactory = telephonyNetworkInfoFactory
+	}
+	#endif
 
 	// MARK: Public
 
 	public var attributes: TelemetryAttributes {
 		var attributes = TelemetryAttributes()
+		let currentPath = networkPath.withLock { $0 }
 
-		if let networkPath = networkPath.withLock({ $0 }) {
+		if let networkPath = currentPath {
 			attributes["network.path.status"] = .string(networkPath.status.description)
 			if networkPath.status == .unsatisfied {
 				attributes["network.path.unsatisfied_reason"] = .string(networkPath.unsatisfiedReason.description)
@@ -31,7 +42,9 @@ public final class NetworkMonitor {
 		}
 
 		#if os(iOS)
+		// CoreTelephony can synchronously contact CommCenter; only read it for cellular paths.
 		if
+			let telephonyNetworkInfo = cellularNetworkInfo(usesCellularInterface: currentPath?.usesInterfaceType(.cellular)),
 			let dataServiceIdentifier = telephonyNetworkInfo.dataServiceIdentifier,
 			let serviceCurrentRadioAccessTechnology = telephonyNetworkInfo.serviceCurrentRadioAccessTechnology,
 			let radioAccessTechnology = serviceCurrentRadioAccessTechnology[dataServiceIdentifier]
@@ -58,6 +71,16 @@ public final class NetworkMonitor {
 	// MARK: Internal
 
 	#if os(iOS)
+	func cellularNetworkInfo(usesCellularInterface: Bool?) -> CTTelephonyNetworkInfo? {
+		guard usesCellularInterface == true else { return nil }
+		return telephonyNetworkInfo.withLock { networkInfo in
+			if let networkInfo { return networkInfo }
+			let createdNetworkInfo = telephonyNetworkInfoFactory()
+			networkInfo = createdNetworkInfo
+			return createdNetworkInfo
+		}
+	}
+
 	func radioAccessTechnologyDescription(_ technology: String) -> String {
 		radioAccessTechnologyMap[technology] ?? technology
 	}
@@ -70,7 +93,8 @@ public final class NetworkMonitor {
 	private let networkPath = Mutex<NWPath?>(nil)
 
 	#if os(iOS)
-	private let telephonyNetworkInfo = CTTelephonyNetworkInfo()
+	private let telephonyNetworkInfo = Mutex<CTTelephonyNetworkInfo?>(nil)
+	private let telephonyNetworkInfoFactory: () -> CTTelephonyNetworkInfo
 
 	private let radioAccessTechnologyMap: [String: String] = [
 		CTRadioAccessTechnologyGPRS: "GPRS",

@@ -3,6 +3,7 @@
 
 import CoreTelephony
 import Network
+import Synchronization
 import Testing
 
 @testable import NautilusTelemetry
@@ -68,6 +69,32 @@ struct NWPathLinkQualityTests {
 struct NautilusTelemetryNetworkMonitorTests {
 
 	// MARK: Internal
+
+	@Test
+	func `telephony info is not created before a cellular path is observed`() {
+		let creationCount = Mutex(0)
+		let monitor = NetworkMonitor(telephonyNetworkInfoFactory: {
+			creationCount.withLock { $0 += 1 }
+			return CTTelephonyNetworkInfo()
+		})
+
+		#expect(creationCount.withLock { $0 } == 0)
+		_ = monitor.attributes
+		#expect(creationCount.withLock { $0 } == 0)
+	}
+
+	@Test
+	func `telephony info is created once when a cellular path is observed`() {
+		let creationCount = Mutex(0)
+		let monitor = NetworkMonitor(telephonyNetworkInfoFactory: {
+			creationCount.withLock { $0 += 1 }
+			return CTTelephonyNetworkInfo()
+		})
+
+		#expect(monitor.cellularNetworkInfo(usesCellularInterface: true) != nil)
+		#expect(monitor.cellularNetworkInfo(usesCellularInterface: true) != nil)
+		#expect(creationCount.withLock { $0 } == 1)
+	}
 
 	@Test
 	func `unknown radio access technology returns the raw string`() {
